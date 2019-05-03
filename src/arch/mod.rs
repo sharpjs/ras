@@ -14,8 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-mod arch;
+use std::fmt::Debug;
 
-fn main() {
+/// An instruction set architecture.
+pub trait Arch {
+    /// An operation or instruction in the architecture.
+    type Op: Debug;
+
+    /// An operation argument or operand in the architecture.
+    type Arg: Debug;
 }
 

@@ -17,51 +17,206 @@
 /// A lexical token.
 #[derive(PartialEq, Eq, Debug)]
 pub enum Token {
-    /// Identifier with index into string table.
-    Ident(usize),
 
-    /// Label with index into string table.
-    Label(usize),
+    // === Identifiers & Literals ===
 
-    /// Integer literal.
-    Int(u64),
-    // TODO: Non-two's-complement representations
-    // TODO: Float and its representations
+    /// An identifier.
+    /// The name is represented as an index into a string table.
+    Ident(u32),
 
-    /// Character literal.
+    /// A label.
+    /// The name is represented as an index into a string table.
+    /// Visibility is represented as Boolean value:
+    ///   `false` for module-scoped, `true` for global.
+    Label(u32, bool),
+
+    /// A macro parameter.
+    /// The name is represented as an index into a string table.
+    Param(u32),
+
+    /// An integer literal.
+    /// The value is represented as an index into an integer table.
+    Int(u32),
+
+    /// A floating-point literal.
+    /// The value is represented as an index into a float table.
+    Float(u32),
+
+    /// A string literal.
+    /// The value is represented as an index into a string table.
+    Str(u32),
+
+    /// A character literal.
+    /// The value is represented directly within the token.
     Char(char),
 
-    /// String literal.
-    Str(usize),
+    // === Operators ===
+    
+    /// `!` - logical NOT operator, side-effect indicator.
+    LogNot,
+    
+    /// `~` - bitwise NOT operator.
+    BitNot,
 
-    /// Plus `+`.
-    Plus,
+    /// `*` - signed multiplication operator.
+    Mul,
 
-    /// Minus `-`.
-    Minus,
+    /// `/` - signed division operator.
+    Div,
 
-    // TODO: More operators
+    /// `%` - signed modulo operator.
+    Mod,
 
-    /// Left brace `{`.
+    /// `+*` - unsigned multiplication operator.
+    UnsMul,
+
+    /// `+/` - unsigned division operator.
+    UnsDiv,
+
+    /// `+%` - unsigned modulo operator.
+    UnsMod,
+
+    /// `+` - addition operator, increment indicator.
+    Add,
+
+    /// `-` - subtraction operator, negation operator, decrement indicator.
+    Sub,
+
+    /// `<<` - left shift operator.
+    Shl,
+
+    /// `>>` - signed right shift operator.
+    Shr,
+
+    /// `+>>` - unsigned right shift operator.
+    UnsShr,
+
+    /// `&` - bitwise AND operator.
+    BitAnd,
+
+    /// `^` - bitwise XOR operator.
+    BitXor,
+
+    /// `|` - bitwise OR operator.
+    BitOr,
+
+    /// `==` - equality operator.
+    Equal,
+
+    /// `!=` - inequality operator.
+    NotEqual,
+
+    /// `<` - signed less-than operator.
+    Less,
+
+    /// `>` - signed greater-than operator.
+    More,
+
+    /// `<=` - signed less-than-or-equal-to operator.
+    LessEqual,
+
+    /// `>=` - signed greater-than-or-equal-to operator.
+    MoreEqual,
+
+    /// `+<` - unsigned less-than operator.
+    UnsLess,
+
+    /// `+>` - unsigned greater-than operator.
+    UnsMore,
+
+    /// `+<=` - unsigned less-than-or-equal-to operator.
+    UnsLessEqual,
+
+    /// `+>=` - unsigned greater-than-or-equal-to operator.
+    UnsMoreEqual,
+
+    /// `?` - not-known indicator.
+    Unknown,
+
+    /// `&&` - logical AND operator.
+    LogAnd,
+
+    /// `||` - logical OR operator.
+    LogOr,
+
+    /// `=`
+    Assign,
+
+    /// `*=`
+    MulAssign,
+
+    /// `/=`
+    DivAssign,
+
+    /// `/=`
+    ModAssign,
+
+    /// `+*=`
+    UnsMulAssign,
+
+    /// `+/=`
+    UnsDivAssign,
+
+    /// `+/=`
+    UnsModAssign,
+
+    /// `+=`
+    AddAssign,
+
+    /// `-=`
+    SubAssign,
+
+    /// `<<=`
+    ShlAssign,
+
+    /// `>>=`
+    ShrAssign,
+
+    /// `+>>=`
+    UnsShrAssign,
+
+    /// `&=`
+    BitAndAssign,
+
+    /// `^=`
+    BitXorAssign,
+
+    /// `|=`
+    BitOrAssign,
+
+    /// `&&=`
+    LogAndAssign,
+
+    /// `||=`
+    LogOrAssign,
+
+    // === Punctuation ===
+
+    /// `{` - left brace.
     BraceL,
 
-    /// Right brace `}`.
+    /// `}` - right brace.
     BraceR,
 
-    /// Left parenthesis `(`.
+    /// `(` - left parenthesis.
     ParenL,
 
-    /// Right parenthesis `)`.
+    /// `)` - right parenthesis.
     ParenR,
 
-    /// Left bracket  `[`.
+    /// `[` - left bracket.
     BracketL,
 
-    /// Right bracket `]`.
+    /// `]` - right bracket.
     BracketR,
 
-    /// Comma `,`.
+    /// `:` - item joiner.
+    Colon,
+
+    /// `,` - item separator.
     Comma,
+
+    // === Terminators ===
 
     /// End of statement.
     Eos,
@@ -69,7 +224,7 @@ pub enum Token {
     /// End of file.
     Eof,
 
-    /// Lexical error.
+    /// A lexical error.
     Error
 }
 

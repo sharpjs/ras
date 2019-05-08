@@ -60,6 +60,10 @@ impl StringTable {
         table
     }
 
+    // push(&mut self, c: char)
+    // push_str(&mut self, s: &str)
+    // commit(&mut self) -> StringId
+
     /// Interns a string, returning a `StringId` that can be used to retrieve
     /// the string later.
     pub fn intern(&mut self, s: &str) -> StringId {
@@ -98,5 +102,39 @@ impl StringTable {
     }
 }
 
-// TODO: Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Prefixes guarantee that rustc will emit two separate "Hello" strings.
+    const A: &str = "A Hello";
+    const B: &str = "B Hello";
+    const C: &str = "C olleH";
+
+    #[test]
+    fn default_id() {
+        let table = StringTable::new();
+
+        assert_eq!("", table.get(StringId::default()));
+    }
+
+    #[test]
+    fn intern() {
+        let a_str = &A[2..];
+        let b_str = &B[2..];
+        let c_str = &C[2..];
+
+        assert_ne!(a_str.as_ptr(), b_str.as_ptr());
+
+        let mut table = StringTable::new();
+        let a_id = table.intern(a_str);
+        let b_id = table.intern(b_str);
+        let c_id = table.intern(c_str);
+
+        assert_eq!(a_id, b_id);
+        assert_ne!(a_id, c_id);
+        assert_eq!("Hello", table.get(b_id) );
+        assert_eq!("olleH", table.get(c_id) );
+    }
+}
 

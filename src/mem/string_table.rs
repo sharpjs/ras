@@ -34,9 +34,15 @@ pub struct StringTable {
     // positions, because the `Range` type is not copyable.
     table: Vec<(usize, usize)>,
 
-    // Storage for interned strings.  Once a string is stored here, those
-    // characters do not change.
+    // Storage for interned strings.  The range `0..mark` is immutable and
+    // contains interned strings, concatenated.  The range `mark..chars.len()`
+    // is mutable and serves as an accumulator for a pending interned string.
     chars: String,
+
+    // The first mutable position in `chars`.  Also, the count of immutable
+    // characters in `chars.  Equal to `chars.len()` unless the caller has a
+    // pending interned string.
+    mark: usize,
 }
 
 impl StringTable {
@@ -44,51 +50,109 @@ impl StringTable {
     const INITIAL_CHR_CAPACITY: usize = 16 * 1024;
 
     /// Creates a new `StringTable`.  Initially, the table contains only the
-    /// empty string.
+    /// empty string mapped to the default [`StringId`].
     pub fn new() -> Self {
-        // Create an empty table
         let mut table = Self {
             map:   HashMap::with_capacity(Self::INITIAL_STR_CAPACITY),
             table: Vec    ::with_capacity(Self::INITIAL_STR_CAPACITY),
             chars: String ::with_capacity(Self::INITIAL_CHR_CAPACITY),
+            mark:  0,
         };
-
-        // Intern the empty string so that it has id 0, thus ensuring that the
-        // default StringId maps to the empty string.
-        table.intern("");
-
+        table.intern_accum(); // StringId(0) => ""
         table
     }
 
-    // push(&mut self, c: char)
-    // push_str(&mut self, s: &str)
-    // commit(&mut self) -> StringId
+    /// Returns the number of interned strings.
+    #[inline]
+    pub fn interned_count(&self) -> usize {
+        self.table.len()
+    }
 
-    /// Interns a string, returning a `StringId` that can be used to retrieve
-    /// the string later.
-    pub fn intern(&mut self, s: &str) -> StringId {
-        // Check if s is interned already
+    /// Returns the number of characters used for interned string storage,
+    /// including any padding.
+    #[inline]
+    pub fn interned_len(&self) -> usize {
+        self.mark
+    }
+
+    /// Returns the number of characters in the pending-string accumulator.
+    #[inline]
+    pub fn pending_len(&self) -> usize {
+        self.chars.len() - self.mark
+    }
+
+    /// Returns the contents of the pending-string accumulator.
+    #[inline]
+    pub fn pending(&self) -> &str {
+        &self.chars[self.mark..]
+    }
+
+    /// Appends the given character `c` to the pending-string accumulator.
+    #[inline]
+    pub fn push(&mut self, c: char) {
+        self.chars.push(c);
+    }
+
+    /// Appends the given string slice `s` to the pending-string accumulator.
+    #[inline]
+    pub fn push_str(&mut self, s: &str) {
+        self.chars.push_str(s);
+    }
+
+    /// Clears the pending-string accumulator.
+    #[inline]
+    pub fn clear_pending(&mut self) {
+        self.chars.truncate(self.mark);
+    }
+
+    /// Interns the contents of and clears the pending-string accumulator.
+    /// Returns a [`StringId`] that uniquely identifies the interned string.
+    pub fn intern(&mut self) -> StringId {
+        // String is present in accumulator
+
+        // Check if string is interned already
+        if let Some(&id) = self.map.get(self.pending()) {
+            self.clear_pending();
+            return StringId(id)
+        }
+
+        // Intern the string
+        self.intern_accum()
+    }
+
+    /// Interns the given string `s` and clears the pending-string accumulator.
+    /// Returns a [`StringId`] that uniquely identifies the interned string.
+    pub fn intern_str(&mut self, s: &str) -> StringId {
+        // Reset accumulator
+        self.clear_pending();
+
+        // Check if string is interned already
         if let Some(&id) = self.map.get(s) {
             return StringId(id)
         }
 
-        // Copy s to interned storage
-        let chars = &mut self.chars;
-        let start = chars.len();
-                    chars.push_str(s);
-        let end   = chars.len();
+        // Intern a copy of the string
+        self.push_str(s);
+        self.intern_accum()
+    }
+
+    fn intern_accum(&mut self) -> StringId {
+        let start = self.mark;
+        let end   = self.chars.len();
 
         // Re-reference s from interned storage
-        let s = &chars[start..end];
+        let s = &self.chars[start..end];
         let s = unsafe { transmute::<&'_ str, &'static str>(s) };
 
         // Add entry to table
-        let table = &mut self.table;
-        let index = table.len() as u32;
-                    table.push((start, end));
+        let index = self.table.len() as u32;
+                    self.table.push((start, end));
 
         // Add entry to map
         self.map.insert(s, index);
+
+        // Mark range as immutable
+        self.mark = end;
 
         // Return table index as id
         StringId(index)
@@ -120,6 +184,31 @@ mod tests {
 
     #[test]
     fn intern() {
+        let mut table = StringTable::new();
+
+        table.push('H');
+        table.push('e');
+        table.push_str("llo");
+        let a_id = table.intern();
+
+        table.push('H');
+        table.push('e');
+        table.push_str("llo");
+        let b_id = table.intern();
+
+        table.push_str("oll");
+        table.push('e');
+        table.push('H');
+        let c_id = table.intern();
+
+        assert_eq!(a_id, b_id);
+        assert_ne!(a_id, c_id);
+        assert_eq!("Hello", table.get(b_id) );
+        assert_eq!("olleH", table.get(c_id) );
+    }
+
+    #[test]
+    fn intern_str() {
         let a_str = &A[2..];
         let b_str = &B[2..];
         let c_str = &C[2..];
@@ -127,9 +216,9 @@ mod tests {
         assert_ne!(a_str.as_ptr(), b_str.as_ptr());
 
         let mut table = StringTable::new();
-        let a_id = table.intern(a_str);
-        let b_id = table.intern(b_str);
-        let c_id = table.intern(c_str);
+        let a_id = table.intern_str(a_str);
+        let b_id = table.intern_str(b_str);
+        let c_id = table.intern_str(c_str);
 
         assert_eq!(a_id, b_id);
         assert_ne!(a_id, c_id);

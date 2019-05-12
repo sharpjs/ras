@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::mem::string_table::*;
+use crate::lang::Visibility;
+
 /// A lexical token.
 #[derive(PartialEq, Eq, Debug)]
 pub enum Token {
@@ -21,33 +24,27 @@ pub enum Token {
     // === Identifiers & Literals ===
 
     /// An identifier.
-    /// The name is represented as an index into a string table.
-    Ident(u32),
+    Ident(StringId),
 
     /// A label.
-    /// The name is represented as an index into a string table.
-    /// Visibility is represented as Boolean value:
-    ///   `false` for module-scoped, `true` for global.
-    Label(u32, bool),
+    Label(Visibility, StringId),
 
     /// A macro parameter.
-    /// The name is represented as an index into a string table.
-    Param(u32),
+    Param(StringId),
 
     /// An integer literal.
-    /// The value is represented as an index into an integer table.
-    Int(u32),
+    /// The value is represented as ...?
+    Int { rep: u8, upper: u16, lower: u32 },
 
     /// A floating-point literal.
-    /// The value is represented as an index into a float table.
+    /// The value is represented as ...?
     Float(u32),
 
     /// A string literal.
-    /// The value is represented as an index into a string table.
-    Str(u32),
+    Str(StringId),
 
     /// A character literal.
-    /// The value is represented directly within the token.
+    /// The value is contained within the token.
     Char(char),
 
     // === Operators ===
@@ -226,5 +223,16 @@ pub enum Token {
 
     /// A lexical error.
     Error
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn size_of_token() {
+        assert_eq!(8 /*bytes*/, size_of::<Token>());
+    }
 }
 

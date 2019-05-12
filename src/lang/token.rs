@@ -35,6 +35,11 @@ pub enum Token {
     /// An integer literal.
     /// The value is represented as ...?
     Int { rep: u8, upper: u16, lower: u32 },
+    //
+    // rep 00 => infinite 0s plus 48 bits
+    // rep 01 => infinite 1s plus 48 bits
+    // rep 02 => negative zero (upper and lower should be 0)
+    // rep 03 => id from large-numbers table
 
     /// A floating-point literal.
     /// The value is represented as ...?

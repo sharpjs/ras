@@ -14,6 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-mod lexer;
-mod token;
+pub mod lexer;
+pub mod token;
+
+/// Symbol visibility and binding behaviors.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Visibility {
+    /// The symbol is visible in the defining object file only.
+    /// Equivalent to ELF binding STB_LOCAL.
+    Local,
+
+    /// The symbol is visible in all object files and cannot be preempted.
+    /// Equivalent to ELF binding STB_GLOBAL.
+    Global,
+
+    /// The symbol is visible in all object files and can be preempted.
+    /// Equivalent to ELF binding STB_WEAK.
+    Weak,
+
+    /// The symbol is visible in all object files and *MUST* be preempted.
+    /// Equivalent to ELF binding STB_WEAK with an undefined symbol.
+    Extern,
+}
 

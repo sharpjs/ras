@@ -18,7 +18,7 @@ use crate::mem::string_table::*;
 use crate::lang::Visibility;
 
 /// A lexical token.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Debug)]
 pub enum Token {
 
     // === Identifiers & Literals ===
@@ -32,18 +32,23 @@ pub enum Token {
     /// A macro parameter.
     Param(StringId),
 
-    /// An integer literal.
-    /// The value is represented as ...?
-    Int { rep: u8, upper: u16, lower: u32 },
+    /// An integer literal with value width <= 64 bits.
+    Int(u8, i64),
     //
     // rep 00 => infinite 0s plus 48 bits
     // rep 01 => infinite 1s plus 48 bits
     // rep 02 => negative zero (upper and lower should be 0)
     // rep 03 => id from large-numbers table
 
-    /// A floating-point literal.
-    /// The value is represented as ...?
-    Float(u32),
+    // /// An integer literal with value width > 64 bits or non-2's-complement
+    // /// representation.
+    // BigInt(Box<Integer>)
+
+    /// A floating-point literal in native representation.
+    Float(f64),
+
+    // /// A floating-point literal in non-native representation.
+    // BigFloat(Box<Float>),
 
     /// A string literal.
     Str(StringId),
@@ -237,7 +242,7 @@ mod tests {
 
     #[test]
     fn size_of_token() {
-        assert_eq!(8 /*bytes*/, size_of::<Token>());
+        assert_eq!(16 /*bytes*/, size_of::<Token>());
     }
 }
 

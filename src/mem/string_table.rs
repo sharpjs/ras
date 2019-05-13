@@ -19,7 +19,7 @@ use std::mem::transmute;
 
 /// An identifier for a string stored in a `StringTable`.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Debug)]
-pub struct StringId (u32);
+pub struct StringId (usize);
 
 /// A table of interned strings, each identified by a [`StringId`].
 pub struct StringTable {
@@ -27,7 +27,7 @@ pub struct StringTable {
     // because Rust has no 'self.  The keys in this map are slices of the
     // `chars` string; their true lifetimes are less than 'static.  Safe
     // lifetimes are enforced via method signatures.
-    map: HashMap<&'static str, u32>,
+    map: HashMap<&'static str, usize>,
 
     // Maps an id to the range within `chars` containing the interned string.
     // An id is an index into this vector.  Ranges are represented as start/end
@@ -144,8 +144,8 @@ impl StringTable {
 
         // Add entry to table
         let table = &mut self.table;
-        let index = table.len() as u32;
-                    table.push((start, end));
+        let index = table.len();
+        table.push((start, end));
 
         // Add entry to map
         self.map.insert(string, index);

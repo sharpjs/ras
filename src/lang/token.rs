@@ -41,10 +41,9 @@ pub enum Token {
     // TODO: Other integer representations.
 
     /// A string literal.
-    Str(StringId),
+    Str(Box<String>),
 
     /// A character literal.
-    /// The value is contained within the token.
     Char(char),
 
     // === Operators ===

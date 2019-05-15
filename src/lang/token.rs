@@ -32,23 +32,13 @@ pub enum Token {
     /// A macro parameter.
     Param(StringId),
 
-    /// An integer literal with value width <= 64 bits.
-    Int(u8, i64),
-    //
-    // rep 00 => infinite 0s plus 48 bits
-    // rep 01 => infinite 1s plus 48 bits
-    // rep 02 => negative zero (upper and lower should be 0)
-    // rep 03 => id from large-numbers table
+    /// An integer literal in 64-bit two's-complement representation.
+    Int(i64),
+    // TODO: Other integer representations.
 
-    // /// An integer literal with value width > 64 bits or non-2's-complement
-    // /// representation.
-    // BigInt(Box<Integer>)
-
-    /// A floating-point literal in native representation.
+    /// A floating-point literal in 64-bit native representation.
     Float(f64),
-
-    // /// A floating-point literal in non-native representation.
-    // BigFloat(Box<Float>),
+    // TODO: Other integer representations.
 
     /// A string literal.
     Str(StringId),

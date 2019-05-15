@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::mem::string_table::*;
+use crate::mem::name::*;
 use crate::lang::Visibility;
 
 /// A lexical token.
@@ -24,13 +24,13 @@ pub enum Token {
     // === Identifiers & Literals ===
 
     /// An identifier.
-    Ident(StringId),
+    Ident(Name),
 
     /// A label.
-    Label(Visibility, StringId),
+    Label(Visibility, Name),
 
     /// A macro parameter.
-    Param(StringId),
+    Param(Name),
 
     /// An integer literal in 64-bit two's-complement representation.
     Int(i64),

@@ -17,41 +17,42 @@
 use std::collections::HashMap;
 use std::mem::transmute;
 
-/// An identifier for a string stored in a `StringTable`.
+/// An identifier for a unique name interned in a `NameTable`.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Debug)]
-pub struct StringId (usize);
+pub struct Name (usize);
 
-/// A table of interned strings, each identified by a [`StringId`].
-pub struct StringTable {
-    // Maps an interned string to its id.  Note that 'static is used here only
+/// A table of unique, interned name strings, each identified by an opaque
+/// [`Name`] value.
+pub struct NameTable {
+    // Maps an interned name to its id.  Note that 'static is used here only
     // because Rust has no 'self.  The keys in this map are slices of the
     // `chars` string; their true lifetimes are less than 'static.  Safe
     // lifetimes are enforced via method signatures.
     map: HashMap<&'static str, usize>,
 
-    // Maps an id to the range within `chars` containing the interned string.
-    // An id is an index into this vector.  Ranges are represented as start/end
+    // Maps an id to the range within `chars` containing the interned name.  An
+    // id is an index into this vector.  Ranges are represented as start/end
     // positions, because the `Range` type is not copyable.
     table: Vec<(usize, usize)>,
 
-    // Storage for interned strings.  The range `0..mark` is immutable and
-    // contains interned strings, concatenated.  The range `mark..` is mutable
-    // and serves as an accumulator for a pending string.
+    // Storage for interned names.  The range `0..mark` is immutable and
+    // contains interned names, concatenated.  The range `mark..` is mutable
+    // and serves as an accumulator for a pending name.
     chars: String,
 
     // The first mutable position in `chars`, at which the table can accumulate
-    // a pending string for later interning.  Also, the count of immutable
-    // characters in `chars`.  Equal to `chars.len()` unless a non-empty string
+    // a pending name for later interning.  Also, the count of immutable
+    // characters in `chars`.  Equal to `chars.len()` unless a non-empty name
     // is pending.
     mark: usize,
 }
 
-impl StringTable {
+impl NameTable {
     const INITIAL_STR_CAPACITY: usize =      1024;
     const INITIAL_CHR_CAPACITY: usize = 16 * 1024;
 
-    /// Creates a new `StringTable`.  Initially, the table contains only the
-    /// empty string mapped to the default [`StringId`].
+    /// Creates a new `NameTable`.  Initially, the table contains only the
+    /// empty name mapped to the default [`Name`] value.
     pub fn new() -> Self {
         let mut table = Self {
             map:   HashMap::with_capacity(Self::INITIAL_STR_CAPACITY),
@@ -59,84 +60,82 @@ impl StringTable {
             chars: String ::with_capacity(Self::INITIAL_CHR_CAPACITY),
             mark:  0,
         };
-        table.intern(); // StringId(0) => ""
+        table.intern(); // Name(0) => ""
         table
     }
 
-    /// Returns the number of interned strings.
+    /// Returns the number of interned names.
     #[inline]
     pub fn count(&self) -> usize {
         self.table.len()
     }
 
-    /// Returns the size of interned string storage, in bytes.
+    /// Returns the size of interned name storage, in bytes.
     #[inline]
     pub fn size(&self) -> usize {
         self.mark
     }
 
-    /// Borrows the pending string.
+    /// Borrows the pending name.
     #[inline]
     pub fn pending(&self) -> &str {
         &self.chars[self.mark..]
     }
 
-    /// Appends the given character to the pending string.
+    /// Appends the given character to the pending name.
     #[inline]
     pub fn push_pending(&mut self, c: char) {
         self.chars.push(c);
     }
 
-    /// Appends the given string slice to the pending string.
+    /// Appends the given string slice to the pending name.
     #[inline]
     pub fn push_pending_str(&mut self, s: &str) {
         self.chars.push_str(s);
     }
 
-    /// Resets the pending string to empty.
+    /// Resets the pending name to empty.
     #[inline]
     pub fn clear_pending(&mut self) {
         self.chars.truncate(self.mark);
     }
 
-    /// Interns the the pending string.  Returns a [`StringId`] that uniquely
-    /// identifies the interned string.  Resets the pending string area to
-    /// empty.
-    pub fn intern_pending(&mut self) -> StringId {
-        // Check if pending string is interned already
+    /// Interns the the pending name.  Returns a [`Name`] that uniquely
+    /// identifies the interned name.  Resets the pending name area to empty.
+    pub fn intern_pending(&mut self) -> Name {
+        // Check if pending name is interned already
         if let Some(&id) = self.map.get(self.pending()) {
             self.clear_pending();
-            return StringId(id)
+            return Name(id)
         }
 
-        // Intern the pending string
+        // Intern the pending name
         self.intern()
     }
 
-    /// Interns the given string.  Returns a [`StringId`] that uniquely
-    /// identifies the interned string.  Resets the pending string area to
-    /// empty.
-    pub fn intern_str(&mut self, s: &str) -> StringId {
+    /// Interns the given name.  Returns a [`Name`] that uniquely
+    /// identifies the interned name.  Resets the pending name area to empty.
+    pub fn intern_str(&mut self, s: &str) -> Name {
         self.clear_pending();
 
-        // Check if given string is interned already
+        // Check if given name is interned already
         if let Some(&id) = self.map.get(s) {
-            return StringId(id)
+            return Name(id)
         }
 
-        // Intern a copy of the given string
+        // Intern a copy of the given name
         self.push_pending_str(s);
         self.intern()
     }
 
-    // Interns the pending string, which is known to not be interned already.
-    fn intern(&mut self) -> StringId {
+    // Interns the pending name, which is known to not be interned already.
+    fn intern(&mut self) -> Name {
         // Get bounds
         let chars = &self.chars;
         let start =  self.mark;
         let end   = chars.len();
 
-        // Borrow the string from interned storage.
+        // Borrow the name from interned storage.
         // SAFETY: 'static because Rust has no 'self.  See comments in struct.
         // Safe lifetimes are enforced via method signatures.
         let string = &chars[start..end];
@@ -154,11 +153,11 @@ impl StringTable {
         self.mark = end;
 
         // Return table index as id
-        StringId(index)
+        Name(index)
     }
 
-    /// Borrows the interned string with the given `id`.
-    pub fn get(&self, id: StringId) -> &str {
+    /// Borrows the interned name with the given `id`.
+    pub fn get(&self, id: Name) -> &str {
         let (start, end) = self.table[id.0 as usize];
         &self.chars[start..end]
     }
@@ -175,17 +174,17 @@ mod tests {
 
     #[test]
     fn initial() {
-        let table = StringTable::new();
+        let table = NameTable::new();
 
         assert_eq!(1,  table.count());
         assert_eq!(0,  table.size());
         assert_eq!("", table.pending());
-        assert_eq!("", table.get(StringId::default()));
+        assert_eq!("", table.get(Name::default()));
     }
 
     #[test]
     fn push_pending() {
-        let mut table = StringTable::new();
+        let mut table = NameTable::new();
 
         table.push_pending('H');
         table.push_pending('e');
@@ -193,12 +192,12 @@ mod tests {
         assert_eq!(1,    table.count());
         assert_eq!(0,    table.size());
         assert_eq!("He", table.pending());
-        assert_eq!("",   table.get(StringId::default()));
+        assert_eq!("",   table.get(Name::default()));
     }
 
     #[test]
     fn push_pending_str() {
-        let mut table = StringTable::new();
+        let mut table = NameTable::new();
 
         table.push_pending_str("He");
         table.push_pending_str("llo");
@@ -206,19 +205,19 @@ mod tests {
         assert_eq!(1,       table.count());
         assert_eq!(0,       table.size());
         assert_eq!("Hello", table.pending());
-        assert_eq!("",      table.get(StringId::default()));
+        assert_eq!("",      table.get(Name::default()));
     }
 
     #[test]
     fn intern_pending() {
-        let mut table = StringTable::new();
+        let mut table = NameTable::new();
 
         table.push_pending('H');
         table.push_pending('e');
         table.push_pending_str("llo");
         let a_id = table.intern_pending();
 
-        assert_eq!(StringId(1), a_id);
+        assert_eq!(Name(1), a_id);
         assert_eq!(2,  table.count());
         assert_eq!("", table.pending());
         let size_a = table.size();
@@ -229,7 +228,7 @@ mod tests {
         table.push_pending('o');
         let b_id = table.intern_pending();
 
-        assert_eq!(StringId(1), b_id);
+        assert_eq!(Name(1), b_id);
         assert_eq!(2,  table.count());
         assert_eq!("", table.pending());
         assert!(table.size() == size_a);
@@ -239,7 +238,7 @@ mod tests {
         table.push_pending('H');
         let c_id = table.intern_pending();
 
-        assert_eq!(StringId(2), c_id);
+        assert_eq!(Name(2), c_id);
         assert_eq!(3,  table.count());
         assert_eq!("", table.pending());
         assert!(table.size() > size_a);
@@ -250,7 +249,7 @@ mod tests {
 
     #[test]
     fn intern_str() {
-        let mut table = StringTable::new();
+        let mut table = NameTable::new();
 
         let a_str = &A[2..];
         let b_str = &B[2..];
@@ -259,7 +258,7 @@ mod tests {
 
         let a_id = table.intern_str(a_str);
 
-        assert_eq!(StringId(1), a_id);
+        assert_eq!(Name(1), a_id);
         assert_eq!(2,  table.count());
         assert_eq!("", table.pending());
         let size_a = table.size();
@@ -267,14 +266,14 @@ mod tests {
 
         let b_id = table.intern_str(b_str);
 
-        assert_eq!(StringId(1), b_id);
+        assert_eq!(Name(1), b_id);
         assert_eq!(2,  table.count());
         assert_eq!("", table.pending());
         assert!(table.size() == size_a);
 
         let c_id = table.intern_str(c_str);
 
-        assert_eq!(StringId(2), c_id);
+        assert_eq!(Name(2), c_id);
         assert_eq!(3,  table.count());
         assert_eq!("", table.pending());
         assert!(table.size() > size_a);

@@ -16,9 +16,7 @@
 
 [package]
 name    = "ras"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Jeff Sharp <jeff.sharp@git>"]
 edition = "2018"
-
-[dependencies]
 

@@ -19,10 +19,11 @@
 
 use crate::lang::token::Token;
 use crate::util::ConstDefault;
+
 use self::Action::*;
 use self::EqClass::*;
 use self::State::*;
-use self::Transition::*;
+use self::TransitionId::*;
 
 // ---------------------------------------------------------------------------- 
 
@@ -85,7 +86,7 @@ impl ConstDefault for EqClass {
     const DEFAULT: Self = Eof;
 }
 
-/// Map from byte value to character equivalence class.
+/// Map from UTF-8 byte to character equivalence class.
 static EQ_CLASS_MAP: [EqClass; 256] = [
 //
 //  7-bit ASCII characters
@@ -156,7 +157,7 @@ impl State {
 // Transitions between lexer states.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
-enum Transition {
+enum TransitionId {
     /// Terminate with success.
     OnEnd,
 
@@ -167,13 +168,13 @@ enum Transition {
     ToNormal,
 }
 
-impl Transition {
+impl TransitionId {
     /// Count of transitions.
     const COUNT: usize = ToNormal as usize + 1;
 }
 
 /// Lexer state transition table.
-static TRANSITIONS: [Transition; State::COUNT * EqClass::COUNT] = [
+static TRANSITION_MAP: [TransitionId; State::COUNT * EqClass::COUNT] = [
 //          Normal    AtBol     AfterCr   InComment
 // ----------------------------------------------------------------------------
 /* Eof   */ OnEnd,    OnEnd,    OnEnd,    OnEnd,
@@ -224,17 +225,17 @@ static TRANSITIONS: [Transition; State::COUNT * EqClass::COUNT] = [
 
 /// Transition behavior definitions.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct TransitionInfo {
+struct Transition {
     state:  State,
     action: Action,
-    flags:  usize,
+    flags:  u16,
 }
 
 /// Transition behavior definitions.
-static TRANSITION_INFOS: [TransitionInfo; Transition::COUNT] = [
-/* OnEnd    */ TransitionInfo { state: Normal, action: Succeed, flags: 0 },
-/* OnError  */ TransitionInfo { state: Normal, action: Fail,    flags: 0 },
-/* ToNormal */ TransitionInfo { state: Normal, action: Nop,     flags: 0 },
+static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
+/* OnEnd    */ Transition { state: Normal, action: Succeed, flags: 0 },
+/* OnError  */ Transition { state: Normal, action: Fail,    flags: 0 },
+/* ToNormal */ Transition { state: Normal, action: Nop,     flags: 0 },
 ];
 
 // ----------------------------------------------------------------------------
@@ -344,14 +345,16 @@ impl<'a> Lexer<'a> {
 
     /// Gets the next lexical token.
     pub fn next(&mut self) -> Token {
+        // Restore saved state and prepare for loop
         let ref mut input = self.input;
         let     mut state = self.state;
         let     mut action;
 
+        // Discover next token
         loop {
-            let eq_class   = input.next();
-            let transition = TRANSITIONS[state as usize + eq_class as usize];
-            let next       = TRANSITION_INFOS[transition as usize];
+            let next = input.next();
+            let next = TRANSITION_MAP[state as usize + next as usize];
+            let next = TRANSITION_LUT[next  as usize];
 
             state  = next.state;
             action = next.action;
@@ -359,8 +362,10 @@ impl<'a> Lexer<'a> {
             if action != Nop { break }
         }
 
+        // Save state for subsequent invocation
         self.state = state;
 
+        // Return token
         match action {
             Nop     => unreachable!(),
             Succeed => Token::Eof,
@@ -427,20 +432,11 @@ mod tests {
         assert_eq!( reader.advance(),  false );
     }
 
-    /*
     #[test]
     fn lexer_empty() {
         let mut lexer = Lexer::new(b"");
 
         assert_eq!( lexer.next(), Token::Eof );
     }
-
-    #[test]
-    fn lexer_not_empty() {
-        let mut lexer = Lexer::new(b"anything currently");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-    */
 }
 

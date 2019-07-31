@@ -27,54 +27,65 @@ use self::TransitionId::*;
 
 // ---------------------------------------------------------------------------- 
 
+macro_rules! eq_class {
+    ($i:expr) => ($i * State::COUNT as u16)
+}
+
 /// Character equivalence classes.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u16)]
 enum EqClass {
-    // Basics
-    Eof     =  0 * State::COUNT as u16,  // end-of-file (pseudo)
-    Space   =  1 * State::COUNT as u16,  // space, tab
-    Cr      =  2 * State::COUNT as u16,  // carriage return
-    Lf      =  3 * State::COUNT as u16,  // line feed
-    Id      =  4 * State::COUNT as u16,  // a-z, A-Z, _, all code points above U+007F
-    // AaCcEeFf Bb Dd Hh Oo _
-    Digit   =  5 * State::COUNT as u16,  // 0-9
-    // Open/close pairs
-    LParen  =  6 * State::COUNT as u16,  // (
-    RParen  =  7 * State::COUNT as u16,  // )
-    LSquare =  8 * State::COUNT as u16,  // [
-    RSquare =  9 * State::COUNT as u16,  // ]
-    LCurly  = 10 * State::COUNT as u16,  // {
-    RCurly  = 11 * State::COUNT as u16,  // }
-    // Quotes
-    DQuote  = 12 * State::COUNT as u16,  // "
-    SQuote  = 13 * State::COUNT as u16,  // '
-    BQuote  = 14 * State::COUNT as u16,  // `
-    // Isolated characters
-    Tilde   = 15 * State::COUNT as u16,  // ~
-    Bang    = 16 * State::COUNT as u16,  // !
-    At      = 17 * State::COUNT as u16,  // @
-    Hash    = 18 * State::COUNT as u16,  // #
-    Dollar  = 19 * State::COUNT as u16,  // $
-    Percent = 20 * State::COUNT as u16,  // %
-    Caret   = 21 * State::COUNT as u16,  // ^
-    Amper   = 22 * State::COUNT as u16,  // &
-    Star    = 23 * State::COUNT as u16,  // *
-    Minus   = 24 * State::COUNT as u16,  // -
-    Equal   = 25 * State::COUNT as u16,  // =
-    Plus    = 26 * State::COUNT as u16,  // +
-    BSlash  = 27 * State::COUNT as u16,  // \
-    Pipe    = 28 * State::COUNT as u16,  // |
-    Semi    = 29 * State::COUNT as u16,  // ;
-    Colon   = 30 * State::COUNT as u16,  // :
-    Comma   = 31 * State::COUNT as u16,  // ,
-    Lt      = 32 * State::COUNT as u16,  // <
-    Dot     = 33 * State::COUNT as u16,  // .
-    Gt      = 34 * State::COUNT as u16,  // >
-    Slash   = 35 * State::COUNT as u16,  // /
-    Quest   = 36 * State::COUNT as u16,  // ?
-    // Unlikely
-    Other   = 37 * State::COUNT as u16,  // any code point not in another category
+    // Variants are in order roughly by descending frequency, except that
+    // groups of related variants are kept contiguous.
+
+    // space, newlines
+    Space   = eq_class!( 0), // \s\t
+    Cr      = eq_class!( 1), // \r
+    Lf      = eq_class!( 2), // \n
+    // identifiers, numbers
+    Id      = eq_class!( 3), // A-Za-z., code points above U+007F
+    LetB    = eq_class!( 4), // Bb
+    LetD    = eq_class!( 5), // Dd
+    LetO    = eq_class!( 6), // Oo
+    LetX    = eq_class!( 7), // Xx
+    LetHex  = eq_class!( 8), // AaCcEeFf
+    Digit   = eq_class!( 9), // 0-9
+    Under   = eq_class!(10), // _
+    // open/close pairs
+    LParen  = eq_class!(11), // (
+    RParen  = eq_class!(12), // )
+    LSquare = eq_class!(13), // [
+    RSquare = eq_class!(14), // ]
+    LCurly  = eq_class!(15), // {
+    RCurly  = eq_class!(16), // }
+    // quotes
+    DQuote  = eq_class!(17), // "
+    SQuote  = eq_class!(18), // '
+    // isolated characters
+    Comma   = eq_class!(19), // ,
+    Hash    = eq_class!(20), // #
+    Equal   = eq_class!(21), // =
+    Plus    = eq_class!(22), // +
+    Minus   = eq_class!(23), // -
+    Amper   = eq_class!(24), // &
+    Pipe    = eq_class!(25), // |
+    Caret   = eq_class!(26), // ^
+    Lt      = eq_class!(27), // <
+    Gt      = eq_class!(28), // >
+    Tilde   = eq_class!(29), // ~
+    Bang    = eq_class!(30), // !
+    Star    = eq_class!(31), // *
+    Slash   = eq_class!(32), // /
+    Percent = eq_class!(33), // %
+    Semi    = eq_class!(34), // ;
+    Colon   = eq_class!(35), // :
+    Quest   = eq_class!(36), // ?
+    Dollar  = eq_class!(37), // $
+    At      = eq_class!(38), // @    unsure if this will be used
+    BSlash  = eq_class!(39), // \
+    // rare
+    Eof     = eq_class!(40), // end of file
+    Other   = eq_class!(41), // code point not in another class
 }
 
 impl EqClass {
@@ -96,17 +107,17 @@ static EQ_CLASS_MAP: [EqClass; 256] = [
     Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
     Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
     Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
-    LParen, RParen, Star,   Plus,   Comma,  Minus,  Dot,    Slash,  // ()*+,-./
+    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
     Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
     Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
-    At,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // @ABCDEFG
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // HIJKLMNO
+    At,     LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // @ABCDEFG
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
-    Id,     Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // XYZ[\]^_
-    BQuote, Id,     Id,     Id,     Id,     Id,     Id,     Id,     // `abcdefg
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // hijklmno
+    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Under,  // XYZ[\]^_
+    Other,  LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // `abcdefg
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
-    Id,     Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
+    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
 //
 //  UTF-8 multibyte sequences
 //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
@@ -130,113 +141,27 @@ static EQ_CLASS_MAP: [EqClass; 256] = [
 
 // ----------------------------------------------------------------------------
 
-/// Lexer states
+/// Lexer states.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum State {
     /// Normal state.  Any token is possible.
     Normal,
 
-    /// At the begining of a line.
-    AtBol,
+    /// At the begining of a line.  Any token is possible.
+    Bol,
 
     /// After a CR.
     AfterCr,
 
     /// In a comment.
-    InComment,
+    Comment,
 }
 
 impl State {
     /// Count of lexer states.
-    const COUNT: usize = InComment as usize + 1;
+    const COUNT: usize = Comment as usize + 1;
 }
-
-// ----------------------------------------------------------------------------
-
-// Transitions between lexer states.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u8)]
-enum TransitionId {
-    /// Terminate with success.
-    OnEnd,
-
-    /// Terminate with failure.
-    OnError,
-
-    /// Transition to `Normal` state.
-    ToNormal,
-}
-
-impl TransitionId {
-    /// Count of transitions.
-    const COUNT: usize = ToNormal as usize + 1;
-}
-
-/// Lexer state transition table.
-static TRANSITION_MAP: [TransitionId; State::COUNT * EqClass::COUNT] = [
-//          Normal    AtBol     AfterCr   InComment
-// ----------------------------------------------------------------------------
-/* Eof   */ OnEnd,    OnEnd,    OnEnd,    OnEnd,
-/* Space */ ToNormal, ToNormal, ToNormal, ToNormal,
-/* Cr    */ OnError,  OnError,  OnError,  OnError,
-/* Lf    */ OnError,  OnError,  OnError,  OnError,
-/* Id    */ OnError,  OnError,  OnError,  OnError,
-/* Digit */ OnError,  OnError,  OnError,  OnError,
-
-/*   (   */ OnError,  OnError,  OnError,  OnError,
-/*   )   */ OnError,  OnError,  OnError,  OnError,
-/*   [   */ OnError,  OnError,  OnError,  OnError,
-/*   ]   */ OnError,  OnError,  OnError,  OnError,
-/*   {   */ OnError,  OnError,  OnError,  OnError,
-/*   }   */ OnError,  OnError,  OnError,  OnError,
-
-/*   "   */ OnError,  OnError,  OnError,  OnError,
-/*   '   */ OnError,  OnError,  OnError,  OnError,
-/*   `   */ OnError,  OnError,  OnError,  OnError,
-
-/*   ~   */ OnError,  OnError,  OnError,  OnError,
-/*   !   */ OnError,  OnError,  OnError,  OnError,
-/*   @   */ OnError,  OnError,  OnError,  OnError,
-/*   #   */ OnError,  OnError,  OnError,  OnError,
-/*   $   */ OnError,  OnError,  OnError,  OnError,
-/*   %   */ OnError,  OnError,  OnError,  OnError,
-/*   ^   */ OnError,  OnError,  OnError,  OnError,
-/*   &   */ OnError,  OnError,  OnError,  OnError,
-/*   *   */ OnError,  OnError,  OnError,  OnError,
-/*   -   */ OnError,  OnError,  OnError,  OnError,
-/*   =   */ OnError,  OnError,  OnError,  OnError,
-/*   +   */ OnError,  OnError,  OnError,  OnError,
-/*   /   */ OnError,  OnError,  OnError,  OnError,
-/*   |   */ OnError,  OnError,  OnError,  OnError,
-/*   ;   */ OnError,  OnError,  OnError,  OnError,
-/*   :   */ OnError,  OnError,  OnError,  OnError,
-/*   ,   */ OnError,  OnError,  OnError,  OnError,
-/*   <   */ OnError,  OnError,  OnError,  OnError,
-/*   .   */ OnError,  OnError,  OnError,  OnError,
-/*   >   */ OnError,  OnError,  OnError,  OnError,
-/*   /   */ OnError,  OnError,  OnError,  OnError,
-/*   ?   */ OnError,  OnError,  OnError,  OnError,
-
-/* Other */ OnError,  OnError,  OnError,  OnError,
-];
-
-// ----------------------------------------------------------------------------
-
-/// Transition behavior definitions.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Transition {
-    state:  State,
-    action: Action,
-    flags:  u16,
-}
-
-/// Transition behavior definitions.
-static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
-/* OnEnd    */ Transition { state: Normal, action: Succeed, flags: 0 },
-/* OnError  */ Transition { state: Normal, action: Fail,    flags: 0 },
-/* ToNormal */ Transition { state: Normal, action: Nop,     flags: 0 },
-];
 
 // ----------------------------------------------------------------------------
 
@@ -244,8 +169,8 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Action {
-    // Do nothing.
-    Nop,
+    // Continue scanning.
+    Continue,
 
     // Terminate successfully.
     Succeed,
@@ -253,6 +178,101 @@ enum Action {
     // Terminate unsuccessfully.
     Fail,
 }
+
+// ----------------------------------------------------------------------------
+
+// Transition IDs.  Each ID is an index into `TRANSITION_LUT`, which contains
+// the details of the transition.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+enum TransitionId {
+    /// Transition to `Normal` state and continue scanning.
+    NormCon,
+
+    /// Transition to `Comment` state and continue scanning.
+    ComCon,
+
+    /// Terminate with failure.
+    Error,
+
+    /// Terminate with success.
+    End,
+}
+
+impl TransitionId {
+    /// Count of transition IDs.
+    const COUNT: usize = End as usize + 1;
+}
+
+/// Lexer state transition map.
+static TRANSITION_MAP: [TransitionId; State::COUNT * EqClass::COUNT] = [
+//          Normal    Bol       AfterCr   Comment
+// ----------------------------------------------------------------------------
+/* \s\t  */ NormCon,  NormCon,  NormCon,  ComCon,
+/* \r    */ Error,    Error,    Error,    Error,
+/* \n    */ Error,    Error,    Error,    Error,
+
+/*  a-z. */ Error,    Error,    Error,    ComCon,
+/*   b   */ Error,    Error,    Error,    ComCon,
+/*   d   */ Error,    Error,    Error,    ComCon,
+/*   o   */ Error,    Error,    Error,    ComCon,
+/*   x   */ Error,    Error,    Error,    ComCon,
+/*  acef */ Error,    Error,    Error,    ComCon,
+/*  0-9  */ Error,    Error,    Error,    ComCon,
+/*   _   */ Error,    Error,    Error,    ComCon,
+
+/*   (   */ Error,    Error,    Error,    ComCon,
+/*   )   */ Error,    Error,    Error,    ComCon,
+/*   [   */ Error,    Error,    Error,    ComCon,
+/*   ]   */ Error,    Error,    Error,    ComCon,
+/*   {   */ Error,    Error,    Error,    ComCon,
+/*   }   */ Error,    Error,    Error,    ComCon,
+/*   "   */ Error,    Error,    Error,    ComCon,
+/*   '   */ Error,    Error,    Error,    ComCon,
+
+/*   ,   */ Error,    Error,    Error,    ComCon,
+/*   #   */ ComCon,   ComCon,   ComCon,   ComCon,
+/*   =   */ Error,    Error,    Error,    ComCon,
+/*   +   */ Error,    Error,    Error,    ComCon,
+/*   -   */ Error,    Error,    Error,    ComCon,
+/*   &   */ Error,    Error,    Error,    ComCon,
+/*   |   */ Error,    Error,    Error,    ComCon,
+/*   ^   */ Error,    Error,    Error,    ComCon,
+/*   <   */ Error,    Error,    Error,    ComCon,
+/*   >   */ Error,    Error,    Error,    ComCon,
+/*   ~   */ Error,    Error,    Error,    ComCon,
+/*   !   */ Error,    Error,    Error,    ComCon,
+/*   *   */ Error,    Error,    Error,    ComCon,
+/*   /   */ Error,    Error,    Error,    ComCon,
+/*   %   */ Error,    Error,    Error,    ComCon,
+/*   ;   */ Error,    Error,    Error,    ComCon,
+/*   :   */ Error,    Error,    Error,    ComCon,
+/*   ?   */ Error,    Error,    Error,    ComCon,
+/*   $   */ Error,    Error,    Error,    ComCon,
+/*   @   */ Error,    Error,    Error,    ComCon,
+/*   \   */ Error,    Error,    Error,    ComCon,
+
+/* Eof   */ End,      End,      End,      End,
+/* Other */ Error,    Error,    Error,    ComCon,
+];
+
+// ----------------------------------------------------------------------------
+
+/// Lexer transition.
+#[derive(Clone, Copy, Debug)]
+struct Transition {
+    state:  State,
+    action: Action,
+    flags:  u16,
+}
+
+/// Lexer transitions in order by transition ID.
+static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
+/* NormCon */ Transition { state: Normal, action: Continue, flags: 0 },
+/* ComCon  */ Transition { state: Normal, action: Continue, flags: 0 },
+/* Error   */ Transition { state: Normal, action: Fail,     flags: 1 },
+/* End     */ Transition { state: Normal, action: Succeed,  flags: 0 },
+];
 
 // ----------------------------------------------------------------------------
 
@@ -361,7 +381,7 @@ impl<'a> Lexer<'a> {
             action  = next.action;
             length += next.flags & 1u16;
 
-            if action != Nop { break }
+            if action != Continue { break }
         }
 
         // Save state for subsequent invocation
@@ -369,9 +389,9 @@ impl<'a> Lexer<'a> {
 
         // Return token
         match action {
-            Nop     => unreachable!(),
-            Succeed => Token::Eof,
-            Fail    => Token::Error,
+            Continue => unreachable!(),
+            Succeed  => Token::Eof,
+            Fail     => Token::Error,
         }
     }
 }
@@ -397,8 +417,8 @@ mod tests {
         let mut reader = Reader::new(b"X+1", &EQ_CLASS_MAP);
 
         assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     Id    );
-        assert_eq!( reader.next(),     Id    );
+        assert_eq!( reader.peek(),     LetX  );
+        assert_eq!( reader.next(),     LetX  );
 
         assert_eq!( reader.is_empty(), false );
         assert_eq!( reader.peek(),     Plus  );
@@ -418,7 +438,7 @@ mod tests {
         let mut reader = Reader::new(b"X+1", &EQ_CLASS_MAP);
 
         assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     Id    );
+        assert_eq!( reader.peek(),     LetX  );
         assert_eq!( reader.advance(),  true  );
 
         assert_eq!( reader.is_empty(), false );

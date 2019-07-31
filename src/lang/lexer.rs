@@ -349,6 +349,7 @@ impl<'a> Lexer<'a> {
         let ref mut input = self.input;
         let     mut state = self.state;
         let     mut action;
+        let     mut length = 0;
 
         // Discover next token
         loop {
@@ -356,8 +357,9 @@ impl<'a> Lexer<'a> {
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
-            state  = next.state;
-            action = next.action;
+            state   = next.state;
+            action  = next.action;
+            length += next.flags & 1u16;
 
             if action != Nop { break }
         }

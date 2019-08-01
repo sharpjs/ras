@@ -270,10 +270,10 @@ struct Transition {
 
 /// Lexer transitions in order by transition ID.
 static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
-/* NormCon */ Transition { state: Normal, action: Continue, flags: 0 },
-/* ComCon  */ Transition { state: Normal, action: Continue, flags: 0 },
-/* Error   */ Transition { state: Normal, action: Fail,     flags: 1 },
-/* End     */ Transition { state: Normal, action: Succeed,  flags: 0 },
+/* NormCon */ Transition { state: Normal,  action: Continue, flags: 0 },
+/* ComCon  */ Transition { state: Comment, action: Continue, flags: 0 },
+/* Error   */ Transition { state: Normal,  action: Fail,     flags: 1 },
+/* End     */ Transition { state: Normal,  action: Succeed,  flags: 0 },
 ];
 
 // ----------------------------------------------------------------------------
@@ -370,7 +370,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a [u8]) -> Self {
         Self {
             input: Reader::new(input, &EQ_CLASS_MAP),
-            state: Normal,
+            state: Bol,
         }
     }
 
@@ -482,6 +482,27 @@ mod tests {
     #[test]
     fn lexer_empty() {
         let mut lexer = Lexer::new(b"");
+
+        assert_eq!( lexer.next(), Token::Eof );
+    }
+
+    #[test]
+    fn lexer_unrecognized() {
+        let mut lexer = Lexer::new(b"`");
+
+        assert_eq!( lexer.next(), Token::Error );
+    }
+
+    #[test]
+    fn lexer_space() {
+        let mut lexer = Lexer::new(b" \t \t");
+
+        assert_eq!( lexer.next(), Token::Eof );
+    }
+
+    #[test]
+    fn lexer_comment() {
+        let mut lexer = Lexer::new(b"# this is a comment");
 
         assert_eq!( lexer.next(), Token::Eof );
     }

@@ -17,6 +17,8 @@
 // The lexer contains some optimizations discussed in this article:
 // http://nothings.org/computer/lexing.html
 
+use std::fmt::{Debug, Formatter, Result};
+
 use crate::lang::token::Token;
 use crate::util::ConstDefault;
 
@@ -345,9 +347,18 @@ impl<'a, T> Reader<'a, T> where T: 'a + ConstDefault {
     }
 }
 
+impl<'a, T> Debug for Reader<'a, T> where T: 'a + ConstDefault + Debug {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        self.peek().fmt(f)?;
+        if !self.is_empty() { f.write_str("...")?; }
+        Ok(())
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 /// A lexical analyzer.  Reads input and yields a stream of lexical tokens.
+#[derive(Debug)]
 pub struct Lexer<'a> {
     input: Reader<'a, EqClass>,
     state: State,
@@ -452,6 +463,20 @@ mod tests {
         assert_eq!( reader.is_empty(), true  );
         assert_eq!( reader.peek(),     Eof   );
         assert_eq!( reader.advance(),  false );
+    }
+
+    #[test]
+    fn reader_debug_empty() {
+        let reader = Reader::new(b"", &EQ_CLASS_MAP);
+
+        assert_eq!( format!("{:?}", reader), "Eof" );
+    }
+
+    #[test]
+    fn reader_debug_not_empty() {
+        let reader = Reader::new(b"X", &EQ_CLASS_MAP);
+
+        assert_eq!( format!("{:?}", reader), "LetX..." );
     }
 
     #[test]

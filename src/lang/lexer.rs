@@ -18,6 +18,8 @@
 // http://nothings.org/computer/lexing.html
 
 use std::fmt::{Debug, Formatter, Result};
+use std::marker::PhantomData;
+use std::slice;
 
 use crate::lang::token::Token;
 use crate::util::ConstDefault;
@@ -279,23 +281,24 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 // ----------------------------------------------------------------------------
 
 /// A byte reader optimized for use by the lexer.
-struct Reader<'a, T> where T: 'a + ConstDefault {
+#[derive(Clone, Copy)]
+struct Reader<'a> {
     ptr: *const u8,
     end: *const u8,
-    map: &'a [T; 256],
+    _lt: PhantomData<&'a ()>,
 }
 
-impl<'a, T> Reader<'a, T> where T: 'a + ConstDefault {
+impl<'a> Reader<'a> {
     // Safety: This is a micro-optimization of std::slice::Iter.  The unsafe
     // blocks are equivalent to those in std::slice::Iter and thus have the
     // effective safety.
 
     #[inline(always)]
-    pub fn new(bytes: &'a [u8], map: &'a [T; 256]) -> Self {
+    pub fn new(bytes: &'a [u8]) -> Self {
         let ptr = bytes.as_ptr();
         let end = unsafe { ptr.add(bytes.len()) };
 
-        Self { ptr, end, map }
+        Self { ptr, end, _lt: PhantomData }
     }
 
     #[inline(always)]
@@ -309,26 +312,29 @@ impl<'a, T> Reader<'a, T> where T: 'a + ConstDefault {
     }
 
     #[inline(always)]
-    pub fn peek(&self) -> T {
+    pub fn peek<T>(&self, map: &[T; 256]) -> T
+        where T: ConstDefault
+    {
         let p = self.ptr;
         if p == self.end {
             T::DEFAULT
         } else {
             unsafe {
-                self.map[*p as usize]
+                map[*p as usize]
             }
         }
     }
 
     #[inline(always)]
-    pub fn next(&mut self) -> T {
+    pub fn next<T>(&mut self, map: &[T; 256]) -> T
+        where T: ConstDefault {
         let p = self.ptr;
         if p == self.end {
             T::DEFAULT
         } else {
             unsafe {
                 self.ptr = p.offset(1);
-                self.map[*p as usize]
+                map[*p as usize]
             }
         }
     }
@@ -345,13 +351,18 @@ impl<'a, T> Reader<'a, T> where T: 'a + ConstDefault {
             }
         }
     }
+
+    #[inline(always)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe {
+            slice::from_raw_parts(self.ptr, self.len())
+        }
+    }
 }
 
-impl<'a, T> Debug for Reader<'a, T> where T: 'a + ConstDefault + Debug {
+impl<'a> Debug for Reader<'a> {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.peek().fmt(f)?;
-        if !self.is_empty() { f.write_str("...")?; }
-        Ok(())
+        write!(f, "Reader {:X?}", self.as_slice())
     }
 }
 
@@ -360,7 +371,7 @@ impl<'a, T> Debug for Reader<'a, T> where T: 'a + ConstDefault + Debug {
 /// A lexical analyzer.  Reads input and yields a stream of lexical tokens.
 #[derive(Debug)]
 pub struct Lexer<'a> {
-    input: Reader<'a, EqClass>,
+    input: Reader<'a>,
     state: State,
 }
 
@@ -369,7 +380,7 @@ impl<'a> Lexer<'a> {
     /// given slice of bytes.
     pub fn new(input: &'a [u8]) -> Self {
         Self {
-            input: Reader::new(input, &EQ_CLASS_MAP),
+            input: Reader::new(input),
             state: Bol,
         }
     }
@@ -384,7 +395,7 @@ impl<'a> Lexer<'a> {
 
         // Discover next token
         loop {
-            let next = input.next();
+            let next = input.next(&EQ_CLASS_MAP);
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
@@ -415,68 +426,68 @@ mod tests {
 
     #[test]
     fn reader_empty() {
-        let mut reader = Reader::new(b"", &EQ_CLASS_MAP);
+        let mut reader = Reader::new(b"");
 
-        assert_eq!( reader.is_empty(), true  );
-        assert_eq!( reader.peek(),     Eof   );
-        assert_eq!( reader.next(),     Eof   );
-        assert_eq!( reader.advance(),  false );
+        assert_eq!( reader.is_empty(),          true  ); 
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Eof   );
+        assert_eq!( reader.next(&EQ_CLASS_MAP), Eof   );
+        assert_eq!( reader.advance(),           false );
     }
 
     #[test]
     fn reader_next() {
-        let mut reader = Reader::new(b"X+1", &EQ_CLASS_MAP);
+        let mut reader = Reader::new(b"X+1");
 
-        assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     LetX  );
-        assert_eq!( reader.next(),     LetX  );
+        assert_eq!( reader.is_empty(),          false );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), LetX  );
+        assert_eq!( reader.next(&EQ_CLASS_MAP), LetX  );
 
-        assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     Plus  );
-        assert_eq!( reader.next(),     Plus  );
+        assert_eq!( reader.is_empty(),          false );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Plus  );
+        assert_eq!( reader.next(&EQ_CLASS_MAP), Plus  );
 
-        assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     Digit );
-        assert_eq!( reader.next(),     Digit );
+        assert_eq!( reader.is_empty(),          false );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Digit );
+        assert_eq!( reader.next(&EQ_CLASS_MAP), Digit );
 
-        assert_eq!( reader.is_empty(), true  );
-        assert_eq!( reader.peek(),     Eof   );
-        assert_eq!( reader.next(),     Eof   );
+        assert_eq!( reader.is_empty(),          true  );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Eof   );
+        assert_eq!( reader.next(&EQ_CLASS_MAP), Eof   );
     }
 
     #[test]
     fn reader_advance() {
-        let mut reader = Reader::new(b"X+1", &EQ_CLASS_MAP);
+        let mut reader = Reader::new(b"X+1");
 
-        assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     LetX  );
-        assert_eq!( reader.advance(),  true  );
+        assert_eq!( reader.is_empty(),          false );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), LetX  );
+        assert_eq!( reader.advance(),           true  );
 
-        assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     Plus  );
-        assert_eq!( reader.advance(),  true  );
+        assert_eq!( reader.is_empty(),          false );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Plus  );
+        assert_eq!( reader.advance(),           true  );
 
-        assert_eq!( reader.is_empty(), false );
-        assert_eq!( reader.peek(),     Digit );
-        assert_eq!( reader.advance(),  true  );
+        assert_eq!( reader.is_empty(),          false );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Digit );
+        assert_eq!( reader.advance(),           true  );
 
-        assert_eq!( reader.is_empty(), true  );
-        assert_eq!( reader.peek(),     Eof   );
-        assert_eq!( reader.advance(),  false );
+        assert_eq!( reader.is_empty(),          true  );
+        assert_eq!( reader.peek(&EQ_CLASS_MAP), Eof   );
+        assert_eq!( reader.advance(),           false );
     }
 
     #[test]
     fn reader_debug_empty() {
-        let reader = Reader::new(b"", &EQ_CLASS_MAP);
+        let reader = Reader::new(b"");
 
-        assert_eq!( format!("{:?}", reader), "Eof" );
+        assert_eq!( format!("{:?}", reader), "Reader []" );
     }
 
     #[test]
     fn reader_debug_not_empty() {
-        let reader = Reader::new(b"X", &EQ_CLASS_MAP);
+        let reader = Reader::new(b"X");
 
-        assert_eq!( format!("{:?}", reader), "LetX..." );
+        assert_eq!( format!("{:?}", reader), "Reader [58]" );
     }
 
     #[test]

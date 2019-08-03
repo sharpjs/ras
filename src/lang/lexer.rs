@@ -98,6 +98,8 @@ impl EqClass {
 }
 
 impl ConstDefault for EqClass {
+    /// Default character equivalence class.
+    /// A `Reader` returns this value at the end of input.
     const DEFAULT: Self = Eof;
 }
 
@@ -213,8 +215,8 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * EqClass::COUNT] = [
 //          Normal    Bol       AfterCr   Comment
 // ----------------------------------------------------------------------------
 /* \s\t  */ NormCon,  NormCon,  NormCon,  ComCon,
-/* \r    */ Error,    Error,    Error,    Error,
-/* \n    */ Error,    Error,    Error,    Error,
+/*  \r   */ Error,    Error,    Error,    Error,
+/*  \n   */ Error,    Error,    Error,    Error,
 
 /*  a-z. */ Error,    Error,    Error,    ComCon,
 /*   b   */ Error,    Error,    Error,    ComCon,
@@ -256,7 +258,7 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * EqClass::COUNT] = [
 /*   @   */ Error,    Error,    Error,    ComCon,
 /*   \   */ Error,    Error,    Error,    ComCon,
 
-/* Eof   */ End,      End,      End,      End,
+/*  Eof  */ End,      End,      End,      End,
 /* Other */ Error,    Error,    Error,    ComCon,
 ];
 
@@ -280,7 +282,9 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 
 // ----------------------------------------------------------------------------
 
-/// A byte reader optimized for use by the lexer.
+/// Input reader specialized for lexical analysis.  A `Reader` takes a slice of
+/// bytes as input and provides a forward-only, peekable, mapped iterator.
+///
 #[derive(Clone, Copy)]
 struct Reader<'a> {
     ptr: *const u8,
@@ -289,10 +293,11 @@ struct Reader<'a> {
 }
 
 impl<'a> Reader<'a> {
-    // Safety: This is a micro-optimization of std::slice::Iter.  The unsafe
-    // blocks are equivalent to those in std::slice::Iter and thus have the
+    // Safety: This is a specialization of std::slice::Iter.  The unsafe blocks
+    // here are equivalent to those in std::slice::Iter and thus have the same
     // effective safety.
 
+    /// Creates a new [`Reader`] over the given slice of bytes.
     #[inline(always)]
     pub fn new(bytes: &'a [u8]) -> Self {
         let ptr = bytes.as_ptr();
@@ -301,16 +306,20 @@ impl<'a> Reader<'a> {
         Self { ptr, end, _lt: PhantomData }
     }
 
+    /// Checks if no more items remain to be read.
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.ptr == self.end
     }
 
+    /// Returns the count of items remaining to be read.
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.end as usize - self.ptr as usize
     }
 
+    /// Returns the next item using the given mapping array.  Does not advance
+    /// the reader.
     #[inline(always)]
     pub fn peek<T>(&self, map: &[T; 256]) -> T
         where T: ConstDefault
@@ -325,6 +334,8 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// Returns the next item using the given mapping array and advances the
+    /// reader.
     #[inline(always)]
     pub fn next<T>(&mut self, map: &[T; 256]) -> T
         where T: ConstDefault {
@@ -339,6 +350,7 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// Advances the reader.
     #[inline(always)]
     pub fn advance(&mut self) -> bool {
         let p = self.ptr;
@@ -352,6 +364,7 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// Returns a slice of the bytes remaining to be read.
     #[inline(always)]
     pub fn as_slice(&self) -> &[u8] {
         unsafe {
@@ -485,9 +498,9 @@ mod tests {
 
     #[test]
     fn reader_debug_not_empty() {
-        let reader = Reader::new(b"X");
+        let reader = Reader::new(b"X+1");
 
-        assert_eq!( format!("{:?}", reader), "Reader [58]" );
+        assert_eq!( format!("{:?}", reader), "Reader [58, 2B, 31]" );
     }
 
     #[test]

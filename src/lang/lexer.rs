@@ -26,6 +26,7 @@ use crate::util::ConstDefault;
 
 use self::Action::*;
 use self::EqClass::*;
+use self::NumEqClass::*;
 use self::State::*;
 use self::TransitionId::*;
 
@@ -143,6 +144,87 @@ static EQ_CLASS_MAP: [EqClass; 256] = [
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
     Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
+];
+
+// ----------------------------------------------------------------------------
+
+macro_rules! num_eq_class {
+    ($i:expr) => ($i * State::COUNT as u16)
+}
+
+/// Character equivalence classes for lexing numeric literals.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u16)]
+enum NumEqClass {
+    // Variants are in order roughly by descending frequency, except that
+    // groups of related variants are kept contiguous.
+
+    NBin   = num_eq_class!(01), // 0-1  binary digit
+    NOct   = num_eq_class!(02), // 2-7  octal digit
+    NDec   = num_eq_class!(03), // 8-9  decimal digit
+    NHexU  = num_eq_class!(04), // A-F  hex digit, uppercase
+    NHexL  = num_eq_class!(05), // a-f  hex digit, lowercase
+    NSep   = num_eq_class!(06), // _    separator
+    NDot   = num_eq_class!(07), // .    radix point
+    NExp   = num_eq_class!(08), // Ee   exponent prefix
+    NPos   = num_eq_class!(09), // +    positive sign
+    NNeg   = num_eq_class!(10), // -    negative sign
+
+    NEof   = num_eq_class!(11), // end of file
+    NOther = num_eq_class!(12), // code point not in another class
+}
+
+impl NumEqClass {
+    /// Count of numeric character equivalence classes.
+    const COUNT: usize = Other as usize / State::COUNT + 1;
+}
+
+impl ConstDefault for NumEqClass {
+    /// Default character equivalence class.
+    /// A `Reader` returns this value at the end of input.
+    const DEFAULT: Self = NEof;
+}
+
+/// Map from UTF-8 byte to character equivalence class.
+static NUM_EQ_CLASS_MAP: [NumEqClass; 256] = [
+//
+//  7-bit ASCII characters
+//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // ........
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // .tn..r..
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // ........
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // ........
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, //  !"#$%&'
+    NOther, NOther, NOther, NPos,   NOther, NNeg,   NDot,   NOther, // ()*+,-./
+    NBin,   NBin,   NOct,   NOct,   NOct,   NOct,   NOct,   NOct,   // 01234567
+    NDec,   NDec,   NOther, NOther, NOther, NOther, NOther, NOther, // 89:;<=>?
+    NOther, NHexU,  NHexU,  NHexU,  NHexU,  NHexU,  NHexU,  NOther, // @ABCDEFG
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // HIJKLMNO
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // PQRSTUVW
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NSep,   // XYZ[\]^_
+    NOther, NHexL,  NHexL,  NHexL,  NHexL,  NHexL,  NHexL,  NOther, // `abcdefg
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // hijklmno
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // pqrstuvw
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // xyz{|}~. <- DEL
+//
+//  UTF-8 multibyte sequences
+//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 80-87
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 88-8F
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 90-97
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 98-9F
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // A0-A7
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // A8-AF
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // B0-B7
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // B8-BF
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // C0-C7
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // C8-CF
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // D0-D7
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // D8-DF
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // E0-E7
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // E8-EF
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // F0-F7
+    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // F8-FF
 ];
 
 // ----------------------------------------------------------------------------

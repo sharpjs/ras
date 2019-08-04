@@ -25,8 +25,6 @@ use crate::lang::token::Token;
 use crate::util::ConstDefault;
 
 use self::Action::*;
-use self::EqClass::*;
-use self::NumEqClass::*;
 use self::State::*;
 use self::TransitionId::*;
 
@@ -95,56 +93,59 @@ enum EqClass {
 
 impl EqClass {
     /// Count of character equivalence classes.
-    const COUNT: usize = Other as usize / State::COUNT + 1;
+    const COUNT: usize = EqClass::Other as usize / State::COUNT + 1;
 }
 
 impl ConstDefault for EqClass {
     /// Default character equivalence class.
     /// A `Reader` returns this value at the end of input.
-    const DEFAULT: Self = Eof;
+    const DEFAULT: Self = EqClass::Eof;
 }
 
 /// Map from UTF-8 byte to character equivalence class.
-static EQ_CLASS_MAP: [EqClass; 256] = [
-//
-//  7-bit ASCII characters
-//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-    Other,  Space,  Lf,     Other,  Other,  Cr,     Other,  Other,  // .tn..r..
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-    Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
-    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
-    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
-    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
-    At,     LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // @ABCDEFG
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
-    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Under,  // XYZ[\]^_
-    Other,  LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // `abcdefg
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
-    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
-//
-//  UTF-8 multibyte sequences
-//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
-    Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
-    Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
-];
+static EQ_CLASS_MAP: [EqClass; 256] = {
+    use self::EqClass::*;
+    [
+    //
+    //  7-bit ASCII characters
+    //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+        Other,  Space,  Lf,     Other,  Other,  Cr,     Other,  Other,  // .tn..r..
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+        Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
+        LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
+        Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
+        Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
+        At,     LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // @ABCDEFG
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
+        LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Under,  // XYZ[\]^_
+        Other,  LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // `abcdefg
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
+        LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
+    //
+    //  UTF-8 multibyte sequences
+    //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
+        Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
+        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
+        Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
+    ]
+};
 
 // ----------------------------------------------------------------------------
 
@@ -159,73 +160,76 @@ enum NumEqClass {
     // Variants are in order roughly by descending frequency, except that
     // groups of related variants are kept contiguous.
 
-    NBin   = num_eq_class!(01), // 0-1  binary digit
-    NOct   = num_eq_class!(02), // 2-7  octal digit
-    NDec   = num_eq_class!(03), // 8-9  decimal digit
-    NHexU  = num_eq_class!(04), // A-F  hex digit, uppercase
-    NHexL  = num_eq_class!(05), // a-f  hex digit, lowercase
-    NSep   = num_eq_class!(06), // _    separator
-    NDot   = num_eq_class!(07), // .    radix point
-    NExp   = num_eq_class!(08), // Ee   exponent prefix
-    NPos   = num_eq_class!(09), // +    positive sign
-    NNeg   = num_eq_class!(10), // -    negative sign
+    Bin   = num_eq_class!(01), // 0-1  binary digit
+    Oct   = num_eq_class!(02), // 2-7  octal digit
+    Dec   = num_eq_class!(03), // 8-9  decimal digit
+    HexU  = num_eq_class!(04), // A-F  hex digit, uppercase
+    HexL  = num_eq_class!(05), // a-f  hex digit, lowercase
+    Sep   = num_eq_class!(06), // _    separator
+    Dot   = num_eq_class!(07), // .    radix point
+    Exp   = num_eq_class!(08), // Ee   exponent prefix
+    Pos   = num_eq_class!(09), // +    positive sign
+    Neg   = num_eq_class!(10), // -    negative sign
 
-    NEof   = num_eq_class!(11), // end of file
-    NOther = num_eq_class!(12), // code point not in another class
+    Eof   = num_eq_class!(11), // end of file
+    Other = num_eq_class!(12), // code point not in another class
 }
 
 impl NumEqClass {
     /// Count of numeric character equivalence classes.
-    const COUNT: usize = Other as usize / State::COUNT + 1;
+    const COUNT: usize = NumEqClass::Other as usize / State::COUNT + 1;
 }
 
 impl ConstDefault for NumEqClass {
     /// Default character equivalence class.
     /// A `Reader` returns this value at the end of input.
-    const DEFAULT: Self = NEof;
+    const DEFAULT: Self = NumEqClass::Eof;
 }
 
 /// Map from UTF-8 byte to character equivalence class.
-static NUM_EQ_CLASS_MAP: [NumEqClass; 256] = [
-//
-//  7-bit ASCII characters
-//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // ........
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // .tn..r..
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // ........
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // ........
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, //  !"#$%&'
-    NOther, NOther, NOther, NPos,   NOther, NNeg,   NDot,   NOther, // ()*+,-./
-    NBin,   NBin,   NOct,   NOct,   NOct,   NOct,   NOct,   NOct,   // 01234567
-    NDec,   NDec,   NOther, NOther, NOther, NOther, NOther, NOther, // 89:;<=>?
-    NOther, NHexU,  NHexU,  NHexU,  NHexU,  NHexU,  NHexU,  NOther, // @ABCDEFG
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // HIJKLMNO
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // PQRSTUVW
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NSep,   // XYZ[\]^_
-    NOther, NHexL,  NHexL,  NHexL,  NHexL,  NHexL,  NHexL,  NOther, // `abcdefg
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // hijklmno
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // pqrstuvw
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // xyz{|}~. <- DEL
-//
-//  UTF-8 multibyte sequences
-//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 80-87
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 88-8F
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 90-97
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // 98-9F
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // A0-A7
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // A8-AF
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // B0-B7
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // B8-BF
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // C0-C7
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // C8-CF
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // D0-D7
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // D8-DF
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // E0-E7
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // E8-EF
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // F0-F7
-    NOther, NOther, NOther, NOther, NOther, NOther, NOther, NOther, // F8-FF
-];
+static NUM_EQ_CLASS_MAP: [NumEqClass; 256] = {
+    use self::NumEqClass::*;
+    [
+    //
+    //  7-bit ASCII characters
+    //  x0     x1     x2     x3     x4     x5     x6     x7     CHARS
+        Other, Other, Other, Other, Other, Other, Other, Other, // ........
+        Other, Other, Other, Other, Other, Other, Other, Other, // .tn..r..
+        Other, Other, Other, Other, Other, Other, Other, Other, // ........
+        Other, Other, Other, Other, Other, Other, Other, Other, // ........
+        Other, Other, Other, Other, Other, Other, Other, Other, //  !"#$%&'
+        Other, Other, Other, Pos,   Other, Neg,   Dot,   Other, // ()*+,-./
+        Bin,   Bin,   Oct,   Oct,   Oct,   Oct,   Oct,   Oct,   // 01234567
+        Dec,   Dec,   Other, Other, Other, Other, Other, Other, // 89:;<=>?
+        Other, HexU,  HexU,  HexU,  HexU,  HexU,  HexU,  Other, // @ABCDEFG
+        Other, Other, Other, Other, Other, Other, Other, Other, // HIJKLMNO
+        Other, Other, Other, Other, Other, Other, Other, Other, // PQRSTUVW
+        Other, Other, Other, Other, Other, Other, Other, Sep,   // XYZ[\]^_
+        Other, HexL,  HexL,  HexL,  HexL,  HexL,  HexL,  Other, // `abcdefg
+        Other, Other, Other, Other, Other, Other, Other, Other, // hijklmno
+        Other, Other, Other, Other, Other, Other, Other, Other, // pqrstuvw
+        Other, Other, Other, Other, Other, Other, Other, Other, // xyz{|}~. <- DEL
+    //
+    //  UTF-8 multibyte sequences
+    //  0 (8)  1 (9)  2 (A)  3 (B)  4 (C)  5 (D)  6 (E)  7 (F)  RANGE
+        Other, Other, Other, Other, Other, Other, Other, Other, // 80-87
+        Other, Other, Other, Other, Other, Other, Other, Other, // 88-8F
+        Other, Other, Other, Other, Other, Other, Other, Other, // 90-97
+        Other, Other, Other, Other, Other, Other, Other, Other, // 98-9F
+        Other, Other, Other, Other, Other, Other, Other, Other, // A0-A7
+        Other, Other, Other, Other, Other, Other, Other, Other, // A8-AF
+        Other, Other, Other, Other, Other, Other, Other, Other, // B0-B7
+        Other, Other, Other, Other, Other, Other, Other, Other, // B8-BF
+        Other, Other, Other, Other, Other, Other, Other, Other, // C0-C7
+        Other, Other, Other, Other, Other, Other, Other, Other, // C8-CF
+        Other, Other, Other, Other, Other, Other, Other, Other, // D0-D7
+        Other, Other, Other, Other, Other, Other, Other, Other, // D8-DF
+        Other, Other, Other, Other, Other, Other, Other, Other, // E0-E7
+        Other, Other, Other, Other, Other, Other, Other, Other, // E8-EF
+        Other, Other, Other, Other, Other, Other, Other, Other, // F0-F7
+        Other, Other, Other, Other, Other, Other, Other, Other, // F8-FF
+    ]
+};
 
 // ----------------------------------------------------------------------------
 
@@ -518,6 +522,7 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::EqClass::*;
 
     #[test]
     fn reader_empty() {

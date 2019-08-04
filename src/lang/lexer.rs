@@ -160,19 +160,19 @@ enum NumEqClass {
     // Variants are in order roughly by descending frequency, except that
     // groups of related variants are kept contiguous.
 
-    Bin   = num_eq_class!(01), // 0-1  binary digit
-    Oct   = num_eq_class!(02), // 2-7  octal digit
-    Dec   = num_eq_class!(03), // 8-9  decimal digit
-    HexU  = num_eq_class!(04), // A-F  hex digit, uppercase
-    HexL  = num_eq_class!(05), // a-f  hex digit, lowercase
-    Sep   = num_eq_class!(06), // _    separator
-    Dot   = num_eq_class!(07), // .    radix point
-    Exp   = num_eq_class!(08), // Ee   exponent prefix
-    Pos   = num_eq_class!(09), // +    positive sign
-    Neg   = num_eq_class!(10), // -    negative sign
+    Bin   = num_eq_class!(00), // 0-1  binary digit
+    Oct   = num_eq_class!(01), // 2-7  octal digit
+    Dec   = num_eq_class!(02), // 8-9  decimal digit
+    HexU  = num_eq_class!(03), // A-F  hex digit, uppercase
+    HexL  = num_eq_class!(04), // a-f  hex digit, lowercase
+    Sep   = num_eq_class!(05), // _    separator
+    Dot   = num_eq_class!(06), // .    radix point
+    Exp   = num_eq_class!(07), // Ee   exponent prefix
+    Pos   = num_eq_class!(08), // +    positive sign
+    Neg   = num_eq_class!(09), // -    negative sign
 
-    Eof   = num_eq_class!(11), // end of file
-    Other = num_eq_class!(12), // code point not in another class
+    Eof   = num_eq_class!(10), // end of file
+    Other = num_eq_class!(11), // code point not in another class
 }
 
 impl NumEqClass {

@@ -487,9 +487,9 @@ impl<'a> Lexer<'a> {
     /// Gets the next lexical token.
     pub fn next(&mut self) -> Token {
         // Restore saved state and prepare for loop
-        let ref mut input = self.input;
-        let     mut state = self.state;
-        let     mut action;
+        let mut input = self.input;
+        let mut state = self.state;
+        let mut action;
         //let mut length = 0;
 
         // Discover next token
@@ -506,6 +506,7 @@ impl<'a> Lexer<'a> {
         }
 
         // Save state for subsequent invocation
+        self.input = input;
         self.state = state;
 
         // Return token

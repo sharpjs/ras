@@ -264,6 +264,9 @@ enum Action {
     // Continue scanning.
     Continue,
 
+    // Scan a numeric literal.
+    ScanNumber,
+
     // Terminate successfully.
     Succeed,
 
@@ -514,6 +517,10 @@ impl<'a> Lexer<'a> {
             Continue => unreachable!(),
             Succeed  => Token::Eof,
             Fail     => Token::Error,
+
+            ScanNumber => {
+                panic!("Not implemented yet");
+            }
         }
     }
 }

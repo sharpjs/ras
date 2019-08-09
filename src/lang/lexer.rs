@@ -14,8 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-// The lexer contains some optimizations discussed in this article:
-// http://nothings.org/computer/lexing.html
+// NOTES:
+//
+// - The lexer implementation is inspired by the article "Some Strategies For
+//   Fast Lexical Analysis when Parsing Programming Languages" by Sean Barrett.
+//   http://nothings.org/computer/lexing.html
+//
+// - The term "logical character" in this file is preferred over the probably
+//   more-correct term "character equivalence class".
 
 use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData;
@@ -30,83 +36,83 @@ use self::TransitionId::*;
 
 // ---------------------------------------------------------------------------- 
 
-macro_rules! eq_class {
-    ($i:expr) => ($i * State::COUNT as u16)
+// Just a helper to define Char variants
+const fn char(n: u16) -> u16 {
+    n * State::COUNT as u16
 }
 
-/// Character equivalence classes.
+/// Logical characters recognized by the main lexer.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u16)]
-enum EqClass {
+enum Char {
     // Variants are in order roughly by descending frequency, except that
     // groups of related variants are kept contiguous.
-
-    // space, newlines
-    Space   = eq_class!( 0), // \s\t
-    Cr      = eq_class!( 1), // \r
-    Lf      = eq_class!( 2), // \n
-    // identifiers, numbers
-    Id      = eq_class!( 3), // A-Za-z., code points above U+007F
-    LetB    = eq_class!( 4), // Bb
-    LetD    = eq_class!( 5), // Dd
-    LetO    = eq_class!( 6), // Oo
-    LetX    = eq_class!( 7), // Xx
-    LetHex  = eq_class!( 8), // AaCcEeFf
-    Digit   = eq_class!( 9), // 0-9
-    Under   = eq_class!(10), // _
-    // open/close pairs
-    LParen  = eq_class!(11), // (
-    RParen  = eq_class!(12), // )
-    LSquare = eq_class!(13), // [
-    RSquare = eq_class!(14), // ]
-    LCurly  = eq_class!(15), // {
-    RCurly  = eq_class!(16), // }
-    // quotes
-    DQuote  = eq_class!(17), // "
-    SQuote  = eq_class!(18), // '
-    // isolated characters
-    Comma   = eq_class!(19), // ,
-    Hash    = eq_class!(20), // #
-    Equal   = eq_class!(21), // =
-    Plus    = eq_class!(22), // +
-    Minus   = eq_class!(23), // -
-    Amper   = eq_class!(24), // &
-    Pipe    = eq_class!(25), // |
-    Caret   = eq_class!(26), // ^
-    Lt      = eq_class!(27), // <
-    Gt      = eq_class!(28), // >
-    Tilde   = eq_class!(29), // ~
-    Bang    = eq_class!(30), // !
-    Star    = eq_class!(31), // *
-    Slash   = eq_class!(32), // /
-    Percent = eq_class!(33), // %
-    Semi    = eq_class!(34), // ;
-    Colon   = eq_class!(35), // :
-    Quest   = eq_class!(36), // ?
-    Dollar  = eq_class!(37), // $
-    At      = eq_class!(38), // @    unsure if this will be used
-    BSlash  = eq_class!(39), // \
-    // rare
-    Eof     = eq_class!(40), // end of file
-    Other   = eq_class!(41), // code point not in another class
-}
-
-impl EqClass {
-    /// Count of character equivalence classes.
-    const COUNT: usize = EqClass::Other as usize / State::COUNT + 1;
-}
-
-impl ConstDefault for EqClass {
-    /// Default character equivalence class.
-    /// A `Reader` returns this value at the end of input.
-    const DEFAULT: Self = EqClass::Eof;
-}
-
-/// Map from UTF-8 byte to character equivalence class.
-static EQ_CLASS_MAP: [EqClass; 256] = {
-    use self::EqClass::*;
-    [
     //
+    // space, newlines
+    Space   = char( 0), // \s\t
+    Cr      = char( 1), // \r
+    Lf      = char( 2), // \n
+    // identifiers, numbers
+    Id      = char( 3), // A-Za-z., code points above U+007F
+    LetB    = char( 4), // Bb
+    LetD    = char( 5), // Dd
+    LetO    = char( 6), // Oo
+    LetX    = char( 7), // Xx
+    LetHex  = char( 8), // AaCcEeFf
+    Digit   = char( 9), // 0-9
+    Under   = char(10), // _
+    // open/close pairs
+    LParen  = char(11), // (
+    RParen  = char(12), // )
+    LSquare = char(13), // [
+    RSquare = char(14), // ]
+    LCurly  = char(15), // {
+    RCurly  = char(16), // }
+    // quotes
+    DQuote  = char(17), // "
+    SQuote  = char(18), // '
+    // isolated characters
+    Comma   = char(19), // ,
+    Hash    = char(20), // #
+    Equal   = char(21), // =
+    Plus    = char(22), // +
+    Minus   = char(23), // -
+    Amper   = char(24), // &
+    Pipe    = char(25), // |
+    Caret   = char(26), // ^
+    Lt      = char(27), // <
+    Gt      = char(28), // >
+    Tilde   = char(29), // ~
+    Bang    = char(30), // !
+    Star    = char(31), // *
+    Slash   = char(32), // /
+    Percent = char(33), // %
+    Semi    = char(34), // ;
+    Colon   = char(35), // :
+    Quest   = char(36), // ?
+    Dollar  = char(37), // $
+    At      = char(38), // @    unsure if this will be used
+    BSlash  = char(39), // \
+    // rare
+    Eof     = char(40), // end of file
+    Other   = char(41), // everything else
+}
+
+impl Char {
+    /// Count of `Char` logical characters.
+    const COUNT: usize = Char::Other as usize / State::COUNT + 1;
+}
+
+impl ConstDefault for Char {
+    /// Default `Char` logical character.
+    /// A [`Reader`] returns this value at the end of input.
+    const DEFAULT: Self = Char::Eof;
+}
+
+/// Mapping of UTF-8 bytes to `Char` logical characters.
+static CHARS: [Char; 256] = {
+    use self::Char::*;
+    [
     //  7-bit ASCII characters
     //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
         Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
@@ -125,7 +131,7 @@ static EQ_CLASS_MAP: [EqClass; 256] = {
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
         LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
-    //
+
     //  UTF-8 multibyte sequences
     //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
@@ -149,85 +155,79 @@ static EQ_CLASS_MAP: [EqClass; 256] = {
 
 // ----------------------------------------------------------------------------
 
-macro_rules! num_eq_class {
-    ($i:expr) => ($i * State::COUNT as u16)
-}
-
-/// Character equivalence classes for lexing numeric literals.
+/// Logical characters recognized by the numeric literal sublexer.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u16)]
-enum NumEqClass {
-    // Variants are in order roughly by descending frequency, except that
-    // groups of related variants are kept contiguous.
-
-    Bin   = num_eq_class!(00), // 0-1  binary digit
-    Oct   = num_eq_class!(01), // 2-7  octal digit
-    Dec   = num_eq_class!(02), // 8-9  decimal digit
-    HexU  = num_eq_class!(03), // A-F  hex digit, uppercase
-    HexL  = num_eq_class!(04), // a-f  hex digit, lowercase
-    Sep   = num_eq_class!(05), // _    separator
-    Dot   = num_eq_class!(06), // .    radix point
-    Exp   = num_eq_class!(07), // Ee   exponent prefix
-    Pos   = num_eq_class!(08), // +    positive sign
-    Neg   = num_eq_class!(09), // -    negative sign
-
-    Eof   = num_eq_class!(10), // end of file
-    Other = num_eq_class!(11), // code point not in another class
+enum NumChar {
+    // digits
+    Bin   = char( 0), // 0-1  binary digit
+    Oct   = char( 1), // 2-7  octal digit
+    Dec   = char( 2), // 8-9  decimal digit
+    HexU  = char( 3), // A-F  hex digit, uppercase
+    HexL  = char( 4), // a-f  hex digit, lowercase
+    // punctuation
+    Sep   = char( 5), // _    separator
+    Dot   = char( 6), // .    radix point
+    Exp   = char( 7), // Pp   exponent prefix
+    Pos   = char( 8), // +    positive sign
+    Neg   = char( 9), // -    negative sign
+    // rare
+    Eof   = char(10), // end of file
+    Other = char(11), // everything else
 }
 
-impl NumEqClass {
-    /// Count of numeric character equivalence classes.
-    const COUNT: usize = NumEqClass::Other as usize / State::COUNT + 1;
+impl NumChar {
+    /// Count of `NumChar` logical characters.
+    const COUNT: usize = NumChar::Other as usize / State::COUNT + 1;
 }
 
-impl ConstDefault for NumEqClass {
-    /// Default character equivalence class.
-    /// A `Reader` returns this value at the end of input.
-    const DEFAULT: Self = NumEqClass::Eof;
+impl ConstDefault for NumChar {
+    /// Default `NumChar` logical character.
+    /// A [`Reader`] returns this value at the end of input.
+    const DEFAULT: Self = NumChar::Eof;
 }
 
-/// Map from UTF-8 byte to character equivalence class.
-static NUM_EQ_CLASS_MAP: [NumEqClass; 256] = {
-    use self::NumEqClass::*;
+/// Mapping of UTF-8 bytes to `NumChar` logical characters.
+static NUM_CHARS: [NumChar; 256] = {
+    use self::NumChar::*;
     [
-    //
     //  7-bit ASCII characters
-    //  x0     x1     x2     x3     x4     x5     x6     x7     CHARS
-        Other, Other, Other, Other, Other, Other, Other, Other, // ........
-        Other, Other, Other, Other, Other, Other, Other, Other, // .tn..r..
-        Other, Other, Other, Other, Other, Other, Other, Other, // ........
-        Other, Other, Other, Other, Other, Other, Other, Other, // ........
-        Other, Other, Other, Other, Other, Other, Other, Other, //  !"#$%&'
-        Other, Other, Other, Pos,   Other, Neg,   Dot,   Other, // ()*+,-./
-        Bin,   Bin,   Oct,   Oct,   Oct,   Oct,   Oct,   Oct,   // 01234567
-        Dec,   Dec,   Other, Other, Other, Other, Other, Other, // 89:;<=>?
-        Other, HexU,  HexU,  HexU,  HexU,  HexU,  HexU,  Other, // @ABCDEFG
-        Other, Other, Other, Other, Other, Other, Other, Other, // HIJKLMNO
-        Other, Other, Other, Other, Other, Other, Other, Other, // PQRSTUVW
-        Other, Other, Other, Other, Other, Other, Other, Sep,   // XYZ[\]^_
-        Other, HexL,  HexL,  HexL,  HexL,  HexL,  HexL,  Other, // `abcdefg
-        Other, Other, Other, Other, Other, Other, Other, Other, // hijklmno
-        Other, Other, Other, Other, Other, Other, Other, Other, // pqrstuvw
-        Other, Other, Other, Other, Other, Other, Other, Other, // xyz{|}~. <- DEL
-    //
+    //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // .tn..r..
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  //  !"#$%&'
+        Other,  Other,  Other,  Pos,    Other,  Neg,    Dot,    Other,  // ()*+,-./
+        Bin,    Bin,    Oct,    Oct,    Oct,    Oct,    Oct,    Oct,    // 01234567
+        Dec,    Dec,    Other,  Other,  Other,  Other,  Other,  Other,  // 89:;<=>?
+        Other,  HexU,   HexU,   HexU,   HexU,   HexU,   HexU,   Other,  // @ABCDEFG
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // HIJKLMNO
+        Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // PQRSTUVW
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Sep,    // XYZ[\]^_
+        Other,  HexL,   HexL,   HexL,   HexL,   HexL,   HexL,   Other,  // `abcdefg
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // hijklmno
+        Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // pqrstuvw
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // xyz{|}~. <- DEL
+
     //  UTF-8 multibyte sequences
-    //  0 (8)  1 (9)  2 (A)  3 (B)  4 (C)  5 (D)  6 (E)  7 (F)  RANGE
-        Other, Other, Other, Other, Other, Other, Other, Other, // 80-87
-        Other, Other, Other, Other, Other, Other, Other, Other, // 88-8F
-        Other, Other, Other, Other, Other, Other, Other, Other, // 90-97
-        Other, Other, Other, Other, Other, Other, Other, Other, // 98-9F
-        Other, Other, Other, Other, Other, Other, Other, Other, // A0-A7
-        Other, Other, Other, Other, Other, Other, Other, Other, // A8-AF
-        Other, Other, Other, Other, Other, Other, Other, Other, // B0-B7
-        Other, Other, Other, Other, Other, Other, Other, Other, // B8-BF
-        Other, Other, Other, Other, Other, Other, Other, Other, // C0-C7
-        Other, Other, Other, Other, Other, Other, Other, Other, // C8-CF
-        Other, Other, Other, Other, Other, Other, Other, Other, // D0-D7
-        Other, Other, Other, Other, Other, Other, Other, Other, // D8-DF
-        Other, Other, Other, Other, Other, Other, Other, Other, // E0-E7
-        Other, Other, Other, Other, Other, Other, Other, Other, // E8-EF
-        Other, Other, Other, Other, Other, Other, Other, Other, // F0-F7
-        Other, Other, Other, Other, Other, Other, Other, Other, // F8-FF
+    //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 80-87
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 88-8F
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 90-97
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 98-9F
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A0-A7
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A8-AF
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B0-B7
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B8-BF
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C0-C7
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C8-CF
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D0-D7
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D8-DF
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E0-E7
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E8-EF
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F0-F7
+        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F8-FF
     ]
 };
 
@@ -300,7 +300,7 @@ impl TransitionId {
 }
 
 /// Lexer state transition map.
-static TRANSITION_MAP: [TransitionId; State::COUNT * EqClass::COUNT] = [
+static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = [
 //          Normal    Bol       AfterCr   Comment
 // ----------------------------------------------------------------------------
 /* \s\t  */ NormCon,  NormCon,  NormCon,  ComCon,
@@ -372,11 +372,13 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 // ----------------------------------------------------------------------------
 
 /// Input reader specialized for lexical analysis.  A `Reader` takes a slice of
-/// bytes as input and provides a forward-only, peekable, mapped iterator.
+/// bytes as input and provides a simple rewindable cursor over a sequence of
+/// logical characters (effectively, character equivalence classes).
 ///
 #[derive(Clone, Copy)]
 struct Reader<'a> {
     ptr: *const u8,
+    beg: *const u8,
     end: *const u8,
     _lt: PhantomData<&'a ()>,
 }
@@ -389,48 +391,28 @@ impl<'a> Reader<'a> {
     /// Creates a new [`Reader`] over the given slice of bytes.
     #[inline(always)]
     pub fn new(bytes: &'a [u8]) -> Self {
-        let ptr = bytes.as_ptr();
-        let end = unsafe { ptr.add(bytes.len()) };
+        let beg = bytes.as_ptr();
+        let end = unsafe { beg.add(bytes.len()) };
 
-        Self { ptr, end, _lt: PhantomData }
+        Self { ptr: beg, beg, end, _lt: PhantomData }
     }
 
-    /// Checks if no more items remain to be read.
+    /// Returns the position of the next byte to be read.
     #[inline(always)]
-    pub fn is_empty(&self) -> bool {
-        self.ptr == self.end
+    pub fn position(&self) -> usize {
+        self.ptr as usize - self.beg as usize
     }
 
-    /// Returns the count of items remaining to be read.
+    /// Reads the next byte, advances the reader, and returns the corresponding
+    /// logical character from the given character set `map`.
+    ///
+    /// If the reader is positioned at the end of input, this method returns
+    /// [`C::DEFAULT`], and the reader's position remains unchanged.
     #[inline(always)]
-    pub fn len(&self) -> usize {
-        self.end as usize - self.ptr as usize
-    }
-
-    /// Returns the next item using the given mapping array.  Does not advance
-    /// the reader.
-    #[inline(always)]
-    pub fn peek<T>(&self, map: &[T; 256]) -> T
-        where T: ConstDefault
-    {
+    pub fn next<C>(&mut self, map: &[C; 256]) -> C where C: ConstDefault {
         let p = self.ptr;
         if p == self.end {
-            T::DEFAULT
-        } else {
-            unsafe {
-                map[*p as usize]
-            }
-        }
-    }
-
-    /// Returns the next item using the given mapping array and advances the
-    /// reader.
-    #[inline(always)]
-    pub fn next<T>(&mut self, map: &[T; 256]) -> T
-        where T: ConstDefault {
-        let p = self.ptr;
-        if p == self.end {
-            T::DEFAULT
+            C::DEFAULT
         } else {
             unsafe {
                 self.ptr = p.offset(1);
@@ -439,25 +421,27 @@ impl<'a> Reader<'a> {
         }
     }
 
-    /// Advances the reader.
+    /// Rewinds the reader by one byte.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reader is positioned at the beginning of input.
+    ///
     #[inline(always)]
-    pub fn advance(&mut self) -> bool {
+    pub fn rewind(&mut self) {
         let p = self.ptr;
-        if p == self.end {
-            false
-        } else {
-            unsafe {
-                self.ptr = p.offset(1);
-                true
-            }
+        if p == self.beg {
+            panic!("Attempt to rewind past beginning of input.")
         }
+        self.ptr = unsafe { p.offset(-1) };
     }
 
     /// Returns a slice of the bytes remaining to be read.
     #[inline(always)]
     pub fn as_slice(&self) -> &[u8] {
         unsafe {
-            slice::from_raw_parts(self.ptr, self.len())
+            let len = self.end as usize - self.ptr as usize;
+            slice::from_raw_parts(self.ptr, len)
         }
     }
 }
@@ -490,14 +474,13 @@ impl<'a> Lexer<'a> {
     /// Gets the next lexical token.
     pub fn next(&mut self) -> Token {
         // Restore saved state and prepare for loop
-        let mut input = self.input;
         let mut state = self.state;
         let mut action;
         //let mut length = 0;
 
         // Discover next token
         loop {
-            let next = input.next(&EQ_CLASS_MAP);
+            let next = self.input.next(&CHARS);
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
@@ -509,7 +492,6 @@ impl<'a> Lexer<'a> {
         }
 
         // Save state for subsequent invocation
-        self.input = input;
         self.state = state;
 
         // Return token
@@ -523,6 +505,11 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+    fn next_number(&mut self) -> Token {
+
+        panic!()
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -530,58 +517,41 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::EqClass::*;
+    use super::Char::*;
 
     #[test]
     fn reader_empty() {
         let mut reader = Reader::new(b"");
 
-        assert_eq!( reader.is_empty(),          true  ); 
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Eof   );
-        assert_eq!( reader.next(&EQ_CLASS_MAP), Eof   );
-        assert_eq!( reader.advance(),           false );
+        assert_eq!( reader.position(),   0     ); 
+
+        assert_eq!( reader.next(&CHARS), Eof   );
+        assert_eq!( reader.position(),   0     ); 
     }
 
     #[test]
     fn reader_next() {
         let mut reader = Reader::new(b"X+1");
 
-        assert_eq!( reader.is_empty(),          false );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), LetX  );
-        assert_eq!( reader.next(&EQ_CLASS_MAP), LetX  );
+        assert_eq!( reader.position(),   0     ); 
 
-        assert_eq!( reader.is_empty(),          false );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Plus  );
-        assert_eq!( reader.next(&EQ_CLASS_MAP), Plus  );
+        assert_eq!( reader.next(&CHARS), LetX  );
+        assert_eq!( reader.position(),   1     ); 
 
-        assert_eq!( reader.is_empty(),          false );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Digit );
-        assert_eq!( reader.next(&EQ_CLASS_MAP), Digit );
+        assert_eq!( reader.next(&CHARS), Plus  );
+        assert_eq!( reader.position(),   2     ); 
 
-        assert_eq!( reader.is_empty(),          true  );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Eof   );
-        assert_eq!( reader.next(&EQ_CLASS_MAP), Eof   );
-    }
+        assert_eq!( reader.next(&CHARS), Digit );
+        assert_eq!( reader.position(),   3     ); 
 
-    #[test]
-    fn reader_advance() {
-        let mut reader = Reader::new(b"X+1");
+        reader.rewind();
+        assert_eq!( reader.position(),   2     ); 
 
-        assert_eq!( reader.is_empty(),          false );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), LetX  );
-        assert_eq!( reader.advance(),           true  );
+        assert_eq!( reader.next(&CHARS), Digit );
+        assert_eq!( reader.position(),   3     ); 
 
-        assert_eq!( reader.is_empty(),          false );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Plus  );
-        assert_eq!( reader.advance(),           true  );
-
-        assert_eq!( reader.is_empty(),          false );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Digit );
-        assert_eq!( reader.advance(),           true  );
-
-        assert_eq!( reader.is_empty(),          true  );
-        assert_eq!( reader.peek(&EQ_CLASS_MAP), Eof   );
-        assert_eq!( reader.advance(),           false );
+        assert_eq!( reader.next(&CHARS), Eof   );
+        assert_eq!( reader.position(),   3     ); 
     }
 
     #[test]

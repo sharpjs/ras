@@ -58,44 +58,42 @@ enum Char {
     LetD    = char( 5), // Dd
     LetO    = char( 6), // Oo
     LetX    = char( 7), // Xx
-    LetHex  = char( 8), // AaCcEeFf
-    Digit   = char( 9), // 0-9
-    Under   = char(10), // _
+    Digit   = char( 8), // 0-9
     // open/close pairs
-    LParen  = char(11), // (
-    RParen  = char(12), // )
-    LSquare = char(13), // [
-    RSquare = char(14), // ]
-    LCurly  = char(15), // {
-    RCurly  = char(16), // }
+    LParen  = char( 9), // (
+    RParen  = char(10), // )
+    LSquare = char(11), // [
+    RSquare = char(12), // ]
+    LCurly  = char(13), // {
+    RCurly  = char(14), // }
     // quotes
-    DQuote  = char(17), // "
-    SQuote  = char(18), // '
+    DQuote  = char(15), // "
+    SQuote  = char(16), // '
     // isolated characters
-    Comma   = char(19), // ,
-    Hash    = char(20), // #
-    Equal   = char(21), // =
-    Plus    = char(22), // +
-    Minus   = char(23), // -
-    Amper   = char(24), // &
-    Pipe    = char(25), // |
-    Caret   = char(26), // ^
-    Lt      = char(27), // <
-    Gt      = char(28), // >
-    Tilde   = char(29), // ~
-    Bang    = char(30), // !
-    Star    = char(31), // *
-    Slash   = char(32), // /
-    Percent = char(33), // %
-    Semi    = char(34), // ;
-    Colon   = char(35), // :
-    Quest   = char(36), // ?
-    Dollar  = char(37), // $
-    At      = char(38), // @    unsure if this will be used
-    BSlash  = char(39), // \
+    Comma   = char(17), // ,
+    Hash    = char(18), // #
+    Equal   = char(19), // =
+    Plus    = char(20), // +
+    Minus   = char(21), // -
+    Amper   = char(22), // &
+    Pipe    = char(23), // |
+    Caret   = char(24), // ^
+    Lt      = char(25), // <
+    Gt      = char(26), // >
+    Tilde   = char(27), // ~
+    Bang    = char(28), // !
+    Star    = char(29), // *
+    Slash   = char(30), // /
+    Percent = char(31), // %
+    Semi    = char(32), // ;
+    Colon   = char(33), // :
+    Quest   = char(34), // ?
+    Dollar  = char(35), // $
+    At      = char(36), // @    unsure if this will be used
+    BSlash  = char(37), // \
     // rare
-    Eof     = char(40), // end of file
-    Other   = char(41), // everything else
+    Eof     = char(38), // end of file
+    Other   = char(39), // everything else
 }
 
 impl Char {
@@ -123,11 +121,11 @@ static CHARS: [Char; 256] = {
         LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
         Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
         Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
-        At,     LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // @ABCDEFG
+        At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // @ABCDEFG
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
-        LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Under,  // XYZ[\]^_
-        Other,  LetHex, LetB,   LetHex, LetD,   LetHex, LetHex, Id,     // `abcdefg
+        LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // XYZ[\]^_
+        Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // `abcdefg
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
         Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
         LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
@@ -307,14 +305,12 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = [
 /*  \r   */ Error,    Error,    Error,    Error,
 /*  \n   */ Error,    Error,    Error,    Error,
 
-/*  a-z. */ Error,    Error,    Error,    ComCon,
+/* a-z_. */ Error,    Error,    Error,    ComCon,
 /*   b   */ Error,    Error,    Error,    ComCon,
 /*   d   */ Error,    Error,    Error,    ComCon,
 /*   o   */ Error,    Error,    Error,    ComCon,
 /*   x   */ Error,    Error,    Error,    ComCon,
-/*  acef */ Error,    Error,    Error,    ComCon,
 /*  0-9  */ Error,    Error,    Error,    ComCon,
-/*   _   */ Error,    Error,    Error,    ComCon,
 
 /*   (   */ Error,    Error,    Error,    ComCon,
 /*   )   */ Error,    Error,    Error,    ComCon,

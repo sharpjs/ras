@@ -718,6 +718,13 @@ impl<'a> Lexer<'a> {
         match action {
             Continue          => unreachable!(),
 
+            // Sublexers
+            ScanBin           => self.scan_bin(),
+            ScanOct           => self.scan_oct(),
+            ScanDec           => self.scan_dec(),
+            ScanHex           => self.scan_hex(),
+            ScanStr           => self.scan_str(),
+
             // Identifiers & Literals
             YieldIdent        => Token::Ident,
             YieldLabel        => Token::Label,
@@ -786,61 +793,54 @@ impl<'a> Lexer<'a> {
             YieldEos          => Token::Eos,
             Succeed           => Token::Eof,
             Fail              => Token::Error,
-
-            // Sublexers
-            ScanBin => {
-                // Token::Int,
-                // Token::Float,
-                panic!("Not implemented yet");
-            },
-
-            ScanOct => {
-                // Token::Int,
-                // Token::Float,
-                panic!("Not implemented yet");
-            },
-
-            ScanDec => {
-                // Token::Int,
-                // Token::Float,
-                panic!("Not implemented yet");
-            },
-
-            ScanHex => {
-                // Token::Int,
-                // Token::Float,
-                panic!("Not implemented yet");
-            },
-
-            ScanStr => {
-                // Token::Str,
-                panic!("Not implemented yet");
-            },
         }
     }
 
-    #[cfg(ideas)]
-    fn next_dec(&mut self) -> Token {
-        let mut val     = 0u64; // significand
-        let mut exp     = 0i16; // exponent
-        let mut exp_inc = 0i16; // exponent increment
+    fn scan_bin(&mut self) -> Token {
+        // TODO: Implement
+        Token::Int // or Token::Float
+    }
 
-        loop {
-            let next = self.input.next(&NUM_CHARS);
+    fn scan_oct(&mut self) -> Token {
+        // TODO: Implement
+        Token::Int // or Token::Float
+    }
 
-            // dig, sig_mask, dig_mask, frac_marker, 
-            let mask = (next.flags & IS_DIGIT) as i64;
-            let mask = (val_mask << 63 >> 63)  as u64;
+    fn scan_dec(&mut self) -> Token {
+        #[cfg(wip)]
+        {
+            let mut val     = 0u64; // significand
+            let mut exp     = 0i16; // exponent
+            let mut exp_inc = 0i16; // exponent increment
 
-            val = val * 10 + dig as u64 & mask;
-            exp = exp + exp_inc         & mask;
+            loop {
+                let next = self.input.next(&NUM_CHARS);
 
-            exp_inc |= -next.frac_marker;
+                // dig, sig_mask, dig_mask, frac_marker, 
+                let mask = (next.flags & IS_DIGIT) as i64;
+                let mask = (val_mask << 63 >> 63)  as u64;
 
-            match action {
-                Continue => {},
+                val = val * 10 + dig as u64 & mask;
+                exp = exp + exp_inc         & mask;
+
+                exp_inc |= -next.frac_marker;
+
+                match action {
+                    Continue => {},
+                }
             }
         }
+        Token::Int // or Token::Float
+    }
+
+    fn scan_hex(&mut self) -> Token {
+        // TODO: Implement
+        Token::Int // or Token::Float
+    }
+
+    fn scan_str(&mut self) -> Token {
+        // TODO: Implement
+        Token::Str
     }
 }
 

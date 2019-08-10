@@ -258,11 +258,173 @@ enum Action {
     /// Scan a numeric literal.
     ScanNumber,
 
-    /// Yield a `ParenL` token.
+    // === Operators ===
+    
+    /// Yield a `!` - logical NOT operator, side-effect indicator.
+    YieldLogNot,
+    
+    /// Yield a `~` - bitwise NOT operator.
+    YieldBitNot,
+
+    /// Yield a `*` - signed multiplication operator.
+    YieldMul,
+
+    /// Yield a `/` - signed division operator.
+    YieldDiv,
+
+    /// Yield a `%` - signed modulo operator.
+    YieldMod,
+
+    /// Yield a `+*` - unsigned multiplication operator.
+    YieldUMul,
+
+    /// Yield a `+/` - unsigned division operator.
+    YieldUDiv,
+
+    /// Yield a `+%` - unsigned modulo operator.
+    YieldUMod,
+
+    /// Yield a `+` - addition operator, increment indicator.
+    YieldAdd,
+
+    /// Yield a `-` - subtraction operator, negation operator, decrement indicator.
+    YieldSub,
+
+    /// Yield a `<<` - left shift operator.
+    YieldShl,
+
+    /// Yield a `>>` - signed right shift operator.
+    YieldShr,
+
+    /// Yield a `+>>` - unsigned right shift operator.
+    YieldUShr,
+
+    /// Yield a `&` - bitwise AND operator.
+    YieldBitAnd,
+
+    /// Yield a `^` - bitwise XOR operator.
+    YieldBitXor,
+
+    /// Yield a `|` - bitwise OR operator.
+    YieldBitOr,
+
+    /// Yield a `==` - equal-to operator.
+    YieldEq,
+
+    /// Yield a `!=` - not-equal-to operator.
+    YieldNotEq,
+
+    /// Yield a `<` - signed less-than operator.
+    YieldLess,
+
+    /// Yield a `>` - signed greater-than operator.
+    YieldMore,
+
+    /// Yield a `<=` - signed less-than-or-equal-to operator.
+    YieldLessEq,
+
+    /// Yield a `>=` - signed greater-than-or-equal-to operator.
+    YieldMoreEq,
+
+    /// Yield a `+<` - unsigned less-than operator.
+    YieldULess,
+
+    /// Yield a `+>` - unsigned greater-than operator.
+    YieldUMore,
+
+    /// Yield a `+<=` - unsigned less-than-or-equal-to operator.
+    YieldULessEq,
+
+    /// Yield a `+>=` - unsigned greater-than-or-equal-to operator.
+    YieldUMoreEq,
+
+    /// Yield a `?` - not-known indicator.
+    YieldUnknown,
+
+    /// Yield a `&&` - logical AND operator.
+    YieldLogAnd,
+
+    /// Yield a `||` - logical OR operator.
+    YieldLogOr,
+
+    /// Yield a `=` - assignment operator.
+    YieldAssign,
+
+    /// Yield a `*=` - signed multiplication-assignment operator.
+    YieldMulAssign,
+
+    /// Yield a `/=` - signed division-assignment operator.
+    YieldDivAssign,
+
+    /// Yield a `%=` - signed modulo-assignment operator.
+    YieldModAssign,
+
+    /// Yield a `+*=` - unsigned multiplication-assignment operator.
+    YieldUMulAssign,
+
+    /// Yield a `+/=` - unsigned division-assignment operator.
+    YieldUDivAssign,
+
+    /// Yield a `+/=` - unsigned modulo-assignment operator.
+    YieldUModAssign,
+
+    /// Yield a `+=` - addition-assigment operator.
+    YieldAddAssign,
+
+    /// Yield a `-=` - subtraction-assignment operator.
+    YieldSubAssign,
+
+    /// Yield a `<<=` - left-shift-assignment operator.
+    YieldShlAssign,
+
+    /// Yield a `>>=` - signed right-shift-assignment operator.
+    YieldShrAssign,
+
+    /// Yield a `+>>=` - unsigned right-shift-assignment operator.
+    YieldUShrAssign,
+
+    /// Yield a `&=` - bitwise AND-assignment operator.
+    YieldBitAndAssign,
+
+    /// Yield a `^=` - bitwise XOR-assignment operator.
+    YieldBitXorAssign,
+
+    /// Yield a `|=` - bitwise OR-assignment operator.
+    YieldBitOrAssign,
+
+    /// Yield a `&&=` - logical AND-assignment operator.
+    YieldLogAndAssign,
+
+    /// Yield a `||=` - logical OR-assignment operator.
+    YieldLogOrAssign,
+
+    // === Punctuation ===
+
+    /// Yield a `{` - left curly brace.
+    YieldBraceL,
+
+    /// Yield a `}` - right curly brace.
+    YieldBraceR,
+
+    /// Yield a `(` - left parenthesis.
     YieldParenL,
 
-    /// Yield a `ParenR` token.
+    /// Yield a `)` - right parenthesis.
     YieldParenR,
+
+    /// Yield a `[` - left square bracket.
+    YieldBracketL,
+
+    /// Yield a `]` - right square bracket.
+    YieldBracketR,
+
+    /// Yield a `:` - item joiner.
+    YieldColon,
+
+    /// Yield a `,` - item separator.
+    YieldComma,
+
+    // === Terminators ===
 
     /// Yield an `Eos` token.
     YieldEos,
@@ -329,6 +491,8 @@ struct Transition {
     state:  State,
     action: Action,
     flags:  u16,
+    //      - line   increment
+    //      - length increment
 }
 
 /// Lexer transitions in order by transition ID.
@@ -343,7 +507,7 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 /* CommentEos */ Transition { state: Comment, action: YieldEos,    flags: 0 },
 /* ParenL     */ Transition { state: Normal,  action: YieldParenL, flags: 0 },
 /* ParenR     */ Transition { state: Normal,  action: YieldParenR, flags: 0 },
-/* Error      */ Transition { state: Normal,  action: Fail,        flags: 1 },
+/* Error      */ Transition { state: Normal,  action: Fail,        flags: 0 },
 /* End        */ Transition { state: Normal,  action: Succeed,     flags: 0 },
 ];
 
@@ -524,22 +688,109 @@ impl<'a> Lexer<'a> {
 
         // Return token
         match action {
-            Continue    => unreachable!(),
-            YieldParenL => Token::ParenL,
-            YieldParenR => Token::ParenR,
-            YieldEos    => Token::Eos,
-            Succeed     => Token::Eof,
-            Fail        => Token::Error,
+            Continue          => unreachable!(),
 
+            // Operators
+            YieldLogNot       => Token::LogNot,
+            YieldBitNot       => Token::BitNot,
+            YieldMul          => Token::Mul,
+            YieldDiv          => Token::Div,
+            YieldMod          => Token::Mod,
+            YieldUMul         => Token::UMul,
+            YieldUDiv         => Token::UDiv,
+            YieldUMod         => Token::UMod,
+            YieldAdd          => Token::Add,
+            YieldSub          => Token::Sub,
+            YieldShl          => Token::Shl,
+            YieldShr          => Token::Shr,
+            YieldUShr         => Token::UShr,
+            YieldBitAnd       => Token::BitAnd,
+            YieldBitXor       => Token::BitXor,
+            YieldBitOr        => Token::BitOr,
+            YieldEq           => Token::Eq,
+            YieldNotEq        => Token::NotEq,
+            YieldLess         => Token::Less,
+            YieldMore         => Token::More,
+            YieldLessEq       => Token::LessEq,
+            YieldMoreEq       => Token::MoreEq,
+            YieldULess        => Token::ULess,
+            YieldUMore        => Token::UMore,
+            YieldULessEq      => Token::ULessEq,
+            YieldUMoreEq      => Token::UMoreEq,
+            YieldUnknown      => Token::Unknown,
+            YieldLogAnd       => Token::LogAnd,
+            YieldLogOr        => Token::LogOr,
+            YieldAssign       => Token::Assign,
+            YieldMulAssign    => Token::MulAssign,
+            YieldDivAssign    => Token::DivAssign,
+            YieldModAssign    => Token::ModAssign,
+            YieldUMulAssign   => Token::UMulAssign,
+            YieldUDivAssign   => Token::UDivAssign,
+            YieldUModAssign   => Token::UModAssign,
+            YieldAddAssign    => Token::AddAssign,
+            YieldSubAssign    => Token::SubAssign,
+            YieldShlAssign    => Token::ShlAssign,
+            YieldShrAssign    => Token::ShrAssign,
+            YieldUShrAssign   => Token::UShrAssign,
+            YieldBitAndAssign => Token::BitAndAssign,
+            YieldBitXorAssign => Token::BitXorAssign,
+            YieldBitOrAssign  => Token::BitOrAssign,
+            YieldLogAndAssign => Token::LogAndAssign,
+            YieldLogOrAssign  => Token::LogOrAssign,
+
+            // Punctuation
+            YieldBraceL       => Token::BraceL,
+            YieldBraceR       => Token::BraceR,
+            YieldParenL       => Token::ParenL,
+            YieldParenR       => Token::ParenR,
+            YieldBracketL     => Token::BracketL,
+            YieldBracketR     => Token::BracketR,
+            YieldColon        => Token::Colon,
+            YieldComma        => Token::Comma,
+
+            // Terminators
+            YieldEos          => Token::Eos,
+            Succeed           => Token::Eof,
+            Fail              => Token::Error,
+
+            // Sublexers
             ScanNumber => {
                 panic!("Not implemented yet");
             }
+
+            // Identifiers & Literals
+            // Ident,
+            // Label,
+            // Param,
+            // Int,
+            // Float,
+            // Str,
+            // Char,
         }
     }
 
-    fn next_number(&mut self) -> Token {
+    #[cfg(ideas)]
+    fn next_num_dec(&mut self) -> Token {
+        let mut val     = 0u64; // significand
+        let mut exp     = 0i16; // exponent
+        let mut exp_inc = 0i16; // exponent increment
 
-        panic!()
+        loop {
+            let next = self.input.next(&NUM_CHARS);
+
+            // dig, sig_mask, dig_mask, frac_marker, 
+            let mask = (next.flags & IS_DIGIT) as i64;
+            let mask = (val_mask << 63 >> 63)  as u64;
+
+            val = val * 10 + dig as u64 & mask;
+            exp = exp + exp_inc         & mask;
+
+            exp_inc |= -next.frac_marker;
+
+            match action {
+                Continue => {},
+            }
+        }
     }
 }
 

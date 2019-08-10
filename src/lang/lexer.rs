@@ -30,8 +30,8 @@ use std::slice;
 use crate::lang::token::Token;
 use crate::util::ConstDefault;
 
-use self::Action::*;
-use self::State::*;
+use Action::*;
+use State::*;
 
 // ---------------------------------------------------------------------------- 
 
@@ -107,48 +107,45 @@ impl ConstDefault for Char {
 }
 
 /// Mapping of UTF-8 bytes to `Char` logical characters.
-static CHARS: [Char; 256] = {
-    use self::Char::*;
-    [
-    //  7-bit ASCII characters
-    //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-        Other,  Space,  Lf,     Other,  Other,  Cr,     Other,  Other,  // .tn..r..
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-        Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
-        LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
-        Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
-        Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
-        At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // @ABCDEFG
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
-        LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // XYZ[\]^_
-        Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // `abcdefg
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
-        LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
+static CHARS: [Char; 256] = { use Char::*; [
+//  7-bit ASCII characters
+//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+    Other,  Space,  Lf,     Other,  Other,  Cr,     Other,  Other,  // .tn..r..
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+    Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
+    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
+    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
+    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
+    At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // @ABCDEFG
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
+    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // XYZ[\]^_
+    Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // `abcdefg
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
+    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
 
-    //  UTF-8 multibyte sequences
-    //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
-        Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
-        Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
-        Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
-    ]
-};
+//  UTF-8 multibyte sequences
+//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
+    Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
+    Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
+]};
 
 // ----------------------------------------------------------------------------
 
@@ -185,48 +182,45 @@ impl ConstDefault for NumChar {
 }
 
 /// Mapping of UTF-8 bytes to `NumChar` logical characters.
-static NUM_CHARS: [NumChar; 256] = {
-    use self::NumChar::*;
-    [
-    //  7-bit ASCII characters
-    //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // .tn..r..
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  //  !"#$%&'
-        Other,  Other,  Other,  Pos,    Other,  Neg,    Dot,    Other,  // ()*+,-./
-        Bin,    Bin,    Oct,    Oct,    Oct,    Oct,    Oct,    Oct,    // 01234567
-        Dec,    Dec,    Other,  Other,  Other,  Other,  Other,  Other,  // 89:;<=>?
-        Other,  HexU,   HexU,   HexU,   HexU,   HexU,   HexU,   Other,  // @ABCDEFG
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // HIJKLMNO
-        Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // PQRSTUVW
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Sep,    // XYZ[\]^_
-        Other,  HexL,   HexL,   HexL,   HexL,   HexL,   HexL,   Other,  // `abcdefg
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // hijklmno
-        Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // pqrstuvw
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // xyz{|}~. <- DEL
+static NUM_CHARS: [NumChar; 256] = { use NumChar::*; [
+//  7-bit ASCII characters
+//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // .tn..r..
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  //  !"#$%&'
+    Other,  Other,  Other,  Pos,    Other,  Neg,    Dot,    Other,  // ()*+,-./
+    Bin,    Bin,    Oct,    Oct,    Oct,    Oct,    Oct,    Oct,    // 01234567
+    Dec,    Dec,    Other,  Other,  Other,  Other,  Other,  Other,  // 89:;<=>?
+    Other,  HexU,   HexU,   HexU,   HexU,   HexU,   HexU,   Other,  // @ABCDEFG
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // HIJKLMNO
+    Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // PQRSTUVW
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Sep,    // XYZ[\]^_
+    Other,  HexL,   HexL,   HexL,   HexL,   HexL,   HexL,   Other,  // `abcdefg
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // hijklmno
+    Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // pqrstuvw
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // xyz{|}~. <- DEL
 
-    //  UTF-8 multibyte sequences
-    //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 80-87
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 88-8F
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 90-97
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 98-9F
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A0-A7
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A8-AF
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B0-B7
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B8-BF
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C0-C7
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C8-CF
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D0-D7
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D8-DF
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E0-E7
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E8-EF
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F0-F7
-        Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F8-FF
-    ]
-};
+//  UTF-8 multibyte sequences
+//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 80-87
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 88-8F
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 90-97
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 98-9F
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A0-A7
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A8-AF
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B0-B7
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B8-BF
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C0-C7
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C8-CF
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D0-D7
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D8-DF
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E0-E7
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E8-EF
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F0-F7
+    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F8-FF
+]};
 
 // ----------------------------------------------------------------------------
 
@@ -296,61 +290,6 @@ impl TransitionId {
     const COUNT: usize = TransitionId::End as usize + 1;
 }
 
-/// Lexer state transition map.
-static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
-    use self::TransitionId::*;
-    [
-    //  Normal    Bol       AfterCr   Comment
-    //  ------------------------------------------------------------------------
-/*Spc*/ NormCon,  NormCon,  NormCon,  ComCon,
-/*Cr */ Error,    Error,    Error,    Error,
-/*Lf */ Error,    Error,    Error,    Error,
-
-/*Idn*/ Error,    Error,    Error,    ComCon,
-/* B */ Error,    Error,    Error,    ComCon,
-/* D */ Error,    Error,    Error,    ComCon,
-/* O */ Error,    Error,    Error,    ComCon,
-/* X */ Error,    Error,    Error,    ComCon,
-/*0-9*/ Error,    Error,    Error,    ComCon,
-
-/* ( */ Error,    Error,    Error,    ComCon,
-/* ) */ Error,    Error,    Error,    ComCon,
-/* [ */ Error,    Error,    Error,    ComCon,
-/* ] */ Error,    Error,    Error,    ComCon,
-/* { */ Error,    Error,    Error,    ComCon,
-/* } */ Error,    Error,    Error,    ComCon,
-/* " */ Error,    Error,    Error,    ComCon,
-/* ' */ Error,    Error,    Error,    ComCon,
-
-/* , */ Error,    Error,    Error,    ComCon,
-/* # */ ComCon,   ComCon,   ComCon,   ComCon,
-/* = */ Error,    Error,    Error,    ComCon,
-/* + */ Error,    Error,    Error,    ComCon,
-/* - */ Error,    Error,    Error,    ComCon,
-/* & */ Error,    Error,    Error,    ComCon,
-/* | */ Error,    Error,    Error,    ComCon,
-/* ^ */ Error,    Error,    Error,    ComCon,
-/* < */ Error,    Error,    Error,    ComCon,
-/* > */ Error,    Error,    Error,    ComCon,
-/* ~ */ Error,    Error,    Error,    ComCon,
-/* ! */ Error,    Error,    Error,    ComCon,
-/* * */ Error,    Error,    Error,    ComCon,
-/* / */ Error,    Error,    Error,    ComCon,
-/* % */ Error,    Error,    Error,    ComCon,
-/* ; */ Error,    Error,    Error,    ComCon,
-/* : */ Error,    Error,    Error,    ComCon,
-/* ? */ Error,    Error,    Error,    ComCon,
-/* $ */ Error,    Error,    Error,    ComCon,
-/* @ */ Error,    Error,    Error,    ComCon,
-/* \ */ Error,    Error,    Error,    ComCon,
-
-/*Eof*/ End,      End,      End,      End,
-/*???*/ Error,    Error,    Error,    ComCon,
-    ]
-};
-
-// ----------------------------------------------------------------------------
-
 /// Lexer transition.
 #[derive(Clone, Copy, Debug)]
 struct Transition {
@@ -366,6 +305,56 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 /* Error   */ Transition { state: Normal,  action: Fail,     flags: 1 },
 /* End     */ Transition { state: Normal,  action: Succeed,  flags: 0 },
 ];
+
+/// Lexer state transition map.
+static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use TransitionId::*; [
+//          Normal    Bol       AfterCr   Comment
+//          ------------------------------------------------------------------------
+/* Space */ NormCon,  NormCon,  NormCon,  ComCon,
+/* Cr    */ Error,    Error,    Error,    Error,
+/* Lf    */ Error,    Error,    Error,    Error,
+
+/* Id    */ Error,    Error,    Error,    ComCon,
+/* LetB  */ Error,    Error,    Error,    ComCon,
+/* LetD  */ Error,    Error,    Error,    ComCon,
+/* LetO  */ Error,    Error,    Error,    ComCon,
+/* LetX  */ Error,    Error,    Error,    ComCon,
+/* Digit */ Error,    Error,    Error,    ComCon,
+
+/*   (   */ Error,    Error,    Error,    ComCon,
+/*   )   */ Error,    Error,    Error,    ComCon,
+/*   [   */ Error,    Error,    Error,    ComCon,
+/*   ]   */ Error,    Error,    Error,    ComCon,
+/*   {   */ Error,    Error,    Error,    ComCon,
+/*   }   */ Error,    Error,    Error,    ComCon,
+/*   "   */ Error,    Error,    Error,    ComCon,
+/*   '   */ Error,    Error,    Error,    ComCon,
+
+/*   ,   */ Error,    Error,    Error,    ComCon,
+/*   #   */ ComCon,   ComCon,   ComCon,   ComCon,
+/*   =   */ Error,    Error,    Error,    ComCon,
+/*   +   */ Error,    Error,    Error,    ComCon,
+/*   -   */ Error,    Error,    Error,    ComCon,
+/*   &   */ Error,    Error,    Error,    ComCon,
+/*   |   */ Error,    Error,    Error,    ComCon,
+/*   ^   */ Error,    Error,    Error,    ComCon,
+/*   <   */ Error,    Error,    Error,    ComCon,
+/*   >   */ Error,    Error,    Error,    ComCon,
+/*   ~   */ Error,    Error,    Error,    ComCon,
+/*   !   */ Error,    Error,    Error,    ComCon,
+/*   *   */ Error,    Error,    Error,    ComCon,
+/*   /   */ Error,    Error,    Error,    ComCon,
+/*   %   */ Error,    Error,    Error,    ComCon,
+/*   ;   */ Error,    Error,    Error,    ComCon,
+/*   :   */ Error,    Error,    Error,    ComCon,
+/*   ?   */ Error,    Error,    Error,    ComCon,
+/*   $   */ Error,    Error,    Error,    ComCon,
+/*   @   */ Error,    Error,    Error,    ComCon,
+/*   \   */ Error,    Error,    Error,    ComCon,
+
+/* Eof   */ End,      End,      End,      End,
+/* Other */ Error,    Error,    Error,    ComCon,
+]};
 
 // ----------------------------------------------------------------------------
 

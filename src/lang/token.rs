@@ -14,37 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::mem::name::*;
-use crate::lang::Visibility;
-
-/// A lexical token.
+/// Lexical token type.
 #[derive(PartialEq, Debug)]
 pub enum Token {
-
     // === Identifiers & Literals ===
 
-    /// An identifier.
-    Ident(Name),
+    /// Identifier.
+    Ident,                              // name
 
-    /// A label.
-    Label(Visibility, Name),
+    /// Label.
+    Label,                              // name, visibility
 
-    /// A macro parameter.
-    Param(Name),
+    /// Macro parameter.
+    Param,                              // name
 
-    /// An integer literal in 64-bit two's-complement representation.
-    Int(i64),
-    // TODO: Other integer representations.
+    /// Integer literal.
+    Int,                                // value (sign, significand)
 
-    /// A floating-point literal in 64-bit native representation.
-    Float(f64),
-    // TODO: Other integer representations.
+    /// Floating-point literal.
+    Float,                              // value (sign, significand, exponent)
 
-    /// A string literal.
-    Str(Box<String>),
+    /// String literal.
+    Str,                                // value, encoding
 
-    /// A character literal.
-    Char(char),
+    /// Character literal.
+    Char,                               // value, encoding
 
     // === Operators ===
     
@@ -64,13 +58,13 @@ pub enum Token {
     Mod,
 
     /// `+*` - unsigned multiplication operator.
-    UnsMul,
+    UMul,
 
     /// `+/` - unsigned division operator.
-    UnsDiv,
+    UDiv,
 
     /// `+%` - unsigned modulo operator.
-    UnsMod,
+    UMod,
 
     /// `+` - addition operator, increment indicator.
     Add,
@@ -85,7 +79,7 @@ pub enum Token {
     Shr,
 
     /// `+>>` - unsigned right shift operator.
-    UnsShr,
+    UShr,
 
     /// `&` - bitwise AND operator.
     BitAnd,
@@ -96,11 +90,11 @@ pub enum Token {
     /// `|` - bitwise OR operator.
     BitOr,
 
-    /// `==` - equality operator.
-    Equal,
+    /// `==` - equal-to operator.
+    Eq,
 
-    /// `!=` - inequality operator.
-    NotEqual,
+    /// `!=` - not-equal-to operator.
+    NotEq,
 
     /// `<` - signed less-than operator.
     Less,
@@ -109,22 +103,22 @@ pub enum Token {
     More,
 
     /// `<=` - signed less-than-or-equal-to operator.
-    LessEqual,
+    LessEq,
 
     /// `>=` - signed greater-than-or-equal-to operator.
-    MoreEqual,
+    MoreEq,
 
     /// `+<` - unsigned less-than operator.
-    UnsLess,
+    ULess,
 
     /// `+>` - unsigned greater-than operator.
-    UnsMore,
+    UMore,
 
     /// `+<=` - unsigned less-than-or-equal-to operator.
-    UnsLessEqual,
+    ULessEq,
 
     /// `+>=` - unsigned greater-than-or-equal-to operator.
-    UnsMoreEqual,
+    UMoreEq,
 
     /// `?` - not-known indicator.
     Unknown,
@@ -135,63 +129,63 @@ pub enum Token {
     /// `||` - logical OR operator.
     LogOr,
 
-    /// `=`
+    /// `=` - assignment operator.
     Assign,
 
-    /// `*=`
+    /// `*=` - signed multiplication-assignment operator.
     MulAssign,
 
-    /// `/=`
+    /// `/=` - signed division-assignment operator.
     DivAssign,
 
-    /// `/=`
+    /// `%=` - signed modulo-assignment operator.
     ModAssign,
 
-    /// `+*=`
-    UnsMulAssign,
+    /// `+*=` - unsigned multiplication-assignment operator.
+    UMulAssign,
 
-    /// `+/=`
-    UnsDivAssign,
+    /// `+/=` - unsigned division-assignment operator.
+    UDivAssign,
 
-    /// `+/=`
-    UnsModAssign,
+    /// `+/=` - unsigned modulo-assignment operator.
+    UModAssign,
 
-    /// `+=`
+    /// `+=` - addition-assigment operator.
     AddAssign,
 
-    /// `-=`
+    /// `-=` - subtraction-assignment operator.
     SubAssign,
 
-    /// `<<=`
+    /// `<<=` - left-shift-assignment operator.
     ShlAssign,
 
-    /// `>>=`
+    /// `>>=` - signed right-shift-assignment operator.
     ShrAssign,
 
-    /// `+>>=`
-    UnsShrAssign,
+    /// `+>>=` - unsigned right-shift-assignment operator.
+    UShrAssign,
 
-    /// `&=`
+    /// `&=` - bitwise AND-assignment operator.
     BitAndAssign,
 
-    /// `^=`
+    /// `^=` - bitwise XOR-assignment operator.
     BitXorAssign,
 
-    /// `|=`
+    /// `|=` - bitwise OR-assignment operator.
     BitOrAssign,
 
-    /// `&&=`
+    /// `&&=` - logical AND-assignment operator.
     LogAndAssign,
 
-    /// `||=`
+    /// `||=` - logical OR-assignment operator.
     LogOrAssign,
 
     // === Punctuation ===
 
-    /// `{` - left brace.
+    /// `{` - left curly brace.
     BraceL,
 
-    /// `}` - right brace.
+    /// `}` - right curly brace.
     BraceR,
 
     /// `(` - left parenthesis.
@@ -200,10 +194,10 @@ pub enum Token {
     /// `)` - right parenthesis.
     ParenR,
 
-    /// `[` - left bracket.
+    /// `[` - left square bracket.
     BracketL,
 
-    /// `]` - right bracket.
+    /// `]` - right square bracket.
     BracketR,
 
     /// `:` - item joiner.
@@ -220,18 +214,7 @@ pub enum Token {
     /// End of file.
     Eof,
 
-    /// A lexical error.
+    /// Lexical error.
     Error
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::mem::size_of;
-
-    #[test]
-    fn size_of_token() {
-        assert_eq!(16 /*bytes*/, size_of::<Token>());
-    }
 }
 

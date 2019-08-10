@@ -519,10 +519,10 @@ mod tests {
     fn reader_empty() {
         let mut reader = Reader::new(b"");
 
-        assert_eq!( reader.position(),   0     ); 
+        assert_eq!( reader.position(),   0   ); 
 
-        assert_eq!( reader.next(&CHARS), Eof   );
-        assert_eq!( reader.position(),   0     ); 
+        assert_eq!( reader.next(&CHARS), Eof );
+        assert_eq!( reader.position(),   0   ); 
     }
 
     #[test]

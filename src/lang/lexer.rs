@@ -258,11 +258,11 @@ enum Action {
     // Scan a numeric literal.
     ScanNumber,
 
-    // Terminate successfully.
-    Succeed,
-
     // Terminate unsuccessfully.
     Fail,
+
+    // Terminate successfully.
+    Succeed,
 }
 
 // ----------------------------------------------------------------------------
@@ -273,10 +273,10 @@ enum Action {
 #[repr(u8)]
 enum TransitionId {
     /// Transition to `Normal` state and continue scanning.
-    NormCon,
+    Normal,
 
     /// Transition to `Comment` state and continue scanning.
-    ComCon,
+    Comment,
 
     /// Terminate with failure.
     Error,
@@ -300,8 +300,8 @@ struct Transition {
 
 /// Lexer transitions in order by transition ID.
 static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
-/* NormCon */ Transition { state: Normal,  action: Continue, flags: 0 },
-/* ComCon  */ Transition { state: Comment, action: Continue, flags: 0 },
+/* Normal  */ Transition { state: Normal,  action: Continue, flags: 0 },
+/* Comment */ Transition { state: Comment, action: Continue, flags: 0 },
 /* Error   */ Transition { state: Normal,  action: Fail,     flags: 1 },
 /* End     */ Transition { state: Normal,  action: Succeed,  flags: 0 },
 ];
@@ -310,50 +310,50 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use TransitionId::*; [
 //          Normal    Bol       AfterCr   Comment
 //          ------------------------------------------------------------------------
-/* Space */ NormCon,  NormCon,  NormCon,  ComCon,
+/* Space */ Normal,   Normal,   Normal,   Comment,
 /* Cr    */ Error,    Error,    Error,    Error,
 /* Lf    */ Error,    Error,    Error,    Error,
 
-/* Id    */ Error,    Error,    Error,    ComCon,
-/* LetB  */ Error,    Error,    Error,    ComCon,
-/* LetD  */ Error,    Error,    Error,    ComCon,
-/* LetO  */ Error,    Error,    Error,    ComCon,
-/* LetX  */ Error,    Error,    Error,    ComCon,
-/* Digit */ Error,    Error,    Error,    ComCon,
+/* Id    */ Error,    Error,    Error,    Comment,
+/* LetB  */ Error,    Error,    Error,    Comment,
+/* LetD  */ Error,    Error,    Error,    Comment,
+/* LetO  */ Error,    Error,    Error,    Comment,
+/* LetX  */ Error,    Error,    Error,    Comment,
+/* Digit */ Error,    Error,    Error,    Comment,
 
-/*   (   */ Error,    Error,    Error,    ComCon,
-/*   )   */ Error,    Error,    Error,    ComCon,
-/*   [   */ Error,    Error,    Error,    ComCon,
-/*   ]   */ Error,    Error,    Error,    ComCon,
-/*   {   */ Error,    Error,    Error,    ComCon,
-/*   }   */ Error,    Error,    Error,    ComCon,
-/*   "   */ Error,    Error,    Error,    ComCon,
-/*   '   */ Error,    Error,    Error,    ComCon,
+/*   (   */ Error,    Error,    Error,    Comment,
+/*   )   */ Error,    Error,    Error,    Comment,
+/*   [   */ Error,    Error,    Error,    Comment,
+/*   ]   */ Error,    Error,    Error,    Comment,
+/*   {   */ Error,    Error,    Error,    Comment,
+/*   }   */ Error,    Error,    Error,    Comment,
+/*   "   */ Error,    Error,    Error,    Comment,
+/*   '   */ Error,    Error,    Error,    Comment,
 
-/*   ,   */ Error,    Error,    Error,    ComCon,
-/*   #   */ ComCon,   ComCon,   ComCon,   ComCon,
-/*   =   */ Error,    Error,    Error,    ComCon,
-/*   +   */ Error,    Error,    Error,    ComCon,
-/*   -   */ Error,    Error,    Error,    ComCon,
-/*   &   */ Error,    Error,    Error,    ComCon,
-/*   |   */ Error,    Error,    Error,    ComCon,
-/*   ^   */ Error,    Error,    Error,    ComCon,
-/*   <   */ Error,    Error,    Error,    ComCon,
-/*   >   */ Error,    Error,    Error,    ComCon,
-/*   ~   */ Error,    Error,    Error,    ComCon,
-/*   !   */ Error,    Error,    Error,    ComCon,
-/*   *   */ Error,    Error,    Error,    ComCon,
-/*   /   */ Error,    Error,    Error,    ComCon,
-/*   %   */ Error,    Error,    Error,    ComCon,
-/*   ;   */ Error,    Error,    Error,    ComCon,
-/*   :   */ Error,    Error,    Error,    ComCon,
-/*   ?   */ Error,    Error,    Error,    ComCon,
-/*   $   */ Error,    Error,    Error,    ComCon,
-/*   @   */ Error,    Error,    Error,    ComCon,
-/*   \   */ Error,    Error,    Error,    ComCon,
+/*   ,   */ Error,    Error,    Error,    Comment,
+/*   #   */ Comment,  Comment,  Comment,  Comment,
+/*   =   */ Error,    Error,    Error,    Comment,
+/*   +   */ Error,    Error,    Error,    Comment,
+/*   -   */ Error,    Error,    Error,    Comment,
+/*   &   */ Error,    Error,    Error,    Comment,
+/*   |   */ Error,    Error,    Error,    Comment,
+/*   ^   */ Error,    Error,    Error,    Comment,
+/*   <   */ Error,    Error,    Error,    Comment,
+/*   >   */ Error,    Error,    Error,    Comment,
+/*   ~   */ Error,    Error,    Error,    Comment,
+/*   !   */ Error,    Error,    Error,    Comment,
+/*   *   */ Error,    Error,    Error,    Comment,
+/*   /   */ Error,    Error,    Error,    Comment,
+/*   %   */ Error,    Error,    Error,    Comment,
+/*   ;   */ Error,    Error,    Error,    Comment,
+/*   :   */ Error,    Error,    Error,    Comment,
+/*   ?   */ Error,    Error,    Error,    Comment,
+/*   $   */ Error,    Error,    Error,    Comment,
+/*   @   */ Error,    Error,    Error,    Comment,
+/*   \   */ Error,    Error,    Error,    Comment,
 
 /* Eof   */ End,      End,      End,      End,
-/* Other */ Error,    Error,    Error,    ComCon,
+/* Other */ Error,    Error,    Error,    Comment,
 ]};
 
 // ----------------------------------------------------------------------------

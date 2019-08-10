@@ -300,9 +300,8 @@ impl TransitionId {
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
     use self::TransitionId::*;
     [
-//      Normal    Bol       AfterCr   Comment
-//      -----------------------------------------------------------------------
-
+    //  Normal    Bol       AfterCr   Comment
+    //  ------------------------------------------------------------------------
 /*Spc*/ NormCon,  NormCon,  NormCon,  ComCon,
 /*Cr */ Error,    Error,    Error,    Error,
 /*Lf */ Error,    Error,    Error,    Error,

@@ -255,8 +255,36 @@ enum Action {
     /// Continue scanning.
     Continue,
 
-    /// Scan a numeric literal.
-    ScanNumber,
+    // === Sublexers ===
+    
+    /// Scan a binary numeric literal.
+    ScanBin,
+
+    /// Scan an octal numeric literal.
+    ScanOct,
+
+    /// Scan a decimal numeric literal.
+    ScanDec,
+
+    /// Scan a hexadecimal numeric literal.
+    ScanHex,
+
+    /// Scan a string.
+    ScanStr,
+
+    // === Identifiers & Literals ===
+
+    /// Yield an identifier.
+    YieldIdent,
+
+    /// Yield a label.
+    YieldLabel,
+
+    /// Yield a macro parameter.
+    YieldParam,
+
+    /// Yield a character literal.
+    YieldChar,
 
     // === Operators ===
     
@@ -690,6 +718,12 @@ impl<'a> Lexer<'a> {
         match action {
             Continue          => unreachable!(),
 
+            // Identifiers & Literals
+            YieldIdent        => Token::Ident,
+            YieldLabel        => Token::Label,
+            YieldParam        => Token::Param,
+            YieldChar         => Token::Char,
+
             // Operators
             YieldLogNot       => Token::LogNot,
             YieldBitNot       => Token::BitNot,
@@ -754,23 +788,39 @@ impl<'a> Lexer<'a> {
             Fail              => Token::Error,
 
             // Sublexers
-            ScanNumber => {
+            ScanBin => {
+                // Token::Int,
+                // Token::Float,
                 panic!("Not implemented yet");
-            }
+            },
 
-            // Identifiers & Literals
-            // Ident,
-            // Label,
-            // Param,
-            // Int,
-            // Float,
-            // Str,
-            // Char,
+            ScanOct => {
+                // Token::Int,
+                // Token::Float,
+                panic!("Not implemented yet");
+            },
+
+            ScanDec => {
+                // Token::Int,
+                // Token::Float,
+                panic!("Not implemented yet");
+            },
+
+            ScanHex => {
+                // Token::Int,
+                // Token::Float,
+                panic!("Not implemented yet");
+            },
+
+            ScanStr => {
+                // Token::Str,
+                panic!("Not implemented yet");
+            },
         }
     }
 
     #[cfg(ideas)]
-    fn next_num_dec(&mut self) -> Token {
+    fn next_dec(&mut self) -> Token {
         let mut val     = 0u64; // significand
         let mut exp     = 0i16; // exponent
         let mut exp_inc = 0i16; // exponent increment

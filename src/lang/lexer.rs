@@ -252,16 +252,25 @@ impl State {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Action {
-    // Continue scanning.
+    /// Continue scanning.
     Continue,
 
-    // Scan a numeric literal.
+    /// Scan a numeric literal.
     ScanNumber,
 
-    // Terminate unsuccessfully.
+    /// Yield a `ParenL` token.
+    YieldParenL,
+
+    /// Yield a `ParenR` token.
+    YieldParenR,
+
+    /// Yield an `Eos` token.
+    YieldEos,
+
+    /// Terminate unsuccessfully.
     Fail,
 
-    // Terminate successfully.
+    /// Terminate successfully.
     Succeed,
 }
 
@@ -275,8 +284,32 @@ enum TransitionId {
     /// Transition to `Normal` state and continue scanning.
     Normal,
 
+    /// Transition to `Bol` state and continue scanning.
+    Bol,
+
+    /// Transition to `Bol` state and emit an `Eos` token.
+    BolEos,
+
+    /// Transition to `AfterCr` state and continue scanning.
+    Cr,
+
+    /// Transition to `AfterCr` state and emit an `Eos` token.
+    CrEos,
+
+    /// Transition to `Bol` state and continue scanning. [Do not increment line]
+    CrLf,
+
     /// Transition to `Comment` state and continue scanning.
     Comment,
+
+    /// Transition to `Comment` state and emit an `Eos` token.
+    CommentEos,
+
+    /// Transition to `Normal` state and emit a `ParenL` token.
+    ParenL,
+
+    /// Transition to `Normal` state and emit a `ParenR` token.
+    ParenR,
 
     /// Terminate with failure.
     Error,
@@ -300,19 +333,27 @@ struct Transition {
 
 /// Lexer transitions in order by transition ID.
 static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
-/* Normal  */ Transition { state: Normal,  action: Continue, flags: 0 },
-/* Comment */ Transition { state: Comment, action: Continue, flags: 0 },
-/* Error   */ Transition { state: Normal,  action: Fail,     flags: 1 },
-/* End     */ Transition { state: Normal,  action: Succeed,  flags: 0 },
+/* Normal     */ Transition { state: Normal,  action: Continue,    flags: 0 },
+/* Bol        */ Transition { state: Bol,     action: Continue,    flags: 1 },
+/* BolEos     */ Transition { state: Bol,     action: YieldEos,    flags: 1 },
+/* Cr         */ Transition { state: AfterCr, action: Continue,    flags: 1 },
+/* CrEos      */ Transition { state: AfterCr, action: YieldEos,    flags: 0 },
+/* CrLf       */ Transition { state: Bol,     action: Continue,    flags: 0 },
+/* Comment    */ Transition { state: Comment, action: Continue,    flags: 0 },
+/* CommentEos */ Transition { state: Comment, action: YieldEos,    flags: 0 },
+/* ParenL     */ Transition { state: Normal,  action: YieldParenL, flags: 0 },
+/* ParenR     */ Transition { state: Normal,  action: YieldParenR, flags: 0 },
+/* Error      */ Transition { state: Normal,  action: Fail,        flags: 1 },
+/* End        */ Transition { state: Normal,  action: Succeed,     flags: 0 },
 ];
 
 /// Lexer state transition map.
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use TransitionId::*; [
 //          Normal    Bol       AfterCr   Comment
 //          ------------------------------------------------------------------------
-/* Space */ Normal,   Normal,   Normal,   Comment,
-/* Cr    */ Error,    Error,    Error,    Error,
-/* Lf    */ Error,    Error,    Error,    Error,
+/* Space */ Normal,   Bol,      Bol,      Comment,
+/* Cr    */ CrEos,    Cr,       Cr,       Cr,
+/* Lf    */ BolEos,   Bol,      CrLf,     Bol,
 
 /* Id    */ Error,    Error,    Error,    Comment,
 /* LetB  */ Error,    Error,    Error,    Comment,
@@ -321,8 +362,8 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use Transi
 /* LetX  */ Error,    Error,    Error,    Comment,
 /* Digit */ Error,    Error,    Error,    Comment,
 
-/*   (   */ Error,    Error,    Error,    Comment,
-/*   )   */ Error,    Error,    Error,    Comment,
+/*   (   */ ParenL,   ParenL,   ParenL,   Comment,
+/*   )   */ ParenR,   ParenR,   ParenR,   Comment,
 /*   [   */ Error,    Error,    Error,    Comment,
 /*   ]   */ Error,    Error,    Error,    Comment,
 /*   {   */ Error,    Error,    Error,    Comment,
@@ -331,7 +372,7 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use Transi
 /*   '   */ Error,    Error,    Error,    Comment,
 
 /*   ,   */ Error,    Error,    Error,    Comment,
-/*   #   */ Comment,  Comment,  Comment,  Comment,
+/*   #   */ CommentEos,Comment, Comment,  Comment,
 /*   =   */ Error,    Error,    Error,    Comment,
 /*   +   */ Error,    Error,    Error,    Comment,
 /*   -   */ Error,    Error,    Error,    Comment,
@@ -483,9 +524,12 @@ impl<'a> Lexer<'a> {
 
         // Return token
         match action {
-            Continue => unreachable!(),
-            Succeed  => Token::Eof,
-            Fail     => Token::Error,
+            Continue    => unreachable!(),
+            YieldParenL => Token::ParenL,
+            YieldParenR => Token::ParenR,
+            YieldEos    => Token::Eos,
+            Succeed     => Token::Eof,
+            Fail        => Token::Error,
 
             ScanNumber => {
                 panic!("Not implemented yet");
@@ -581,6 +625,37 @@ mod tests {
         let mut lexer = Lexer::new(b"# this is a comment");
 
         assert_eq!( lexer.next(), Token::Eof );
+    }
+
+    #[test]
+    fn lexer_cr() {
+        let mut lexer = Lexer::new(b"\r\r # hello");
+
+        assert_eq!( lexer.next(), Token::Eof );
+    }
+
+    #[test]
+    fn lexer_lf() {
+        let mut lexer = Lexer::new(b"\n\n # hello");
+
+        assert_eq!( lexer.next(), Token::Eof );
+    }
+
+    #[test]
+    fn lexer_crlf() {
+        let mut lexer = Lexer::new(b"\r\n\r\n # hello");
+
+        assert_eq!( lexer.next(), Token::Eof );
+    }
+
+    #[test]
+    fn lexer_parens() {
+        let mut lexer = Lexer::new(b"()#c\n\n");
+
+        assert_eq!( lexer.next(), Token::ParenL );
+        assert_eq!( lexer.next(), Token::ParenR );
+        assert_eq!( lexer.next(), Token::Eos    );
+        assert_eq!( lexer.next(), Token::Eof    );
     }
 }
 

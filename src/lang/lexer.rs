@@ -23,6 +23,7 @@
 // - The term "logical character" in this file is preferred over the probably
 //   more-correct term "character equivalence class".
 
+use std::borrow::Cow;
 use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData;
 use std::slice;
@@ -691,7 +692,38 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Gets the next lexical token.
+    /// Returns the source file path of the current token.
+    #[inline]
+    pub fn path(&self) -> &'a str {
+        panic!()
+    }
+
+    /// Returns the source line number (1-indexed) of the current token.
+    #[inline]
+    pub fn line(&self) -> usize {
+        panic!()
+    }
+
+    /// Returns the numeric value of the current token.
+    #[inline]
+    pub fn num(&mut self) -> u64 /*?*/ {
+        panic!()
+    }
+
+    /// Returns the source text of the current token.
+    #[inline]
+    pub fn text(&self) -> &'a [u8] {
+        panic!()
+    }
+
+    /// Takes the string value of the current token out of the lexer.
+    /// Can be invoked only once per string token.
+    #[inline]
+    pub fn take_str(&mut self) -> Cow<'a, String> {
+        panic!()
+    }
+
+    /// Advances to the next token and returns its type.
     pub fn next(&mut self) -> Token {
         // Restore saved state and prepare for loop
         let mut state = self.state;

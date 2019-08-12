@@ -695,6 +695,7 @@ impl<'a> Lexer<'a> {
     /// Returns the source file path of the current token.
     #[inline]
     pub fn path(&self) -> &'a str {
+        // TODO: Perhaps this would go somewhere else.
         panic!()
     }
 
@@ -706,7 +707,8 @@ impl<'a> Lexer<'a> {
 
     /// Returns the numeric value of the current token.
     #[inline]
-    pub fn num(&mut self) -> u64 /*?*/ {
+    pub fn num(&mut self) -> u64 {
+        // TODO: How to represent numbers?
         panic!()
     }
 

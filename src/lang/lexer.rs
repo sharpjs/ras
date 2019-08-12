@@ -652,14 +652,30 @@ impl<'a> Reader<'a> {
     pub fn rewind(&mut self) {
         let p = self.ptr;
         if p == self.beg {
-            panic!("Attempt to rewind past beginning of input.")
+            panic!("Attempt to rewind past the beginning of input.")
         }
         self.ptr = unsafe { p.offset(-1) };
     }
 
+    /// Returns a slice of the `len` bytes preceding the next byte to be read.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `len` exceeds the count of bytes that have been read.
+    ///
+    #[inline(always)]
+    pub fn preceding(&self, len: usize) -> &'a [u8] {
+        unsafe {
+            if len > self.position() {
+                panic!("Attempted to obtain a slice before the beginning of input.")
+            }
+            slice::from_raw_parts(self.end.sub(len), len)
+        }
+    }
+
     /// Returns a slice of the bytes remaining to be read.
     #[inline(always)]
-    pub fn as_slice(&self) -> &[u8] {
+    pub fn remaining(&self) -> &'a [u8] {
         unsafe {
             let len = self.end as usize - self.ptr as usize;
             slice::from_raw_parts(self.ptr, len)
@@ -669,7 +685,7 @@ impl<'a> Reader<'a> {
 
 impl<'a> Debug for Reader<'a> {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "Reader {:X?}", self.as_slice())
+        write!(f, "Reader {:X?}", self.remaining())
     }
 }
 
@@ -720,7 +736,7 @@ impl<'a> Lexer<'a> {
     /// Returns the source text of the current token.
     #[inline]
     pub fn text(&self) -> &'a [u8] {
-        panic!()
+        self.input.preceding(self.len)
     }
 
     /// Takes the string value of the current token out of the lexer.

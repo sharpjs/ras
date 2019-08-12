@@ -16,3 +16,38 @@
 
 pub mod int;
 
+/// Numeric bases.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum Base {
+    /// Binary.
+    Bin,
+
+    /// Octal.
+    Oct,
+
+    /// Decimal.
+    Dec,
+
+    /// Hexadecimal.
+    Hex,
+}
+
+impl Base {
+    /// Returns the radix number, such as 8 for octal.
+    pub fn radix(self) -> usize {
+        match self {
+            Base::Bin =>  2,
+            Base::Oct =>  8,
+            Base::Dec => 10,
+            Base::Hex => 16,
+        }
+    }
+}
+
+impl Default for Base {
+    #[inline(always)]
+    fn default() -> Self {
+        Base::Dec
+    }
+}
+

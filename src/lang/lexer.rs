@@ -680,6 +680,9 @@ impl<'a> Debug for Reader<'a> {
 pub struct Lexer<'a> {
     input: Reader<'a>,
     state: State,
+
+    line:  usize,
+    len:   usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -689,6 +692,8 @@ impl<'a> Lexer<'a> {
         Self {
             input: Reader::new(input),
             state: Bol,
+            line:  1,
+            len:   0,
         }
     }
 
@@ -702,7 +707,7 @@ impl<'a> Lexer<'a> {
     /// Returns the source line number (1-indexed) of the current token.
     #[inline]
     pub fn line(&self) -> usize {
-        panic!()
+        self.line
     }
 
     /// Returns the numeric value of the current token.
@@ -728,9 +733,11 @@ impl<'a> Lexer<'a> {
     /// Advances to the next token and returns its type.
     pub fn next(&mut self) -> Token {
         // Restore saved state and prepare for loop
-        let mut state = self.state;
+        let mut state   = self.state;
+        let mut line    = self.line;
+        let mut len     = 0;
+        let mut len_inc = 0;
         let mut action;
-        //let mut length = 0;
 
         // Discover next token
         loop {
@@ -738,15 +745,19 @@ impl<'a> Lexer<'a> {
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
-            state   = next.state;
-            action  = next.action;
-            //length += next.flags & 1u16;
+            state    = next.state;
+            action   = next.action;
+            line    += ((next.flags & 2u16) >> 1) as usize;
+            len_inc |= next.flags & 1u16;
+            len     += len_inc as usize;
 
             if action != Continue { break }
         }
 
         // Save state for subsequent invocation
         self.state = state;
+        self.line  = line;
+        self.len   = len;
 
         // Return token
         match action {

@@ -98,13 +98,13 @@ enum Char {
 
 impl Char {
     /// Count of `Char` logical characters.
-    const COUNT: usize = Char::Other as usize / State::COUNT + 1;
+    const COUNT: usize = Self::Other as usize / State::COUNT + 1;
 }
 
 impl ConstDefault for Char {
     /// Default `Char` logical character.
     /// A [`Reader`] returns this value at the end of input.
-    const DEFAULT: Self = Char::Eof;
+    const DEFAULT: Self = Self::Eof;
 }
 
 /// Mapping of UTF-8 bytes to `Char` logical characters.
@@ -173,13 +173,13 @@ enum NumChar {
 
 impl NumChar {
     /// Count of `NumChar` logical characters.
-    const COUNT: usize = NumChar::Other as usize / State::COUNT + 1;
+    const COUNT: usize = Self::Other as usize / State::COUNT + 1;
 }
 
 impl ConstDefault for NumChar {
     /// Default `NumChar` logical character.
     /// A [`Reader`] returns this value at the end of input.
-    const DEFAULT: Self = NumChar::Eof;
+    const DEFAULT: Self = Self::Eof;
 }
 
 /// Mapping of UTF-8 bytes to `NumChar` logical characters.
@@ -511,7 +511,7 @@ enum TransitionId {
 
 impl TransitionId {
     /// Count of transition IDs.
-    const COUNT: usize = TransitionId::End as usize + 1;
+    const COUNT: usize = Self::End as usize + 1;
 }
 
 /// Lexer transition.

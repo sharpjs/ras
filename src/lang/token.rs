@@ -15,7 +15,8 @@
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 /// Lexical token type.
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum Token {
     // === Identifiers & Literals ===
 

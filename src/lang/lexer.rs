@@ -273,7 +273,7 @@ enum Action {
     /// Scan a string.
     ScanStr,
 
-    // === Identifiers & Literals ===
+    // === Tokens ===
 
     /// Yield an identifier.
     YieldIdent,
@@ -287,15 +287,10 @@ enum Action {
     /// Yield a character literal.
     YieldChar,
 
-    // === Simple Tokens ===
-    
     /// Yield a token.
     Yield(Token),
 
     // === Terminators ===
-
-    /// Yield an `Eos` token.
-    YieldEos,
 
     /// Terminate unsuccessfully.
     Fail,
@@ -379,12 +374,12 @@ impl Transition {
 static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [            // Newline┐ │
 /* Normal     */ Transition { state: Normal,  action: Continue,         flags: 0b_0_0 },
 /* Bol        */ Transition { state: Bol,     action: Continue,         flags: 0b_1_0 },
-/* BolEos     */ Transition { state: Bol,     action: YieldEos,         flags: 0b_1_0 },
+/* BolEos     */ Transition { state: Bol,     action: Yield(T::Eos),    flags: 0b_1_0 },
 /* Cr         */ Transition { state: AfterCr, action: Continue,         flags: 0b_1_0 },
-/* CrEos      */ Transition { state: AfterCr, action: YieldEos,         flags: 0b_0_0 },
+/* CrEos      */ Transition { state: AfterCr, action: Yield(T::Eos),    flags: 0b_1_0 },
 /* CrLf       */ Transition { state: Bol,     action: Continue,         flags: 0b_0_0 },
 /* Comment    */ Transition { state: Comment, action: Continue,         flags: 0b_0_0 },
-/* CommentEos */ Transition { state: Comment, action: YieldEos,         flags: 0b_0_0 },
+/* CommentEos */ Transition { state: Comment, action: Yield(T::Eos),    flags: 0b_0_0 },
 /* ParenL     */ Transition { state: Normal,  action: Yield(T::ParenL), flags: 0b_0_1 },
 /* ParenR     */ Transition { state: Normal,  action: Yield(T::ParenR), flags: 0b_0_1 },
 /* Error      */ Transition { state: Normal,  action: Fail,             flags: 0b_0_0 },
@@ -647,7 +642,6 @@ impl<'a> Lexer<'a> {
             Yield(token)      => token,
 
             // Terminators
-            YieldEos          => Token::Eos,
             Succeed           => Token::Eof,
             Fail              => Token::Error,
         }

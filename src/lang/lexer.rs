@@ -519,25 +519,37 @@ impl TransitionId {
 struct Transition {
     state:  State,
     action: Action,
-    flags:  u16,
-    //      - line   increment
-    //      - length increment
+    flags:  u8, // 0b000000LT
+                //         │└Token increment
+                //         └─Line increment
 }
 
-/// Lexer transitions in order by transition ID.
-static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [
-/* Normal     */ Transition { state: Normal,  action: Continue,    flags: 0 },
-/* Bol        */ Transition { state: Bol,     action: Continue,    flags: 1 },
-/* BolEos     */ Transition { state: Bol,     action: YieldEos,    flags: 1 },
-/* Cr         */ Transition { state: AfterCr, action: Continue,    flags: 1 },
-/* CrEos      */ Transition { state: AfterCr, action: YieldEos,    flags: 0 },
-/* CrLf       */ Transition { state: Bol,     action: Continue,    flags: 0 },
-/* Comment    */ Transition { state: Comment, action: Continue,    flags: 0 },
-/* CommentEos */ Transition { state: Comment, action: YieldEos,    flags: 0 },
-/* ParenL     */ Transition { state: Normal,  action: YieldParenL, flags: 0 },
-/* ParenR     */ Transition { state: Normal,  action: YieldParenR, flags: 0 },
-/* Error      */ Transition { state: Normal,  action: Fail,        flags: 0 },
-/* End        */ Transition { state: Normal,  action: Succeed,     flags: 0 },
+impl Transition {
+    #[inline]
+    fn token_inc(&self) -> usize {
+        (self.flags & 1) as usize
+    }
+
+    #[inline]
+    fn line_inc(&self) -> usize {
+        (self.flags >> 1) as usize
+    }
+}
+
+/// Lexer transitions in order by transition ID.                   //     Token┐
+static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [       // Newline┐ │
+/* Normal     */ Transition { state: Normal,  action: Continue,    flags: 0b_0_0 },
+/* Bol        */ Transition { state: Bol,     action: Continue,    flags: 0b_1_0 },
+/* BolEos     */ Transition { state: Bol,     action: YieldEos,    flags: 0b_1_0 },
+/* Cr         */ Transition { state: AfterCr, action: Continue,    flags: 0b_1_0 },
+/* CrEos      */ Transition { state: AfterCr, action: YieldEos,    flags: 0b_0_0 },
+/* CrLf       */ Transition { state: Bol,     action: Continue,    flags: 0b_0_0 },
+/* Comment    */ Transition { state: Comment, action: Continue,    flags: 0b_0_0 },
+/* CommentEos */ Transition { state: Comment, action: YieldEos,    flags: 0b_0_0 },
+/* ParenL     */ Transition { state: Normal,  action: YieldParenL, flags: 0b_0_1 },
+/* ParenR     */ Transition { state: Normal,  action: YieldParenR, flags: 0b_0_1 },
+/* Error      */ Transition { state: Normal,  action: Fail,        flags: 0b_0_0 },
+/* End        */ Transition { state: Normal,  action: Succeed,     flags: 0b_0_0 },
 ];
 
 /// Lexer state transition map.
@@ -763,9 +775,9 @@ impl<'a> Lexer<'a> {
 
             state    = next.state;
             action   = next.action;
-            line    += ((next.flags & 2u16) >> 1) as usize;
-            len_inc |= next.flags & 1u16;
-            len     += len_inc as usize;
+            line    += next.line_inc();
+            len_inc |= next.token_inc();
+            len     += len_inc;
 
             if action != Continue { break }
         }

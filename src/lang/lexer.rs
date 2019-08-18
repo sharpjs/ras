@@ -451,9 +451,9 @@ struct Reader<'a> {
 }
 
 impl<'a> Reader<'a> {
-    // Safety: This is a specialization of std::slice::Iter.  The unsafe blocks
-    // here are equivalent to those in std::slice::Iter and thus have the same
-    // effective safety.
+    // Safety: Similar to std::slice::Iter.  Performs pointer arithmetic and
+    // dereferences pointers to bytes within a slice of bytes.  Safety is
+    // ensured by checks against the slice bounds.
 
     /// Creates a new [`Reader`] over the given slice of bytes.
     #[inline(always)]

@@ -470,20 +470,21 @@ impl<'a> Reader<'a> {
         self.ptr as usize - self.beg as usize
     }
 
-    /// Reads the next byte, advances the reader, and returns the corresponding
-    /// logical character from the given character set `map`.
+    /// Reads the next byte, advances the reader, and returns both the byte and
+    /// its corresponding logical character from the given character set `map`.
     ///
     /// If the reader is positioned at the end of input, this method returns
-    /// [`C::DEFAULT`], and the reader's position remains unchanged.
+    /// `(C::DEFAULT, 0)`, and the reader's position remains unchanged.
     #[inline(always)]
-    pub fn next<C>(&mut self, map: &[C; 256]) -> C where C: ConstDefault {
+    pub fn next<C>(&mut self, map: &[C; 256]) -> (C, u8) where C: ConstDefault {
         let p = self.ptr;
         if p == self.end {
-            C::DEFAULT
+            (C::DEFAULT, 0)
         } else {
             unsafe {
                 self.ptr = p.offset(1);
-                map[*p as usize]
+                let byte = *p;
+                (map[byte as usize], byte)
             }
         }
     }
@@ -603,7 +604,7 @@ impl<'a> Lexer<'a> {
 
         // Discover next token
         loop {
-            let next = self.input.next(&CHARS);
+            let next = self.input.next(&CHARS).0;
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
@@ -665,7 +666,7 @@ impl<'a> Lexer<'a> {
             let mut exp_inc = 0i16; // exponent increment
 
             loop {
-                let next = self.input.next(&NUM_CHARS);
+                let (next, byte) = self.input.next(&NUM_CHARS);
 
                 // dig, sig_mask, dig_mask, frac_marker, 
                 let mask = (next.flags & IS_DIGIT) as i64;
@@ -706,35 +707,35 @@ mod tests {
     fn reader_empty() {
         let mut reader = Reader::new(b"");
 
-        assert_eq!( reader.position(),   0   ); 
+        assert_eq!( reader.position(),   0        );
 
-        assert_eq!( reader.next(&CHARS), Eof );
-        assert_eq!( reader.position(),   0   ); 
+        assert_eq!( reader.next(&CHARS), (Eof, 0) );
+        assert_eq!( reader.position(),   0        );
     }
 
     #[test]
     fn reader_next() {
         let mut reader = Reader::new(b"X+1");
 
-        assert_eq!( reader.position(),   0     ); 
+        assert_eq!( reader.position(),   0             );
 
-        assert_eq!( reader.next(&CHARS), LetX  );
-        assert_eq!( reader.position(),   1     ); 
+        assert_eq!( reader.next(&CHARS), (LetX, b'X')  );
+        assert_eq!( reader.position(),   1             );
 
-        assert_eq!( reader.next(&CHARS), Plus  );
-        assert_eq!( reader.position(),   2     ); 
+        assert_eq!( reader.next(&CHARS), (Plus, b'+')  );
+        assert_eq!( reader.position(),   2             );
 
-        assert_eq!( reader.next(&CHARS), Digit );
-        assert_eq!( reader.position(),   3     ); 
+        assert_eq!( reader.next(&CHARS), (Digit, b'1') );
+        assert_eq!( reader.position(),   3             );
 
         reader.rewind();
-        assert_eq!( reader.position(),   2     ); 
+        assert_eq!( reader.position(),   2             );
 
-        assert_eq!( reader.next(&CHARS), Digit );
-        assert_eq!( reader.position(),   3     ); 
+        assert_eq!( reader.next(&CHARS), (Digit, b'1') );
+        assert_eq!( reader.position(),   3             );
 
-        assert_eq!( reader.next(&CHARS), Eof   );
-        assert_eq!( reader.position(),   3     ); 
+        assert_eq!( reader.next(&CHARS), (Eof, 0)      );
+        assert_eq!( reader.position(),   3             );
     }
 
     #[test]

@@ -516,7 +516,7 @@ impl<'a> Reader<'a> {
             panic!("Attempted to obtain a slice before the beginning of input.")
         }
         unsafe {
-            slice::from_raw_parts(self.end.sub(len), len)
+            slice::from_raw_parts(self.ptr.sub(len), len)
         }
     }
 

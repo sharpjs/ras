@@ -32,9 +32,6 @@ use crate::util::ConstDefault;
 
 use super::token::Token::{self, self as T};
 
-use Action::*;
-use State::*;
-
 // ---------------------------------------------------------------------------- 
 
 // Just a helper to define Char variants
@@ -246,7 +243,7 @@ enum State {
 
 impl State {
     /// Count of lexer states.
-    const COUNT: usize = Comment as usize + 1;
+    const COUNT: usize = State::Comment as usize + 1;
 }
 
 // ----------------------------------------------------------------------------
@@ -371,8 +368,10 @@ impl Transition {
     }
 }
 
-/// Lexer transitions in order by transition ID.                        //     Token┐
-static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [            // Newline┐ │
+/// Lexer transitions in order by transition ID.
+static TRANSITION_LUT: [Transition; TransitionId::COUNT] = { use Action::*; use State::*; [
+//                                                                             Token┐
+//                                                                         Newline┐ │
 /* Normal     */ Transition { state: Normal,  action: Continue,         flags: 0b_0_0 },
 /* Bol        */ Transition { state: Bol,     action: Continue,         flags: 0b_1_0 },
 /* BolEos     */ Transition { state: Bol,     action: Yield(T::Eos),    flags: 0b_1_0 },
@@ -385,7 +384,7 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = [            // Newli
 /* ParenR     */ Transition { state: Normal,  action: Yield(T::ParenR), flags: 0b_0_1 },
 /* Error      */ Transition { state: Normal,  action: Fail,             flags: 0b_0_0 },
 /* End        */ Transition { state: Normal,  action: Succeed,          flags: 0b_0_0 },
-];
+]};
 
 /// Lexer state transition map.
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use TransitionId::*; [
@@ -555,7 +554,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a [u8]) -> Self {
         Self {
             input: Reader::new(input),
-            state: Bol,
+            state: State::Bol,
             line:  1,
             len:   0,
         }
@@ -596,6 +595,8 @@ impl<'a> Lexer<'a> {
 
     /// Advances to the next token and returns its type.
     pub fn next(&mut self) -> Token {
+        use Action::*;
+
         // Restore saved state and prepare for loop
         let mut state   = self.state;
         let mut line    = self.line;

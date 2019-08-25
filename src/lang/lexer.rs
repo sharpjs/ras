@@ -512,10 +512,10 @@ impl<'a> Reader<'a> {
     ///
     #[inline(always)]
     pub fn preceding(&self, len: usize) -> &'a [u8] {
+        if len > self.position() {
+            panic!("Attempted to obtain a slice before the beginning of input.")
+        }
         unsafe {
-            if len > self.position() {
-                panic!("Attempted to obtain a slice before the beginning of input.")
-            }
             slice::from_raw_parts(self.end.sub(len), len)
         }
     }
@@ -523,8 +523,8 @@ impl<'a> Reader<'a> {
     /// Returns a slice of the bytes remaining to be read.
     #[inline(always)]
     pub fn remaining(&self) -> &'a [u8] {
+        let len = self.end as usize - self.ptr as usize;
         unsafe {
-            let len = self.end as usize - self.ptr as usize;
             slice::from_raw_parts(self.ptr, len)
         }
     }

@@ -499,7 +499,7 @@ impl<'a> Reader<'a> {
     pub fn rewind(&mut self) {
         let p = self.ptr;
         if p == self.beg {
-            panic!("Attempt to rewind past the beginning of input.")
+            panic!("Attempted to rewind past the beginning of input.")
         }
         self.ptr = unsafe { p.offset(-1) };
     }

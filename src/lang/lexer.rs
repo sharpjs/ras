@@ -169,7 +169,8 @@ enum NumChar {
     Neg   = char( 9), // -    negative sign
     // rare
     Eof   = char(10), // end of file
-    Other = char(11), // everything else
+    Id    = char(11), // identifier character
+    Other = char(12), // everything else
 }
 
 impl NumChar {
@@ -195,33 +196,33 @@ static NUM_CHARS: [NumChar; 256] = { use NumChar::*; [
     Other,  Other,  Other,  Pos,    Other,  Neg,    Dot,    Other,  // ()*+,-./
     Bin,    Bin,    Oct,    Oct,    Oct,    Oct,    Oct,    Oct,    // 01234567
     Dec,    Dec,    Other,  Other,  Other,  Other,  Other,  Other,  // 89:;<=>?
-    Other,  HexU,   HexU,   HexU,   HexU,   HexU,   HexU,   Other,  // @ABCDEFG
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // HIJKLMNO
-    Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // PQRSTUVW
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Sep,    // XYZ[\]^_
-    Other,  HexL,   HexL,   HexL,   HexL,   HexL,   HexL,   Other,  // `abcdefg
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // hijklmno
-    Exp,    Other,  Other,  Other,  Other,  Other,  Other,  Other,  // pqrstuvw
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // xyz{|}~. <- DEL
+    Other,  HexU,   HexU,   HexU,   HexU,   HexU,   HexU,   Id,     // @ABCDEFG
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // HIJKLMNO
+    Exp,    Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
+    Id,     Id,     Id,     Other,  Other,  Other,  Other,  Sep,    // XYZ[\]^_
+    Other,  HexL,   HexL,   HexL,   HexL,   HexL,   HexL,   Id,     // `abcdefg
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // hijklmno
+    Exp,    Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
+    Id,     Id,     Id,     Other,  Other,  Other,  Other,  Other,  // xyz{|}~. <- DEL
 
 //  UTF-8 multibyte sequences
 //  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 80-87
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 88-8F
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 90-97
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // 98-9F
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A0-A7
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // A8-AF
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B0-B7
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // B8-BF
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C0-C7
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // C8-CF
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D0-D7
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // D8-DF
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E0-E7
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // E8-EF
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F0-F7
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // F8-FF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
+    Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
+    Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
 ]};
 
 // ----------------------------------------------------------------------------

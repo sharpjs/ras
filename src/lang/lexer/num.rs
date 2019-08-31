@@ -230,3 +230,119 @@ enum Action {
     Panic,
 }
 
+// ----------------------------------------------------------------------------
+
+// IDs of transitions in lexical analysis of numeric literals.  Each ID is an
+// index into [`TRANSITION_LUT`], which contains the details of the transition.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+enum TransitionId {
+    /// Continue scanning.
+    None,
+
+    /// Transition to `Int` state.
+    Int,
+
+    /// Transition to `Frac0` state.
+    Frac0,
+
+    /// Transition to `Frac` state.
+    Frac,
+
+    /// Transition to `Exp0` state.
+    Exp0,
+
+    /// Transition to `ExpS0` state.  Set exponent sign to positive.
+    ExpP0,
+
+    /// Transition to `ExpS0` state.  Set exponent sign to negative.
+    ExpN0,
+
+    /// Transition to `Exp` state.
+    Exp,
+
+    /// Transition to `Invalid` state.
+    Inval,
+
+    /// Yield a numeric literal, assigning accumulator to significand.
+    YNumS,
+
+    /// Yield a numeric literal, assigning accumulator to exponent.
+    YNumE,
+
+    /// Yield an 'invalid numeric literal' lexical error.
+    YErr,
+
+    /// Panic: the lexer is in an invalid state.
+    Panic,
+}
+
+impl TransitionId {
+    /// Count of transition IDs.
+    const COUNT: usize = Self::Panic as usize + 1;
+}
+
+/// Transition in lexical analysis of numeric literals.
+#[derive(Clone, Copy, Debug)]
+struct Transition {
+    state:  State,
+    action: Action,
+    flags:  u8, // 0bCESxxxNW
+                //   │││   │└─ increment fraction width
+                //   │││   └── set exponent sign
+                //   ││└────── store accumulator to significand
+                //   │└─────── store accumulator to exponent
+                //   └──────── change state
+}
+
+impl Transition {
+    /// Returns the increment to fraction width.
+    #[inline(always)]
+    fn frac_width(&self) -> u8 {
+        self.flags & 1
+    }
+
+    /// Returns 1 if the exponent is signed and 0 otherwise.
+    #[inline(always)]
+    fn exp_sign(&self) -> u64 {
+        self.flags as u64 >> 1 << 63
+    }
+
+    /// Returns [`std::u64::MAX`] if the accumulator should be stored to the
+    /// significand and `0` otherwise.
+    #[inline(always)]
+    fn sig_mask(&self) -> u64 {
+        ((self.flags as i64) << 59 >> 63) as u64
+    }
+
+    /// Returns [`std::u8::MAX`] if the state should change and `0` otherwise.
+    #[inline(always)]
+    fn state_mask(&self) -> u8 {
+        ((self.flags as i8) >> 7) as u8
+    }
+}
+
+/// Lexer transitions in order by transition ID.
+static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
+use Action::*; use State::*; [
+//                                         increment fraction width ──────────┐
+//                                                set exponent sign ─────────┐│
+//                                                store significand ───┐     ││
+//                                                   store exponent ──┐│     ││
+//                                                     change state ─┐││     ││
+//                                                                   CES     NW
+/* None  */ Transition { state: Invalid, action: Continue, flags: 0b_000_000_00 },
+/* Int   */ Transition { state: Int,     action: Continue, flags: 0b_100_000_00 },
+/* Frac0 */ Transition { state: Frac0,   action: Continue, flags: 0b_100_000_00 },
+/* Frac  */ Transition { state: Frac,    action: Continue, flags: 0b_100_000_01 },
+/* Exp0  */ Transition { state: Exp0,    action: Continue, flags: 0b_101_000_00 },
+/* ExpP0 */ Transition { state: ExpS0,   action: Continue, flags: 0b_100_000_00 },
+/* ExpN0 */ Transition { state: ExpS0,   action: Continue, flags: 0b_100_000_10 },
+/* Exp   */ Transition { state: Exp,     action: Continue, flags: 0b_100_000_00 },
+/* Inval */ Transition { state: Invalid, action: Continue, flags: 0b_100_000_00 },
+/* YNumS */ Transition { state: Invalid, action: YieldNum, flags: 0b_001_000_00 },
+/* YNumE */ Transition { state: Invalid, action: YieldNum, flags: 0b_010_000_00 },
+/* YErr  */ Transition { state: Invalid, action: YieldErr, flags: 0b_000_000_00 },
+/* Panic */ Transition { state: Invalid, action: Panic,    flags: 0b_000_000_00 },
+]};
+

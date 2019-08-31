@@ -45,7 +45,7 @@ impl ConstDefault for Char {
     const DEFAULT: Self = Self::Eof;
 }
 
-/// An entry in the mapping of UTF-8 bytes to logical characters.
+/// Entry in the mapping of UTF-8 bytes to logical characters.
 #[derive(Clone, Copy, Debug)]
 pub struct CharEntry (u8);
 
@@ -169,5 +169,64 @@ pub fn accumulate(mut acc: u64, byte: u8, base: BaseFlag) -> (Char, u64) {
 
     let chr = entry.logical_char(mask);
     (chr, acc)
+}
+
+// ----------------------------------------------------------------------------
+
+// Helper to define state variants
+const fn state(n: u8) -> u8 {
+    n * Char::COUNT as u8
+}
+
+/// States for lexical analysis of numeric literals.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+enum State {
+    /// At the first character of the integer part.
+    Int0    = state(0),
+
+    /// At a non-first character of the integer part.
+    Int     = state(1),
+
+    /// At the first character of the fraction part.
+    Frac0   = state(2),
+
+    /// At a non-first character of the fraction part.
+    Frac    = state(3),
+
+    /// At the first character of the exponent part.
+    Exp0    = state(4),
+
+    /// At the first non-sign character of the exponent part.
+    ExpS0   = state(5),
+
+    /// At a non-first, non-sign character of the exponent part.
+    Exp     = state(6),
+
+    /// Consuming identifier characters after an invalid numeric literal.
+    Invalid = state(7),
+}
+
+impl State {
+    /// Count of states.
+    const COUNT: usize = State::Invalid as usize / Char::COUNT + 1;
+}
+
+// ----------------------------------------------------------------------------
+
+/// Actions for lexical analysis of numeric literals.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Action {
+    /// Continue scanning.
+    Continue,
+
+    /// Yield a numeric literal token.
+    YieldNum,
+
+    /// Yield an 'invalid numeric literal' lexical error.
+    YieldErr,
+
+    /// Panic: the lexer is in an invalid state.
+    Panic,
 }
 

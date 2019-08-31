@@ -32,6 +32,8 @@ use crate::util::ConstDefault;
 
 use super::token::Token::{self, self as T};
 
+mod num;
+
 // ---------------------------------------------------------------------------- 
 
 // Just a helper to define Char variants

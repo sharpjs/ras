@@ -36,7 +36,7 @@ pub enum Char {
 
 impl Char {
     /// Count of logical characters.
-    const COUNT: usize = Self::Eof as usize /* / State::COUNT */ + 1;
+    const COUNT: usize = Self::Eof as usize + 1;
 }
 
 impl ConstDefault for Char {
@@ -344,5 +344,21 @@ use Action::*; use State::*; [
 /* YNumE */ Transition { state: Invalid, action: YieldNum, flags: 0b_010_000_00 },
 /* YErr  */ Transition { state: Invalid, action: YieldErr, flags: 0b_000_000_00 },
 /* Panic */ Transition { state: Invalid, action: Panic,    flags: 0b_000_000_00 },
+]};
+
+/// Lexer state transition map for numeric literals.
+static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
+use TransitionId::*; [
+//          ----Digits----
+//          Other   InBase  _       .       Pp      +       -       etc     EOF
+//          -------------------------------------------------------------------
+/* Int0  */ Inval,  Int,    None,   Frac0,  Inval,  YErr,   YErr,   YErr,   YErr,
+/* Int   */ Inval,  None,   None,   Frac0,  Exp0,   YNumS,  YNumS,  YNumS,  YNumS,
+/* Frac0 */ Inval,  Frac,   None,   Inval,  Exp0,   YNumS,  YNumS,  YNumS,  YNumS,
+/* Frac  */ Inval,  None,   None,   Inval,  Exp0,   YNumS,  YNumS,  YNumS,  YNumS,
+/* Exp0  */ Inval,  Exp,    None,   Inval,  Inval,  ExpP0,  ExpN0,  YErr,   YErr,
+/* ExpS0 */ Inval,  Exp,    None,   Inval,  Inval,  YNumE,  YNumE,  YNumE,  YNumE,
+/* Exp   */ Inval,  None,   None,   Inval,  Inval,  YNumE,  YNumE,  YNumE,  YNumE,
+/* Inval */ None,   None,   None,   None,   None,   YErr,   YErr,   YErr,   YErr,
 ]};
 

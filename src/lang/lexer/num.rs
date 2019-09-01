@@ -17,6 +17,56 @@
 // TODO: Just make an Eof or LogChar trait
 use crate::util::ConstDefault;
 
+use super::Reader;
+
+fn next_num(input: &mut Reader, base: BaseFlag) {
+    use super::num::Action::*;
+
+    let mut state = State::Int0 as u8;
+    let mut acc   = 0;
+    let mut sig   = 0;
+    let mut exp   = 0;
+    let mut fw    = 0;
+
+    loop {
+        let (entry, _) = input.next(&CHAR_MAP);
+        let mask       = entry.mask(base);
+        let digit      = entry.digit();
+
+        acc = (acc * 10 + digit) & mask | acc & !mask;
+        //         ^^^^ TODO
+
+        let chr  = entry.logical_char(mask);
+        let next = TRANSITION_MAP[state as usize + chr as usize];
+        let next = TRANSITION_LUT[next  as usize];
+
+        state ^= (state ^ next.state as u8) & next.state_mask();
+        sig   ^= (sig   ^ acc)              & next.sig_mask();
+        exp   ^= (exp   ^ acc)              & next.exp_mask();
+        exp   |=                              next.exp_sign();
+        fw    +=                              next.frac_width();
+
+        match next.action {
+            Continue => continue,
+            YieldNum => {
+                if chr != Char::Eof {
+                    input.rewind();
+                }
+                return // numeric literal
+            },
+            YieldErr => {
+                if chr != Char::Eof {
+                    input.rewind();
+                }
+                return // error
+            },
+            Panic => {
+                panic!()
+            },
+        };
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 /// Logical characters for lexical analysis of numeric literals.
@@ -165,17 +215,6 @@ static CHAR_MAP: [CharEntry; 256] = {
     c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // F0-F7
     c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), __,     __,     // F8-FF
 ]};
-
-pub fn accumulate(mut acc: u64, byte: u8, base: BaseFlag) -> (Char, u64) {
-    let entry = CHAR_MAP[byte as usize];
-    let mask  = entry.mask(base);
-    let digit = entry.digit();
-
-    acc = (acc * 10 + digit) & mask | acc & !mask;
-
-    let chr = entry.logical_char(mask);
-    (chr, acc)
-}
 
 // ----------------------------------------------------------------------------
 

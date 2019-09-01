@@ -330,7 +330,8 @@ use Action::*; use State::*; [
 //                                                store significand ───┐     ││
 //                                                   store exponent ──┐│     ││
 //                                                     change state ─┐││     ││
-//                                                                   CES     NW
+// Id                           State            Action              │││     ││
+// -----                        --------         ---------        ---CES-----NW
 /* None  */ Transition { state: Invalid, action: Continue, flags: 0b_000_000_00 },
 /* Int   */ Transition { state: Int,     action: Continue, flags: 0b_100_000_00 },
 /* Frac0 */ Transition { state: Frac0,   action: Continue, flags: 0b_100_000_00 },
@@ -350,8 +351,8 @@ use Action::*; use State::*; [
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 use TransitionId::*; [
 //          ----Digits----
-//          Other   Base    _       .       Pp      +       -       etc     EOF
-//          -------------------------------------------------------------------
+// State    Other   Base    _       .       Pp      +       -       etc     EOF
+// -----    ------- ------- ------- ------- ------- ------- ------- ------- -------
 /* Int0  */ Inval,  Int,    None,   Frac0,  Inval,  YErr,   YErr,   YErr,   YErr,
 /* Int   */ Inval,  None,   None,   Frac0,  Exp0,   YNumS,  YNumS,  YNumS,  YNumS,
 /* Frac0 */ Inval,  Frac,   None,   Inval,  Exp0,   YNumS,  YNumS,  YNumS,  YNumS,

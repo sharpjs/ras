@@ -318,7 +318,14 @@ impl Transition {
     /// significand and `0` otherwise.
     #[inline(always)]
     fn sig_mask(&self) -> u64 {
-        ((self.flags as i64) << 59 >> 63) as u64
+        ((self.flags as i64) << (63 - 5) >> 63) as u64
+    }
+
+    /// Returns [`std::u64::MAX`] if the accumulator should be stored to the
+    /// exponent and `0` otherwise.
+    #[inline(always)]
+    fn exp_mask(&self) -> u64 {
+        ((self.flags as i64) << (63 - 6) >> 63) as u64
     }
 
     /// Returns [`std::u8::MAX`] if the state should change and `0` otherwise.

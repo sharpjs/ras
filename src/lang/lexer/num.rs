@@ -45,10 +45,6 @@ impl ConstDefault for Char {
     const DEFAULT: Self = Self::Eof;
 }
 
-/// Entry in the mapping of UTF-8 bytes to logical characters.
-#[derive(Clone, Copy, Debug)]
-pub struct CharEntry (u8);
-
 /// Numerical bases.
 #[derive(Clone, Copy, Debug)]
 #[repr(usize)]
@@ -57,6 +53,16 @@ pub enum BaseFlag {
     Oct = 63 - 5,
     Dec = 63 - 6,
     Hex = 63 - 7
+}
+
+/// Entry in the mapping of UTF-8 bytes to logical characters.
+#[derive(Clone, Copy, Debug)]
+pub struct CharEntry (u8);
+
+impl ConstDefault for CharEntry {
+    /// Default logical character.
+    /// A [`Reader`] returns this value at the end of input.
+    const DEFAULT: Self = CharEntry(Char::Eof as u8);
 }
 
 impl CharEntry {

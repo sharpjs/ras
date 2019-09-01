@@ -350,7 +350,7 @@ use Action::*; use State::*; [
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 use TransitionId::*; [
 //          ----Digits----
-//          Other   InBase  _       .       Pp      +       -       etc     EOF
+//          Other   Base    _       .       Pp      +       -       etc     EOF
 //          -------------------------------------------------------------------
 /* Int0  */ Inval,  Int,    None,   Frac0,  Inval,  YErr,   YErr,   YErr,   YErr,
 /* Int   */ Inval,  None,   None,   Frac0,  Exp0,   YNumS,  YNumS,  YNumS,  YNumS,

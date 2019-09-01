@@ -287,12 +287,12 @@ impl TransitionId {
 struct Transition {
     state:  State,
     action: Action,
-    flags:  u8, // 0bCESxxxNW
-                //   │││   │└─ increment fraction width
-                //   │││   └── set exponent sign
-                //   ││└────── store accumulator to significand
-                //   │└─────── store accumulator to exponent
-                //   └──────── change state
+    flags:  u8, // 0b_CES_xxx_NW
+                //    │││     │└─ increment fraction width
+                //    │││     └── set exponent sign
+                //    ││└──────── store accumulator to significand
+                //    │└───────── store accumulator to exponent
+                //    └────────── change state
 }
 
 impl Transition {

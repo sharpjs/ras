@@ -26,7 +26,7 @@ fn next_num(input: &mut Reader, base: BaseFlag) {
     let mut acc   = 0;
     let mut sig   = 0;
     let mut exp   = 0;
-    let mut fw    = 0;
+    let mut _fw   = 0; // TODO: fraction width
 
     loop {
         let (entry, _) = input.next(&CHAR_MAP);
@@ -44,7 +44,7 @@ fn next_num(input: &mut Reader, base: BaseFlag) {
         sig   ^= (sig   ^ acc)              & next.sig_mask();
         exp   ^= (exp   ^ acc)              & next.exp_mask();
         exp   |=                              next.exp_sign();
-        fw    +=                              next.frac_width();
+        _fw   +=                              next.frac_width();
 
         match next.action {
             Continue => continue,

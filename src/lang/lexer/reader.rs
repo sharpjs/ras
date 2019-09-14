@@ -18,7 +18,7 @@ use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData;
 use std::slice;
 
-/// Trait for types that have a compile-time constant default value.
+/// Trait for types whose instances form a logical character set.
 pub trait CharSet: Copy {
     /// The default value of the type.
     const DEFAULT: Self;

@@ -123,3 +123,110 @@ impl<'a> Debug for Reader<'a> {
         write!(f, "Reader {:X?}", self.remaining())
     }
 }
+
+// ----------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use Char::*;
+
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Char { Lc, Uc, Etc, Eof }
+
+    impl CharSet for Char {
+        const DEFAULT: Self = Self::Eof;
+    }
+
+    /// Mapping of bytes to `Char` logical characters.
+    static CHARS: [Char; 256] = {
+        const __: Char = Etc;
+    [
+    //  7-bit ASCII characters
+    //  x0   x1   x2   x3   x4   x5   x6   x7   CHARS
+        __,  __,  __,  __,  __,  __,  __,  __,  // ........
+        __,  __,  __,  __,  __,  __,  __,  __,  // .tn..r..
+        __,  __,  __,  __,  __,  __,  __,  __,  // ........
+        __,  __,  __,  __,  __,  __,  __,  __,  // ........
+        __,  __,  __,  __,  __,  __,  __,  __,  //  !"#$%&'
+        __,  __,  __,  __,  __,  __,  __,  __,  // ()*+,-./
+        __,  __,  __,  __,  __,  __,  __,  __,  // 01234567
+        __,  __,  __,  __,  __,  __,  __,  __,  // 89:;<=>?
+        __,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // @ABCDEFG
+        Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // HIJKLMNO
+        Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // PQRSTUVW
+        Uc,  Uc,  Uc,  __,  __,  __,  __,  __,  // XYZ[\]^_
+        __,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // `abcdefg
+        Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // hijklmno
+        Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // pqrstuvw
+        Lc,  Lc,  Lc,  __,  __,  __,  __,  __,  // xyz{|}~. <- DEL
+
+    //  UTF-8 multibyte sequences
+    //  x8   x9   xA   xB   xC   xD   xE   xF   RANGE
+        __,  __,  __,  __,  __,  __,  __,  __,  // 80-87
+        __,  __,  __,  __,  __,  __,  __,  __,  // 88-8F
+        __,  __,  __,  __,  __,  __,  __,  __,  // 90-97
+        __,  __,  __,  __,  __,  __,  __,  __,  // 98-9F
+        __,  __,  __,  __,  __,  __,  __,  __,  // A0-A7
+        __,  __,  __,  __,  __,  __,  __,  __,  // A8-AF
+        __,  __,  __,  __,  __,  __,  __,  __,  // B0-B7
+        __,  __,  __,  __,  __,  __,  __,  __,  // B8-BF
+        __,  __,  __,  __,  __,  __,  __,  __,  // C0-C7
+        __,  __,  __,  __,  __,  __,  __,  __,  // C8-CF
+        __,  __,  __,  __,  __,  __,  __,  __,  // D0-D7
+        __,  __,  __,  __,  __,  __,  __,  __,  // D8-DF
+        __,  __,  __,  __,  __,  __,  __,  __,  // E0-E7
+        __,  __,  __,  __,  __,  __,  __,  __,  // E8-EF
+        __,  __,  __,  __,  __,  __,  __,  __,  // F0-F7
+        __,  __,  __,  __,  __,  __,  __,  __,  // F8-FF
+    ]};
+
+    #[test]
+    fn reader_empty() {
+        let mut reader = Reader::new(b"");
+
+        assert_eq!( reader.position(),   0        );
+
+        assert_eq!( reader.next(&CHARS), (Eof, 0) );
+        assert_eq!( reader.position(),   0        );
+    }
+
+    #[test]
+    fn reader_next() {
+        let mut reader = Reader::new(b"Hi!");
+
+        assert_eq!( reader.position(),   0           );
+
+        assert_eq!( reader.next(&CHARS), (Uc,  b'H') );
+        assert_eq!( reader.position(),   1           );
+
+        assert_eq!( reader.next(&CHARS), (Lc,  b'i') );
+        assert_eq!( reader.position(),   2           );
+
+        assert_eq!( reader.next(&CHARS), (Etc, b'!') );
+        assert_eq!( reader.position(),   3           );
+
+        reader.rewind();
+        assert_eq!( reader.position(),   2           );
+
+        assert_eq!( reader.next(&CHARS), (Etc, b'!') );
+        assert_eq!( reader.position(),   3           );
+
+        assert_eq!( reader.next(&CHARS), (Eof, 0)    );
+        assert_eq!( reader.position(),   3           );
+    }
+
+    #[test]
+    fn reader_debug_empty() {
+        let reader = Reader::new(b"");
+
+        assert_eq!( format!("{:?}", reader), "Reader []" );
+    }
+
+    #[test]
+    fn reader_debug_not_empty() {
+        let reader = Reader::new(b"X+1");
+
+        assert_eq!( format!("{:?}", reader), "Reader [58, 2B, 31]" );
+    }
+}

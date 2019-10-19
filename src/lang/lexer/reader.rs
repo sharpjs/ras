@@ -18,10 +18,12 @@ use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData;
 use std::slice;
 
-/// Trait for types whose instances form a logical character set.
-pub trait CharSet: Copy {
-    /// The default value of the type.
-    const DEFAULT: Self;
+// ----------------------------------------------------------------------------
+
+/// Trait for logical character types used with [`Reader`].
+pub trait LogChar: Copy {
+    /// The value representing virtual end-of-file.
+    const EOF: Self;
 }
 
 // ----------------------------------------------------------------------------
@@ -62,12 +64,12 @@ impl<'a> Reader<'a> {
     /// its corresponding logical character from the given character set `map`.
     ///
     /// If the reader is positioned at the end of input, this method returns
-    /// `(C::DEFAULT, 0)`, and the reader's position remains unchanged.
+    /// `(C::EOF, 0)`, and the reader's position remains unchanged.
     #[inline(always)]
-    pub fn next<C>(&mut self, map: &[C; 256]) -> (C, u8) where C: CharSet {
+    pub fn next<C>(&mut self, map: &[C; 256]) -> (C, u8) where C: LogChar {
         let p = self.ptr;
         if p == self.end {
-            (C::DEFAULT, 0)
+            (C::EOF, 0)
         } else {
             unsafe {
                 self.ptr = p.offset(1);
@@ -134,8 +136,8 @@ mod tests {
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     enum Char { Lc, Uc, Etc, Eof }
 
-    impl CharSet for Char {
-        const DEFAULT: Self = Self::Eof;
+    impl LogChar for Char {
+        const EOF: Self = Self::Eof;
     }
 
     /// Mapping of bytes to `Char` logical characters.

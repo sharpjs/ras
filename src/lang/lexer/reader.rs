@@ -163,7 +163,7 @@ mod tests {
         Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // pqrstuvw
         Lc,  Lc,  Lc,  __,  __,  __,  __,  __,  // xyz{|}~. <- DEL
 
-    //  UTF-8 multibyte sequences
+    //  8-bit extended characters, character-set agnostic
     //  x8   x9   xA   xB   xC   xD   xE   xF   RANGE
         __,  __,  __,  __,  __,  __,  __,  __,  // 80-87
         __,  __,  __,  __,  __,  __,  __,  __,  // 88-8F

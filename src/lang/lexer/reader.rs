@@ -22,7 +22,11 @@ use std::slice;
 
 /// Trait for logical character types used with [`Reader`].
 pub trait LogChar: Copy {
-    /// The value representing virtual end-of-file.
+
+    /// Logical character representing a byte beyond the 7-bit ASCII range.
+    const EXT: Self;
+
+    /// Logical character representing an end-of-file condition.
     const EOF: Self;
 }
 
@@ -66,17 +70,21 @@ impl<'a> Reader<'a> {
     /// If the reader is positioned at the end of input, this method returns
     /// `(C::EOF, 0)`, and the reader's position remains unchanged.
     #[inline(always)]
-    pub fn next<C>(&mut self, map: &[C; 256]) -> (C, u8) where C: LogChar {
+    pub fn next<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogChar {
         let p = self.ptr;
         if p == self.end {
-            (C::EOF, 0)
-        } else {
-            unsafe {
-                self.ptr = p.offset(1);
-                let byte = *p;
-                (map[byte as usize], byte)
-            }
+            return (C::EOF, 0)
         }
+        let byte = unsafe { *p } as i8;
+        self.ptr = unsafe { p.offset(1) };
+        (
+            if byte >= 0 {
+                map[byte as usize]
+            } else {
+                C::EXT
+            },
+            byte as u8
+        )
     }
 
     /// Rewinds the reader by one byte.
@@ -134,17 +142,17 @@ mod tests {
     use Char::*;
 
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-    enum Char { Lc, Uc, Etc, Eof }
+    enum Char { Lc, Uc, Etc, Ext, Eof }
 
     impl LogChar for Char {
-        const EOF: Self = Self::Eof;
+        const EXT: Self = Ext;
+        const EOF: Self = Eof;
     }
 
-    /// Mapping of bytes to `Char` logical characters.
-    static CHARS: [Char; 256] = {
+    /// Mapping of 7-bit ASCII bytes to `Char` logical characters.
+    static CHARS: [Char; 128] = {
         const __: Char = Etc;
     [
-    //  7-bit ASCII characters
     //  x0   x1   x2   x3   x4   x5   x6   x7   CHARS
         __,  __,  __,  __,  __,  __,  __,  __,  // ........
         __,  __,  __,  __,  __,  __,  __,  __,  // .tn..r..
@@ -162,25 +170,6 @@ mod tests {
         Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // hijklmno
         Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // pqrstuvw
         Lc,  Lc,  Lc,  __,  __,  __,  __,  __,  // xyz{|}~. <- DEL
-
-    //  8-bit extended characters, character-set agnostic
-    //  x8   x9   xA   xB   xC   xD   xE   xF   RANGE
-        __,  __,  __,  __,  __,  __,  __,  __,  // 80-87
-        __,  __,  __,  __,  __,  __,  __,  __,  // 88-8F
-        __,  __,  __,  __,  __,  __,  __,  __,  // 90-97
-        __,  __,  __,  __,  __,  __,  __,  __,  // 98-9F
-        __,  __,  __,  __,  __,  __,  __,  __,  // A0-A7
-        __,  __,  __,  __,  __,  __,  __,  __,  // A8-AF
-        __,  __,  __,  __,  __,  __,  __,  __,  // B0-B7
-        __,  __,  __,  __,  __,  __,  __,  __,  // B8-BF
-        __,  __,  __,  __,  __,  __,  __,  __,  // C0-C7
-        __,  __,  __,  __,  __,  __,  __,  __,  // C8-CF
-        __,  __,  __,  __,  __,  __,  __,  __,  // D0-D7
-        __,  __,  __,  __,  __,  __,  __,  __,  // D8-DF
-        __,  __,  __,  __,  __,  __,  __,  __,  // E0-E7
-        __,  __,  __,  __,  __,  __,  __,  __,  // E8-EF
-        __,  __,  __,  __,  __,  __,  __,  __,  // F0-F7
-        __,  __,  __,  __,  __,  __,  __,  __,  // F8-FF
     ]};
 
     #[test]
@@ -195,7 +184,7 @@ mod tests {
 
     #[test]
     fn reader_next() {
-        let mut reader = Reader::new(b"Hi!");
+        let mut reader = Reader::new(b"Hi!\xED");
 
         assert_eq!( reader.position(),   0           );
 
@@ -214,8 +203,11 @@ mod tests {
         assert_eq!( reader.next(&CHARS), (Etc, b'!') );
         assert_eq!( reader.position(),   3           );
 
+        assert_eq!( reader.next(&CHARS), (Ext, b'\xED') );
+        assert_eq!( reader.position(),   4           );
+
         assert_eq!( reader.next(&CHARS), (Eof, 0)    );
-        assert_eq!( reader.position(),   3           );
+        assert_eq!( reader.position(),   4           );
     }
 
     #[test]

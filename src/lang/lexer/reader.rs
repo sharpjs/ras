@@ -153,23 +153,24 @@ mod tests {
     static CHARS: [Char; 128] = {
         const __: Char = Etc;
     [
-    //  x0   x1   x2   x3   x4   x5   x6   x7   CHARS
-        __,  __,  __,  __,  __,  __,  __,  __,  // ........
-        __,  __,  __,  __,  __,  __,  __,  __,  // .tn..r..
-        __,  __,  __,  __,  __,  __,  __,  __,  // ........
-        __,  __,  __,  __,  __,  __,  __,  __,  // ........
-        __,  __,  __,  __,  __,  __,  __,  __,  //  !"#$%&'
-        __,  __,  __,  __,  __,  __,  __,  __,  // ()*+,-./
-        __,  __,  __,  __,  __,  __,  __,  __,  // 01234567
-        __,  __,  __,  __,  __,  __,  __,  __,  // 89:;<=>?
-        __,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // @ABCDEFG
-        Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // HIJKLMNO
-        Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // PQRSTUVW
-        Uc,  Uc,  Uc,  __,  __,  __,  __,  __,  // XYZ[\]^_
-        __,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // `abcdefg
-        Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // hijklmno
-        Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // pqrstuvw
-        Lc,  Lc,  Lc,  __,  __,  __,  __,  __,  // xyz{|}~. <- DEL
+    //  [x0] [x1] [x2] [x3] [x4] [x5] [x6] [x7]
+    //  [x8] [x9] [xA] [xB] [xC] [xD] [xE] [xF]
+        __,  __,  __,  __,  __,  __,  __,  __,  // [0x] ........
+        __,  __,  __,  __,  __,  __,  __,  __,  // [0x] .tn..r..
+        __,  __,  __,  __,  __,  __,  __,  __,  // [1x] ........
+        __,  __,  __,  __,  __,  __,  __,  __,  // [1x] ........
+        __,  __,  __,  __,  __,  __,  __,  __,  // [2x]  !"#$%&'
+        __,  __,  __,  __,  __,  __,  __,  __,  // [2x] ()*+,-./
+        __,  __,  __,  __,  __,  __,  __,  __,  // [3x] 01234567
+        __,  __,  __,  __,  __,  __,  __,  __,  // [3x] 89:;<=>?
+        __,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // [4x] @ABCDEFG
+        Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // [4x] HIJKLMNO
+        Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  Uc,  // [5x] PQRSTUVW
+        Uc,  Uc,  Uc,  __,  __,  __,  __,  __,  // [5x] XYZ[\]^_
+        __,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // [6x] `abcdefg
+        Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // [6x] hijklmno
+        Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  Lc,  // [7x] pqrstuvw
+        Lc,  Lc,  Lc,  __,  __,  __,  __,  __,  // [7x] xyz{|}~. <- DEL
     ]};
 
     #[test]

@@ -214,9 +214,15 @@ mod tests {
     #[test]
     fn reader_preceding()
     {
-        let mut reader = Reader::new(b"abcd");
+        let mut reader = Reader::new(b"ab");
+
+        assert_eq!( reader.preceding(0),   b"" );
 
         let _ = reader.next(&CHARS);
+
+        assert_eq!( reader.preceding(0),   b"" );
+        assert_eq!( reader.preceding(1),  b"a" );
+
         let _ = reader.next(&CHARS);
 
         assert_eq!( reader.preceding(0),   b"" );

@@ -231,6 +231,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn reader_preceding_panic()
+    {
+        let reader = Reader::new(b"ab");
+
+        let _ = reader.preceding(1);
+    }
+
+    #[test]
     fn reader_debug_empty() {
         let reader = Reader::new(b"");
 

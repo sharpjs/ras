@@ -240,6 +240,26 @@ mod tests {
     }
 
     #[test]
+    fn reader_remaining()
+    {
+        let mut reader = Reader::new(b"ab");
+
+        assert_eq!( reader.remaining(), b"ab" );
+
+        let _ = reader.next(&CHARS);
+
+        assert_eq!( reader.remaining(), b"b" );
+
+        let _ = reader.next(&CHARS);
+
+        assert_eq!( reader.remaining(), b"" );
+
+        let _ = reader.next(&CHARS);
+
+        assert_eq!( reader.remaining(), b"" );
+    }
+
+    #[test]
     fn reader_debug_empty() {
         let reader = Reader::new(b"");
 

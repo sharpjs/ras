@@ -228,6 +228,12 @@ mod tests {
         assert_eq!( reader.preceding(0),   b"" );
         assert_eq!( reader.preceding(1),  b"b" );
         assert_eq!( reader.preceding(2), b"ab" );
+
+        let _ = reader.next(&CHARS);
+
+        assert_eq!( reader.preceding(0),   b"" );
+        assert_eq!( reader.preceding(1),  b"b" );
+        assert_eq!( reader.preceding(2), b"ab" );
     }
 
     #[test]

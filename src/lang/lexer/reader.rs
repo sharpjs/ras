@@ -212,6 +212,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn reader_rewind_panic() {
+        let mut reader = Reader::new(b"ab");
+
+        reader.rewind();
+    }
+
+    #[test]
     fn reader_preceding()
     {
         let mut reader = Reader::new(b"ab");

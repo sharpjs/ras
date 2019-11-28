@@ -220,8 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn reader_preceding()
-    {
+    fn reader_preceding() {
         let mut reader = Reader::new(b"ab");
 
         assert_eq!( reader.preceding(0),   b"" );
@@ -246,16 +245,14 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn reader_preceding_panic()
-    {
+    fn reader_preceding_panic() {
         let reader = Reader::new(b"ab");
 
         let _ = reader.preceding(1);
     }
 
     #[test]
-    fn reader_remaining()
-    {
+    fn reader_remaining() {
         let mut reader = Reader::new(b"ab");
 
         assert_eq!( reader.remaining(), b"ab" );

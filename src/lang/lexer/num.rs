@@ -14,10 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO: Just make an Eof or LogChar trait
-use crate::util::ConstDefault;
-
-use super::Reader;
+use super::reader::*;
 
 fn next_num(input: &mut Reader, base: BaseFlag) {
     use super::num::Action::*;
@@ -89,10 +86,9 @@ impl Char {
     const COUNT: usize = Self::Eof as usize + 1;
 }
 
-impl ConstDefault for Char {
-    /// Default logical character.
-    /// A [`Reader`] returns this value at the end of input.
-    const DEFAULT: Self = Self::Eof;
+impl LogChar for Char {
+    const EXT: Self = Self::Non;
+    const EOF: Self = Self::Eof;
 }
 
 /// Numerical bases.
@@ -109,10 +105,9 @@ pub enum BaseFlag {
 #[derive(Clone, Copy, Debug)]
 pub struct CharEntry (u8);
 
-impl ConstDefault for CharEntry {
-    /// Default logical character.
-    /// A [`Reader`] returns this value at the end of input.
-    const DEFAULT: Self = CharEntry(Char::Eof as u8);
+impl LogChar for CharEntry {
+    const EXT: Self = CharEntry(Char::Non as u8);
+    const EOF: Self = CharEntry(Char::Eof as u8);
 }
 
 impl CharEntry {
@@ -160,7 +155,7 @@ impl CharEntry {
 }
 
 /// Mapping of UTF-8 bytes to logical characters.
-static CHAR_MAP: [CharEntry; 256] = {
+static CHAR_MAP: [CharEntry; 128] = {
     use Char::*;
 
     // Table entry constructors:
@@ -195,25 +190,6 @@ static CHAR_MAP: [CharEntry; 256] = {
     c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // hijklmno
     c(Exp), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // pqrstuvw
     c(Non), c(Non), c(Non), __,     __,     __,     __,     __,     // xyz{|}~. <- DEL
-
-//  UTF-8 multibyte sequences
-//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 80-87
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 88-8F
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 90-97
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 98-9F
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // A0-A7
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // A8-AF
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // B0-B7
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // B8-BF
-    __,     __,     c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // C0-C7
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // C8-CF
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // D0-D7
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // D8-DF
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // E0-E7
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // E8-EF
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // F0-F7
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), __,     __,     // F8-FF
 ]};
 
 // ----------------------------------------------------------------------------

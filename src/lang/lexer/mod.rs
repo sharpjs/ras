@@ -23,17 +23,14 @@
 // - The term "logical character" in this file is preferred over the probably
 //   more-correct term "character equivalence class".
 
-use std::borrow::Cow;
-use std::fmt::{Debug, Formatter, Result};
-use std::marker::PhantomData;
-use std::slice;
-
-use crate::util::ConstDefault;
-
-use super::token::Token::{self, self as T};
-
 mod num;
 mod reader;
+
+use std::borrow::Cow;
+use std::fmt::Debug;
+
+use super::token::Token::{self, self as T};
+use self::reader::*;
 
 // ---------------------------------------------------------------------------- 
 
@@ -102,14 +99,15 @@ impl Char {
     const COUNT: usize = Self::Other as usize / State::COUNT + 1;
 }
 
-impl ConstDefault for Char {
-    /// Default `Char` logical character.
-    /// A [`Reader`] returns this value at the end of input.
-    const DEFAULT: Self = Self::Eof;
+impl LogChar for Char {
+    const EXT: Self = Self::Id;
+    const EOF: Self = Self::Eof;
 }
 
 /// Mapping of UTF-8 bytes to `Char` logical characters.
-static CHARS: [Char; 256] = { use Char::*; [
+static CHARS: [Char; 128] = {
+    use Char::*;
+[
 //  7-bit ASCII characters
 //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
     Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
@@ -128,25 +126,6 @@ static CHARS: [Char; 256] = { use Char::*; [
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
     LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
-
-//  UTF-8 multibyte sequences
-//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
-    Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
-    Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
 ]};
 
 // ----------------------------------------------------------------------------
@@ -178,14 +157,13 @@ impl NumChar {
     const COUNT: usize = Self::Other as usize / State::COUNT + 1;
 }
 
-impl ConstDefault for NumChar {
-    /// Default `NumChar` logical character.
-    /// A [`Reader`] returns this value at the end of input.
-    const DEFAULT: Self = Self::Eof;
+impl LogChar for NumChar {
+    const EXT: Self = Self::Id;
+    const EOF: Self = Self::Eof;
 }
 
 /// Mapping of UTF-8 bytes to `NumChar` logical characters.
-static NUM_CHARS: [NumChar; 256] = { use NumChar::*; [
+static NUM_CHARS: [NumChar; 128] = { use NumChar::*; [
 //  7-bit ASCII characters
 //  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
     Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
@@ -204,25 +182,6 @@ static NUM_CHARS: [NumChar; 256] = { use NumChar::*; [
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // hijklmno
     Exp,    Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
     Id,     Id,     Id,     Other,  Other,  Other,  Other,  Other,  // xyz{|}~. <- DEL
-
-//  UTF-8 multibyte sequences
-//  0 (8)   1 (9)   2 (A)   3 (B)   4 (C)   5 (D)   6 (E)   7 (F)   RANGE
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 80-87
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 88-8F
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 90-97
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 98-9F
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A0-A7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // A8-AF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B0-B7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // B8-BF
-    Other,  Other,  Id,     Id,     Id,     Id,     Id,     Id,     // C0-C7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // C8-CF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D0-D7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // D8-DF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E0-E7
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // E8-EF
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // F0-F7
-    Id,     Id,     Id,     Id,     Id,     Id,     Other,  Other,  // F8-FF
 ]};
 
 // ----------------------------------------------------------------------------
@@ -441,106 +400,6 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use Transi
 
 // ----------------------------------------------------------------------------
 
-/// Input reader specialized for lexical analysis.  A `Reader` takes a slice of
-/// bytes as input and provides a simple rewindable cursor over a sequence of
-/// logical characters (effectively, character equivalence classes).
-///
-#[derive(Clone, Copy)]
-struct Reader<'a> {
-    ptr: *const u8,
-    beg: *const u8,
-    end: *const u8,
-    _lt: PhantomData<&'a ()>,
-}
-
-impl<'a> Reader<'a> {
-    // Safety: Similar to std::slice::Iter.  Performs pointer arithmetic and
-    // dereferences pointers to bytes within a slice of bytes.  Safety is
-    // ensured by checks against the slice bounds.
-
-    /// Creates a new [`Reader`] over the given slice of bytes.
-    #[inline(always)]
-    pub fn new(bytes: &'a [u8]) -> Self {
-        let beg = bytes.as_ptr();
-        let end = unsafe { beg.add(bytes.len()) };
-
-        Self { ptr: beg, beg, end, _lt: PhantomData }
-    }
-
-    /// Returns the position of the next byte to be read.
-    #[inline(always)]
-    pub fn position(&self) -> usize {
-        self.ptr as usize - self.beg as usize
-    }
-
-    /// Reads the next byte, advances the reader, and returns both the byte and
-    /// its corresponding logical character from the given character set `map`.
-    ///
-    /// If the reader is positioned at the end of input, this method returns
-    /// `(C::DEFAULT, 0)`, and the reader's position remains unchanged.
-    #[inline(always)]
-    pub fn next<C>(&mut self, map: &[C; 256]) -> (C, u8) where C: ConstDefault {
-        let p = self.ptr;
-        if p == self.end {
-            (C::DEFAULT, 0)
-        } else {
-            unsafe {
-                self.ptr = p.offset(1);
-                let byte = *p;
-                (map[byte as usize], byte)
-            }
-        }
-    }
-
-    /// Rewinds the reader by one byte.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the reader is positioned at the beginning of input.
-    ///
-    #[inline(always)]
-    pub fn rewind(&mut self) {
-        let p = self.ptr;
-        if p == self.beg {
-            panic!("Attempted to rewind past the beginning of input.")
-        }
-        self.ptr = unsafe { p.offset(-1) };
-    }
-
-    /// Returns a slice of the `len` bytes preceding the next byte to be read.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `len` exceeds the count of bytes that have been read.
-    ///
-    #[inline(always)]
-    pub fn preceding(&self, len: usize) -> &'a [u8] {
-        if len > self.position() {
-            panic!("Attempted to obtain a slice before the beginning of input.")
-        }
-        unsafe {
-            slice::from_raw_parts(self.ptr.sub(len), len)
-        }
-    }
-
-    /// Returns a slice of the bytes remaining to be read.
-    #[inline(always)]
-    pub fn remaining(&self) -> &'a [u8] {
-        let len = self.end as usize - self.ptr as usize;
-        unsafe {
-            slice::from_raw_parts(self.ptr, len)
-        }
-    }
-}
-
-impl<'a> Debug for Reader<'a> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "Reader {:X?}", self.remaining())
-    }
-}
-
-// ----------------------------------------------------------------------------
-
 /// A lexical analyzer.  Reads input and yields a stream of lexical tokens.
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -706,56 +565,6 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::Char::*;
-
-    #[test]
-    fn reader_empty() {
-        let mut reader = Reader::new(b"");
-
-        assert_eq!( reader.position(),   0        );
-
-        assert_eq!( reader.next(&CHARS), (Eof, 0) );
-        assert_eq!( reader.position(),   0        );
-    }
-
-    #[test]
-    fn reader_next() {
-        let mut reader = Reader::new(b"X+1");
-
-        assert_eq!( reader.position(),   0             );
-
-        assert_eq!( reader.next(&CHARS), (LetX, b'X')  );
-        assert_eq!( reader.position(),   1             );
-
-        assert_eq!( reader.next(&CHARS), (Plus, b'+')  );
-        assert_eq!( reader.position(),   2             );
-
-        assert_eq!( reader.next(&CHARS), (Digit, b'1') );
-        assert_eq!( reader.position(),   3             );
-
-        reader.rewind();
-        assert_eq!( reader.position(),   2             );
-
-        assert_eq!( reader.next(&CHARS), (Digit, b'1') );
-        assert_eq!( reader.position(),   3             );
-
-        assert_eq!( reader.next(&CHARS), (Eof, 0)      );
-        assert_eq!( reader.position(),   3             );
-    }
-
-    #[test]
-    fn reader_debug_empty() {
-        let reader = Reader::new(b"");
-
-        assert_eq!( format!("{:?}", reader), "Reader []" );
-    }
-
-    #[test]
-    fn reader_debug_not_empty() {
-        let reader = Reader::new(b"X+1");
-
-        assert_eq!( format!("{:?}", reader), "Reader [58, 2B, 31]" );
-    }
 
     #[test]
     fn lexer_empty() {
@@ -816,4 +625,3 @@ mod tests {
         assert_eq!( lexer.next(), Token::Eof    );
     }
 }
-

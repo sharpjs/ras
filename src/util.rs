@@ -13,10 +13,3 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
-
-/// Trait for types that have a compile-time constant default value.
-pub trait ConstDefault: Copy {
-    /// The default value of the type.
-    const DEFAULT: Self;
-}
-

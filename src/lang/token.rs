@@ -218,4 +218,3 @@ pub enum Token {
     /// Lexical error.
     Error
 }
-

@@ -23,8 +23,64 @@
 // - The term "logical character" in this file is preferred over the probably
 //   more-correct term "character equivalence class".
 
-mod num;
+#[cfg(OLD)] mod num;
+
+mod core;
 mod reader;
+
+use self::reader::Reader;
+
+// ---------------------------------------------------------------------------- 
+
+/// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
+#[derive(Debug)]
+pub struct Lexer<'a> {
+    input: Reader<'a>,
+    state: State,
+    line:  usize,
+    len:   usize,
+}
+
+/// Lexer states.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+enum State {
+    /// Normal state.  Any token is possible.
+    Normal,
+
+    /// At the begining of a line.  Any token is possible.
+    Bol,
+
+    /// After a carriage return (0x0D).
+    AfterCr,
+
+    /// In a comment.
+    Comment,
+}
+
+impl State {
+    /// Count of lexer states.
+    const COUNT: usize = Self::Comment as usize + 1;
+}
+
+impl<'a> Lexer<'a> {
+    /// Creates a lexical analyzer that takes as input the contents of the
+    /// given slice of bytes.
+    pub fn new(input: &'a [u8]) -> Self {
+        Self {
+            input: Reader::new(input),
+            state: State::Bol,
+            line:  1,
+            len:   0,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------- 
+// ---------------------------------------------------------------------------- 
+
+#[cfg(OLD)]
+mod old {
 
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -34,101 +90,6 @@ use self::reader::*;
 
 // ---------------------------------------------------------------------------- 
 
-// Just a helper to define Char variants
-const fn char(n: u16) -> u16 {
-    n * State::COUNT as u16
-}
-
-/// Logical characters recognized by the main lexer.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u16)]
-enum Char {
-    // Variants are in order roughly by descending frequency, except that
-    // groups of related variants are kept contiguous.
-    //
-    // space, newlines
-    Space   = char( 0), // \s\t
-    Cr      = char( 1), // \r
-    Lf      = char( 2), // \n
-    // identifiers, numbers
-    Id      = char( 3), // A-Za-z., code points above U+007F
-    LetB    = char( 4), // Bb
-    LetD    = char( 5), // Dd
-    LetO    = char( 6), // Oo
-    LetX    = char( 7), // Xx
-    Digit   = char( 8), // 0-9
-    // open/close pairs
-    LParen  = char( 9), // (
-    RParen  = char(10), // )
-    LSquare = char(11), // [
-    RSquare = char(12), // ]
-    LCurly  = char(13), // {
-    RCurly  = char(14), // }
-    // quotes
-    DQuote  = char(15), // "
-    SQuote  = char(16), // '
-    // isolated characters
-    Comma   = char(17), // ,
-    Hash    = char(18), // #
-    Equal   = char(19), // =
-    Plus    = char(20), // +
-    Minus   = char(21), // -
-    Amper   = char(22), // &
-    Pipe    = char(23), // |
-    Caret   = char(24), // ^
-    Lt      = char(25), // <
-    Gt      = char(26), // >
-    Tilde   = char(27), // ~
-    Bang    = char(28), // !
-    Star    = char(29), // *
-    Slash   = char(30), // /
-    Percent = char(31), // %
-    Semi    = char(32), // ;
-    Colon   = char(33), // :
-    Quest   = char(34), // ?
-    Dollar  = char(35), // $
-    At      = char(36), // @    unsure if this will be used
-    BSlash  = char(37), // \
-    // rare
-    Eof     = char(38), // end of file
-    Other   = char(39), // everything else
-}
-
-impl Char {
-    /// Count of `Char` logical characters.
-    const COUNT: usize = Self::Other as usize / State::COUNT + 1;
-}
-
-impl LogChar for Char {
-    const EXT: Self = Self::Id;
-    const EOF: Self = Self::Eof;
-}
-
-/// Mapping of UTF-8 bytes to `Char` logical characters.
-static CHARS: [Char; 128] = {
-    use Char::*;
-[
-//  7-bit ASCII characters
-//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-    Other,  Space,  Lf,     Other,  Other,  Cr,     Other,  Other,  // .tn..r..
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-    Other,  Other,  Other,  Other,  Other,  Other,  Other,  Other,  // ........
-    Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
-    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
-    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
-    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
-    At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // @ABCDEFG
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
-    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // XYZ[\]^_
-    Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // `abcdefg
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
-    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
-]};
-
-// ----------------------------------------------------------------------------
 
 /// Logical characters recognized by the numeric literal sublexer.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -400,16 +361,6 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = { use Transi
 
 // ----------------------------------------------------------------------------
 
-/// A lexical analyzer.  Reads input and yields a stream of lexical tokens.
-#[derive(Debug)]
-pub struct Lexer<'a> {
-    input: Reader<'a>,
-    state: State,
-
-    line:  usize,
-    len:   usize,
-}
-
 impl<'a> Lexer<'a> {
     /// Creates a lexical analyzer that takes as input the contents of the
     /// given slice of bytes.
@@ -624,4 +575,6 @@ mod tests {
         assert_eq!( lexer.next(), Token::Eos    );
         assert_eq!( lexer.next(), Token::Eof    );
     }
+}
+
 }

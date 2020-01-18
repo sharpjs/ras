@@ -24,4 +24,3 @@ mod util;
 
 fn main() {
 }
-

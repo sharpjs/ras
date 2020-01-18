@@ -24,4 +24,3 @@ pub trait Arch {
     /// An operation argument or operand in the architecture.
     type Arg: Debug;
 }
-

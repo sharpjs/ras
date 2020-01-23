@@ -32,15 +32,6 @@ use self::reader::Reader;
 
 // ---------------------------------------------------------------------------- 
 
-/// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
-#[derive(Debug)]
-pub struct Lexer<'a> {
-    input: Reader<'a>,
-    state: State,
-    line:  usize,
-    len:   usize,
-}
-
 /// Lexer states.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
@@ -61,6 +52,17 @@ enum State {
 impl State {
     /// Count of lexer states.
     const COUNT: usize = Self::Comment as usize + 1;
+}
+
+// ---------------------------------------------------------------------------- 
+
+/// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
+#[derive(Debug)]
+pub struct Lexer<'a> {
+    input: Reader<'a>,
+    state: State,
+    line:  usize,
+    len:   usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -88,82 +90,9 @@ impl<'a> Lexer<'a> {
     }
 }
 
-// ---------------------------------------------------------------------------- 
-// ---------------------------------------------------------------------------- 
-
-#[cfg(OLD)]
-mod old {
-
-use std::borrow::Cow;
-use std::fmt::Debug;
-
-use super::token::Token::{self, self as T};
-use self::reader::*;
-
 // ----------------------------------------------------------------------------
 
-impl<'a> Lexer<'a> {
-    /// Advances to the next token and returns its type.
-    pub fn next(&mut self) -> Token {
-        use Action::*;
-
-        // Restore saved state and prepare for loop
-        let mut state   = self.state;
-        let mut line    = self.line;
-        let mut len     = 0;
-        let mut len_inc = 0;
-        let mut action;
-
-        // Discover next token
-        loop {
-            let next = self.input.next(&CHARS).0;
-            let next = TRANSITION_MAP[state as usize + next as usize];
-            let next = TRANSITION_LUT[next  as usize];
-
-            state    = next.state;
-            action   = next.action;
-            line    += next.line_inc();
-            len_inc |= next.token_inc();
-            len     += len_inc;
-
-            if action != Continue { break }
-        }
-
-        // Save state for subsequent invocation
-        self.state = state;
-        self.line  = line;
-        self.len   = len;
-
-        // Return token
-        match action {
-            Continue          => unreachable!(),
-
-            // Sublexers
-            ScanBin           => self.scan_bin(),
-            ScanOct           => self.scan_oct(),
-            ScanDec           => self.scan_dec(),
-            ScanHex           => self.scan_hex(),
-            ScanStr           => self.scan_str(),
-
-            // Identifiers & Literals
-            YieldIdent        => Token::Ident,
-            YieldLabel        => Token::Label,
-            YieldParam        => Token::Param,
-            YieldChar         => Token::Char,
-
-            // Simple Tokens
-            Yield(token)      => token,
-
-            // Terminators
-            Succeed           => Token::Eof,
-            Fail              => Token::Error,
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-
-#[cfg(test)]
+#[cfg(OLD)]//#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -225,6 +154,4 @@ mod tests {
         assert_eq!( lexer.next(), Token::Eos    );
         assert_eq!( lexer.next(), Token::Eof    );
     }
-}
-
 }

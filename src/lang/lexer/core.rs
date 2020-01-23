@@ -17,6 +17,7 @@
 use super::State;
 use super::reader::LogChar;
 use super::super::token::Token::{self, self as T};
+use super::Lexer;
 
 // ----------------------------------------------------------------------------
 
@@ -305,4 +306,63 @@ enum Action {
 
     /// Terminate successfully.
     Succeed,
+}
+
+impl<'a> Lexer<'a> {
+    /// Advances to the next token and returns its type.
+    pub fn next(&mut self) -> Token {
+        use Action::*;
+
+        // Restore saved state and prepare for loop
+        let mut state   = self.state;
+        let mut line    = self.line;
+        let mut len     = 0;
+        let mut len_inc = 0;
+        let mut action;
+
+        // Discover next token
+        loop {
+            let next = self.input.next(&CHARS).0;
+            let next = TRANSITION_MAP[state as usize + next as usize];
+            let next = TRANSITION_LUT[next  as usize];
+
+            state    = next.state;
+            action   = next.action;
+            line    += next.line_inc();
+            len_inc |= next.token_inc();
+            len     += len_inc;
+
+            if action != Continue { break }
+        }
+
+        // Save state for subsequent invocation
+        self.state = state;
+        self.line  = line;
+        self.len   = len;
+
+        // Return token
+        match action {
+            Continue          => unreachable!(),
+
+            // Sublexers
+            ScanBin           => panic!(), // self.scan_bin(),
+            ScanOct           => panic!(), // self.scan_oct(),
+            ScanDec           => panic!(), // self.scan_dec(),
+            ScanHex           => panic!(), // self.scan_hex(),
+            ScanStr           => panic!(), // self.scan_str(),
+
+            // Identifiers & Literals
+            YieldIdent        => Token::Ident,
+            YieldLabel        => Token::Label,
+            YieldParam        => Token::Param,
+            YieldChar         => Token::Char,
+
+            // Simple Tokens
+            Yield(token)      => token,
+
+            // Terminators
+            Succeed           => Token::Eof,
+            Fail              => Token::Error,
+        }
+    }
 }

@@ -23,10 +23,12 @@
 // - The term "logical character" in this file is preferred over the probably
 //   more-correct term "character equivalence class".
 
-#[cfg(OLD)] mod num;
-
 mod core;
+#[cfg(OLD)] mod num;
 mod reader;
+
+#[cfg(OLD)]//#[cfg(test)]
+mod tests;
 
 use self::reader::Reader;
 
@@ -87,71 +89,5 @@ impl<'a> Lexer<'a> {
     #[inline]
     pub fn text(&self) -> &'a [u8] {
         self.input.preceding(self.len)
-    }
-}
-
-// ----------------------------------------------------------------------------
-
-#[cfg(OLD)]//#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn lexer_empty() {
-        let mut lexer = Lexer::new(b"");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-
-    #[test]
-    fn lexer_unrecognized() {
-        let mut lexer = Lexer::new(b"`");
-
-        assert_eq!( lexer.next(), Token::Error );
-    }
-
-    #[test]
-    fn lexer_space() {
-        let mut lexer = Lexer::new(b" \t \t");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-
-    #[test]
-    fn lexer_comment() {
-        let mut lexer = Lexer::new(b"# this is a comment");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-
-    #[test]
-    fn lexer_cr() {
-        let mut lexer = Lexer::new(b"\r\r # hello");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-
-    #[test]
-    fn lexer_lf() {
-        let mut lexer = Lexer::new(b"\n\n # hello");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-
-    #[test]
-    fn lexer_crlf() {
-        let mut lexer = Lexer::new(b"\r\n\r\n # hello");
-
-        assert_eq!( lexer.next(), Token::Eof );
-    }
-
-    #[test]
-    fn lexer_parens() {
-        let mut lexer = Lexer::new(b"()#c\n\n");
-
-        assert_eq!( lexer.next(), Token::ParenL );
-        assert_eq!( lexer.next(), Token::ParenR );
-        assert_eq!( lexer.next(), Token::Eos    );
-        assert_eq!( lexer.next(), Token::Eof    );
     }
 }

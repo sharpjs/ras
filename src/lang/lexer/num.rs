@@ -101,7 +101,7 @@ pub enum BaseFlag {
     Hex = 63 - 7
 }
 
-/// Entry in the mapping of UTF-8 bytes to logical characters.
+/// Entry in the mapping of bytes to logical characters.
 #[derive(Clone, Copy, Debug)]
 pub struct CharEntry (u8);
 

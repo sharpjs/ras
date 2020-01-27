@@ -154,7 +154,7 @@ impl CharEntry {
     }
 }
 
-/// Mapping of UTF-8 bytes to logical characters.
+/// Mapping of 7-bit ASCII to logical characters.
 static CHAR_MAP: [CharEntry; 128] = {
     use Char::*;
 
@@ -172,24 +172,23 @@ static CHAR_MAP: [CharEntry; 128] = {
     const fn c(c: Char) -> CharEntry { CharEntry(c as u8) }          // character
     const __:              CharEntry = c(Etc);
 [
-//  7-bit ASCII characters
-//  x0      x1      x2      x3      x4      x5      x6      x7      CHARS
-    __,     __,     __,     __,     __,     __,     __,     __,     // ........
-    __,     __,     __,     __,     __,     __,     __,     __,     // .tn..r..
-    __,     __,     __,     __,     __,     __,     __,     __,     // ........
-    __,     __,     __,     __,     __,     __,     __,     __,     // ........
-    __,     __,     __,     __,     __,     __,     __,     __,     //  !"#$%&'
-    __,     __,     __,     c(Pos), __,     c(Neg), c(Dot), __,     // ()*+,-./
-    b(0),   b(1),   o(2),   o(3),   o(4),   o(5),   o(6),   o(7),   // 01234567
-    d(8),   d(9),   __,     __,     __,     __,     __,     __,     // 89:;<=>?
-    __,     x(0xA), x(0xB), x(0xC), x(0xD), x(0xE), x(0xF), c(Non), // @ABCDEFG
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // HIJKLMNO
-    c(Exp), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // PQRSTUVW
-    c(Non), c(Non), c(Non), __,     __,     __,     __,     c(Sep), // XYZ[\]^_
-    __,     x(0xA), x(0xB), x(0xC), x(0xD), x(0xE), x(0xF), c(Non), // `abcdefg
-    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // hijklmno
-    c(Exp), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // pqrstuvw
-    c(Non), c(Non), c(Non), __,     __,     __,     __,     __,     // xyz{|}~. <- DEL
+//  xx0     xx1     xx2     xx3     xx4     xx5     xx6     xx7
+    __,     __,     __,     __,     __,     __,     __,     __,     // 00x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 01x │·tn··r··│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 02x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 03x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 04x │ !"#$%&'│
+    __,     __,     __,     c(Pos), __,     c(Neg), c(Dot), __,     // 05x │()*+,-./│
+    b(0),   b(1),   o(2),   o(3),   o(4),   o(5),   o(6),   o(7),   // 06x │01234567│
+    d(8),   d(9),   __,     __,     __,     __,     __,     __,     // 07x │89:;<=>?│
+    __,     x(0xA), x(0xB), x(0xC), x(0xD), x(0xE), x(0xF), c(Non), // 10x │@ABCDEFG│
+    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 11x │HIJKLMNO│
+    c(Exp), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 12x │PQRSTUVW│
+    c(Non), c(Non), c(Non), __,     __,     __,     __,     c(Sep), // 13x │XYZ[\]^_│
+    __,     x(0xA), x(0xB), x(0xC), x(0xD), x(0xE), x(0xF), c(Non), // 14x │`abcdefg│
+    c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 15x │hijklmno│
+    c(Exp), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), c(Non), // 16x │pqrstuvw│
+    c(Non), c(Non), c(Non), __,     __,     __,     __,     __,     // 17x │xyz{|}~·│
 ]};
 
 // ----------------------------------------------------------------------------

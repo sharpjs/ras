@@ -89,28 +89,28 @@ impl LogChar for Char {
     const EOF: Self = Self::Eof;
 }
 
-/// Mapping of 7-bit ASCII bytes to `Char` logical characters.
+/// Mapping of 7-bit ASCII to logical characters.
 static CHARS: [Char; 128] = {
     use Char::*;
     const __: Char = Other;
 [
-//  xx0     xx1     xx2     xx3     xx4     xx5     xx6     xx7     CHARS
-    __,     __,     __,     __,     __,     __,     __,     __,     // ........
-    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // .tn..r..
-    __,     __,     __,     __,     __,     __,     __,     __,     // ........
-    __,     __,     __,     __,     __,     __,     __,     __,     // ........
-    Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, //  !"#$%&'
-    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // ()*+,-./
-    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 01234567
-    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 89:;<=>?
-    At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // @ABCDEFG
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // HIJKLMNO
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // PQRSTUVW
-    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // XYZ[\]^_
-    Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // `abcdefg
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // hijklmno
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // pqrstuvw
-    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  Other,  // xyz{|}~. <- DEL
+//  xx0     xx1     xx2     xx3     xx4     xx5     xx6     xx7
+    __,     __,     __,     __,     __,     __,     __,     __,     // 00x │········│
+    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 01x │·tn··r··│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 02x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 03x │········│
+    Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, // 04x │ !"#$%&'│
+    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // 05x │()*+,-./│
+    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 06x │01234567│
+    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 07x │89:;<=>?│
+    At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // 10x │@ABCDEFG│
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // 11x │HIJKLMNO│
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 12x │PQRSTUVW│
+    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // 13x │XYZ[\]^_│
+    Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // 14x │`abcdefg│
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // 15x │hijklmno│
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 16x │pqrstuvw│
+    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  __,     // 17x │xyz{|}~·│
 ]};
 
 // ----------------------------------------------------------------------------

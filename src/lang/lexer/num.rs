@@ -14,42 +14,63 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::lang::Base;
 use super::reader::*;
 
-fn next_num(input: &mut Reader, base: BaseFlag) {
-    use super::num::Action::*;
+fn next_num(input: &mut Reader, base: Base) {
+    use self::Action::*;
 
-    let mut state = State::Int0 as u8;
-    let mut acc   = 0;
-    let mut sig   = 0;
-    let mut exp   = 0;
-    let mut _fw   = 0; // TODO: fraction width
+    let mut state = State::Int0 as u8;  // sublexer state
+    let mut acc   = 0u64;               // accumulator
+    let mut sig   = 0;                  // significand
+    let mut exp   = 0;                  // exponent
+    let mut fw    = 0;                  // fraction width
+    let mut ovf   = false;              // overflow flag
+
+    let radix = base.radix() as u64;
 
     loop {
         let (entry, _) = input.next(&CHAR_MAP);
         let mask       = entry.mask(base);
-        let digit      = entry.digit();
 
-        acc = (acc * 10 + digit) & mask | acc & !mask;
-        //         ^^^^ TODO
+        // Accumulate digit
+        {
+            let digit    = entry.digit();
+            let (val, o) = acc.overflowing_mul(radix); ovf |= o;
+            let (val, o) = val.overflowing_add(digit); ovf |= o;
+            acc = val & mask.0 | acc & !mask.0;
+        }
 
+        // Get state transition
         let chr  = entry.logical_char(mask);
         let next = TRANSITION_MAP[state as usize + chr as usize];
         let next = TRANSITION_LUT[next  as usize];
 
+        // Update state
         state ^= (state ^ next.state as u8) & next.state_mask();
         sig   ^= (sig   ^ acc)              & next.sig_mask();
         exp   ^= (exp   ^ acc)              & next.exp_mask();
         exp   |=                              next.exp_sign();
-        _fw   +=                              next.frac_width();
+        fw    +=                              next.frac_width();
 
         match next.action {
             Continue => continue,
             YieldNum => {
+                if ovf {
+                    panic!() // TODO
+                }
                 if chr != Char::Eof {
                     input.rewind();
                 }
-                return // numeric literal
+                if state < State::Frac0 as u8 {
+                    let _ = sig;
+                    return // numeric integer literal
+                } else {
+                    let _ = sig;
+                    let _ = exp;
+                    let _ = fw;
+                    return // numeric floating-point literal
+                }
             },
             YieldErr => {
                 if chr != Char::Eof {
@@ -91,15 +112,7 @@ impl LogChar for Char {
     const EOF: Self = Self::Eof;
 }
 
-/// Numerical bases.
-#[derive(Clone, Copy, Debug)]
-#[repr(usize)]
-pub enum BaseFlag {
-    Bin = 63 - 4,
-    Oct = 63 - 5,
-    Dec = 63 - 6,
-    Hex = 63 - 7
-}
+// ----------------------------------------------------------------------------
 
 /// Entry in the mapping of bytes to logical characters.
 #[derive(Clone, Copy, Debug)]
@@ -110,14 +123,19 @@ impl LogChar for CharEntry {
     const EOF: Self = CharEntry(Char::Eof as u8);
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct BaseMask (u64);
+
 impl CharEntry {
     /// Returns the mask for digit accumulation.
     ///
     /// If the entry represents a digit in the given `base`, this function
     /// returns [`std::u64::MAX`].  Otherwise, this function returns `0`.
     #[inline(always)]
-    pub fn mask(self, base: BaseFlag) -> u64 {
-        ((self.0 as i64) << base as usize >> 63) as u64
+    pub fn mask(self, base: Base) -> BaseMask {
+        BaseMask(
+        ((self.0 as i64) >> (base as u8) << 59 >> 63) as u64
+        )
     }
 
     /// Returns the digit value for digit accumulation.
@@ -131,11 +149,11 @@ impl CharEntry {
 
     /// Returns the logical character.
     #[inline(always)]
-    pub fn logical_char(self, mask: u64) -> Char {
+    pub fn logical_char(self, mask: BaseMask) -> Char {
         use std::mem::transmute;
 
         // Compute masks
-        let is_base_digit = mask                  as u8; // 0xFF if digit in this base
+        let is_base_digit =   mask.0              as u8; // 0xFF if digit in this base
         let is_some_digit = ((self.0 as i8) >> 7) as u8; // 0xFF if digit in any  base
 
         // Decide what logical character to return if the entry represents a
@@ -148,11 +166,13 @@ impl CharEntry {
         // Otherwise, use the entry itself as the logical character value.
         // Uses "Merge bits from two values according to a mask" hack:
         // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
-        let chr = is_some_digit & (self.0 ^ chr) ^ self.0;
+        let chr = is_some_digit & (chr ^ self.0) ^ self.0;
 
         unsafe { transmute(chr) }
     }
 }
+
+// ----------------------------------------------------------------------------
 
 /// Mapping of 7-bit ASCII to logical characters.
 static CHAR_MAP: [CharEntry; 128] = {
@@ -322,7 +342,8 @@ impl Transition {
         self.flags & 1
     }
 
-    /// Returns 1 if the exponent is signed and 0 otherwise.
+    /// Returns the sign bit of the exponent.  Returns [`std::u64::MIN`] if the
+    /// exponent is known to be negative and 0 otherwise.
     #[inline(always)]
     fn exp_sign(&self) -> u64 {
         self.flags as u64 >> 1 << 63
@@ -351,7 +372,9 @@ impl Transition {
 
 /// Lexer transitions in order by transition ID.
 static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
-use Action::*; use State::*; [
+    use Action::*;
+    use State::*;
+[
 //                                         increment fraction width ──────────┐
 //                                                set exponent sign ─────────┐│
 //                                                store significand ───┐     ││
@@ -376,7 +399,8 @@ use Action::*; use State::*; [
 
 /// Lexer state transition map for numeric literals.
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
-use TransitionId::*; [
+    use TransitionId::*;
+[
 //          ----Digits----
 // State    Other   Base    _       .       Pp      +       -       etc     EOF
 // -----    ------- ------- ------- ------- ------- ------- ------- ------- -------

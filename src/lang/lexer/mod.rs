@@ -25,6 +25,7 @@
 
 mod core;
 mod num;
+mod num2;
 mod reader;
 
 #[cfg(OLD)]//#[cfg(test)]

@@ -24,15 +24,15 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
 
     let radix = base.radix();
 
-    loop {
+    // Read bytes until a non-digit is found
+    let next = loop {
         // Read next byte
         let (ch, _) = input.next(&CHARS);
 
         // Get digit value, or 0 for separator
-        let digit = ch.digit();
-
         // Stop when digit is greater than the radix
-        if digit >= radix { break; }
+        let digit = ch.digit();
+        if digit >= radix { break ch; }
 
         // Get digit mask: 00 for separator, FF for digit
         let mask = ch.mask();
@@ -44,10 +44,13 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
 
         // Accumulate count
         len = len.wrapping_add(1 & mask); // 0 for separator, 1 for digit
-    }
+    };
 
     // Un-read the byte that caused loop exit
-    input.rewind();
+    match next {
+        Char::Eof => (),
+        _         => input.rewind()
+    }
 
     return (val, if ovf { 0 } else { len })
 }
@@ -61,12 +64,13 @@ enum Char {
     Dig0, Dig1, Dig2, Dig3, Dig4, Dig5, Dig6, Dig7,
     Dig8, Dig9, DigA, DigB, DigC, DigD, DigE, DigF,
     Etc,
+    Eof,
     Sep = 0b_1000_0000
 }
 
 impl LogChar for Char {
     const EXT: Self = Self::Etc;
-    const EOF: Self = Self::Etc;
+    const EOF: Self = Self::Eof;
 }
 
 impl Char {
@@ -112,6 +116,28 @@ mod tests {
     use crate::lang::Base::*;
 
     #[test]
+    fn scan_int_empty() {
+        let mut reader = Reader::new(b"");
+
+        let (val, len) = scan_int(&mut reader, Dec);
+
+        assert_eq!(val, 0);
+        assert_eq!(len, 0);
+        assert_eq!(reader.remaining(), b"");
+    }
+
+    #[test]
+    fn scan_int_junk() {
+        let mut reader = Reader::new(b"?");
+
+        let (val, len) = scan_int(&mut reader, Dec);
+
+        assert_eq!(val, 0);
+        assert_eq!(len, 0);
+        assert_eq!(reader.remaining(), b"?");
+    }
+
+    #[test]
     fn scan_int_zero() {
         let mut reader = Reader::new(b"0+");
 
@@ -121,6 +147,18 @@ mod tests {
         assert_eq!(len, 1);
         assert_eq!(reader.remaining(), b"+");
     }
+
+    #[test]
+    fn scan_int_zero_eof() {
+        let mut reader = Reader::new(b"0");
+
+        let (val, len) = scan_int(&mut reader, Dec);
+
+        assert_eq!(val, 0);
+        assert_eq!(len, 1);
+        assert_eq!(reader.remaining(), b"");
+    }
+
 
     #[test]
     fn scan_int_ok() {

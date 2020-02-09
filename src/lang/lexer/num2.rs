@@ -111,15 +111,21 @@ static CHARS: [Char; 128] = {
 
 #[cfg(test)]
 mod tests {
+    use crate::lang::Base::{self, *};
     use super::super::reader::Reader;
     use super::scan_int;
-    use crate::lang::Base::*;
+
+    static BASES: [Base; 4] = [Bin, Oct, Dec, Hex];
 
     #[test]
     fn scan_int_empty() {
+        for &base in &BASES { scan_int_empty_(base) }
+    }
+
+    fn scan_int_empty_(base: Base) {
         let mut reader = Reader::new(b"");
 
-        let (val, len) = scan_int(&mut reader, Dec);
+        let (val, len) = scan_int(&mut reader, base);
 
         assert_eq!(val, 0);
         assert_eq!(len, 0);
@@ -128,9 +134,13 @@ mod tests {
 
     #[test]
     fn scan_int_junk() {
+        for &base in &BASES { scan_int_junk_(base) }
+    }
+
+    fn scan_int_junk_(base: Base) {
         let mut reader = Reader::new(b"?");
 
-        let (val, len) = scan_int(&mut reader, Dec);
+        let (val, len) = scan_int(&mut reader, base);
 
         assert_eq!(val, 0);
         assert_eq!(len, 0);
@@ -139,9 +149,13 @@ mod tests {
 
     #[test]
     fn scan_int_zero() {
+        for &base in &BASES { scan_int_zero_(base) }
+    }
+
+    fn scan_int_zero_(base: Base) {
         let mut reader = Reader::new(b"0+");
 
-        let (val, len) = scan_int(&mut reader, Dec);
+        let (val, len) = scan_int(&mut reader, base);
 
         assert_eq!(val, 0);
         assert_eq!(len, 1);
@@ -150,53 +164,75 @@ mod tests {
 
     #[test]
     fn scan_int_zero_eof() {
+        for &base in &BASES { scan_int_zero_eof_(base) }
+    }
+
+    fn scan_int_zero_eof_(base: Base) {
         let mut reader = Reader::new(b"0");
 
-        let (val, len) = scan_int(&mut reader, Dec);
+        let (val, len) = scan_int(&mut reader, base);
 
         assert_eq!(val, 0);
         assert_eq!(len, 1);
         assert_eq!(reader.remaining(), b"");
     }
 
-
     #[test]
-    fn scan_int_ok() {
-        let mut reader = Reader::new(b"42+");
+    fn scan_int_all_digits() {
+        scan_int_typical_(Bin, b"01_234567_89_ABCDEFG", 0b01,                2, b"234567_89_ABCDEFG");
+        scan_int_typical_(Oct, b"01_234567_89_ABCDEFG", 0o01_234567,         8,        b"89_ABCDEFG");
+        scan_int_typical_(Dec, b"01_234567_89_ABCDEFG", 0_0123456789,       10,           b"ABCDEFG");
+        scan_int_typical_(Hex, b"01_234567_89_ABCDEFG", 0x0123456789ABCDEF, 16,                 b"G");
+        scan_int_typical_(Hex, b"01_234567_89_abcdefg", 0x0123456789abcdef, 16,                 b"g");
+    }
 
-        let (val, len) = scan_int(&mut reader, Dec);
+    fn scan_int_typical_(base: Base, bytes: &[u8], v: u64, l: u8, r: &[u8]) {
+        let mut reader = Reader::new(bytes);
 
-        assert_eq!(val, 42);
-        assert_eq!(len, 2);
-        assert_eq!(reader.remaining(), b"+");
+        let (val, len) = scan_int(&mut reader, base);
+
+        assert_eq!(val, v);
+        assert_eq!(len, l);
+        assert_eq!(reader.remaining(), r);
     }
 
     #[test]
     fn scan_int_max() {
-        let mut reader = Reader::new(b"18_446_744_073_709_551_615+");
+        scan_int_max_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+", 64);
+        scan_int_max_(Oct, b"1_777_777_777_777_777_777_777+", 22);
+        scan_int_max_(Dec, b"18_446_744_073_709_551_615+",    20);
+        scan_int_max_(Hex, b"FFFF_FFFF_FFFF_FFFF+",           16);
 
-        let (val, len) = scan_int(&mut reader, Dec);
+    }
+    fn scan_int_max_(base: Base, bytes: &[u8], exp_len: u8) {
+        let mut reader = Reader::new(bytes);
+
+        let (val, len) = scan_int(&mut reader, base);
 
         assert_eq!(val, 18_446_744_073_709_551_615);
-        assert_eq!(len, 20);
+        assert_eq!(len, exp_len);
         assert_eq!(reader.remaining(), b"+");
     }
 
     #[test]
-    fn scan_int_max_plus_one() {
-        let mut reader = Reader::new(b"18_446_744_073_709_551_616+");
+    fn scan_int_overflow() {
+        // max + 1
+        scan_int_overflow_(Bin, b"1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000+");
+        scan_int_overflow_(Oct, b"2_000_000_000_000_000_000_000+");
+        scan_int_overflow_(Dec, b"18_446_744_073_709_551_616+");
+        scan_int_overflow_(Hex, b"1_0000_0000_0000_0000+");
 
-        let (_, len) = scan_int(&mut reader, Dec);
-
-        assert_eq!(len, 0);
-        assert_eq!(reader.remaining(), b"+");
+        // huge
+        scan_int_overflow_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+");
+        scan_int_overflow_(Oct, b"777_777_777_777_777_777_777_777_777_777_777_777_777_777+");
+        scan_int_overflow_(Dec, b"999_999_999_999_999_999_999_999_999_999_999_999_999_999+");
+        scan_int_overflow_(Hex, b"FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF+");
     }
 
-    #[test]
-    fn scan_int_huge() {
-        let mut reader = Reader::new(b"999_999_999_999_999_999_999_999_999_999_999_999_999_999+");
+    fn scan_int_overflow_(base: Base, bytes: &[u8]) {
+        let mut reader = Reader::new(bytes);
 
-        let (_, len) = scan_int(&mut reader, Dec);
+        let (_, len) = scan_int(&mut reader, base);
 
         assert_eq!(len, 0);
         assert_eq!(reader.remaining(), b"+");

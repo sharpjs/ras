@@ -24,8 +24,8 @@
 //   more-correct term "character equivalence class".
 
 mod core;
+mod int;
 mod num;
-mod num2;
 mod reader;
 
 #[cfg(OLD)]//#[cfg(test)]

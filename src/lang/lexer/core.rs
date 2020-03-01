@@ -37,46 +37,42 @@ enum Char {
     Lf      = char( 2), // \n
     // identifiers, numbers
     Id      = char( 3), // A-Za-z., code points above U+007F
-    LetB    = char( 4), // Bb
-    LetD    = char( 5), // Dd
-    LetO    = char( 6), // Oo
-    LetX    = char( 7), // Xx
-    Digit   = char( 8), // 0-9
+    Digit   = char( 4), // 0-9
     // open/close pairs
-    LParen  = char( 9), // (
-    RParen  = char(10), // )
-    LSquare = char(11), // [
-    RSquare = char(12), // ]
-    LCurly  = char(13), // {
-    RCurly  = char(14), // }
+    LParen  = char( 5), // (
+    RParen  = char( 6), // )
+    LSquare = char( 7), // [
+    RSquare = char( 8), // ]
+    LCurly  = char( 9), // {
+    RCurly  = char(10), // }
     // quotes
-    DQuote  = char(15), // "
-    SQuote  = char(16), // '
+    DQuote  = char(11), // "
+    SQuote  = char(12), // '
     // isolated characters
-    Comma   = char(17), // ,
-    Hash    = char(18), // #
-    Equal   = char(19), // =
-    Plus    = char(20), // +
-    Minus   = char(21), // -
-    Amper   = char(22), // &
-    Pipe    = char(23), // |
-    Caret   = char(24), // ^
-    Lt      = char(25), // <
-    Gt      = char(26), // >
-    Tilde   = char(27), // ~
-    Bang    = char(28), // !
-    Star    = char(29), // *
-    Slash   = char(30), // /
-    Percent = char(31), // %
-    Semi    = char(32), // ;
-    Colon   = char(33), // :
-    Quest   = char(34), // ?
-    Dollar  = char(35), // $
-    At      = char(36), // @    unsure if this will be used
-    BSlash  = char(37), // \
+    Comma   = char(13), // ,
+    Hash    = char(14), // #
+    Equal   = char(15), // =
+    Plus    = char(16), // +
+    Minus   = char(17), // -
+    Amper   = char(18), // &
+    Pipe    = char(19), // |
+    Caret   = char(20), // ^
+    Lt      = char(21), // <
+    Gt      = char(22), // >
+    Tilde   = char(23), // ~
+    Bang    = char(24), // !
+    Star    = char(25), // *
+    Slash   = char(26), // /
+    Percent = char(27), // %
+    Semi    = char(28), // ;
+    Colon   = char(29), // :
+    Quest   = char(30), // ?
+    Dollar  = char(31), // $
+    At      = char(32), // @    unsure if this will be used
+    BSlash  = char(33), // \
     // rare
-    Eof     = char(38), // end of file
-    Other   = char(39), // everything else
+    Eof     = char(34), // end of file
+    Other   = char(35), // everything else
 }
 
 impl Char {
@@ -103,14 +99,14 @@ static CHARS: [Char; 128] = {
     LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // 05x │()*+,-./│
     Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 06x │01234567│
     Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 07x │89:;<=>?│
-    At,     Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // 10x │@ABCDEFG│
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // 11x │HIJKLMNO│
+    At,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 10x │@ABCDEFG│
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 11x │HIJKLMNO│
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 12x │PQRSTUVW│
-    LetX,   Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // 13x │XYZ[\]^_│
-    Other,  Id,     LetB,   Id,     LetD,   Id,     Id,     Id,     // 14x │`abcdefg│
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     LetO,   // 15x │hijklmno│
+    Id,     Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // 13x │XYZ[\]^_│
+    __,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 14x │`abcdefg│
+    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 15x │hijklmno│
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 16x │pqrstuvw│
-    LetX,   Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  __,     // 17x │xyz{|}~·│
+    Id,     Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  __,     // 17x │xyz{|}~·│
 ]};
 
 // ----------------------------------------------------------------------------
@@ -216,10 +212,6 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 /* Lf    */ BolEos,   Bol,      CrLf,     Bol,
 
 /* Id    */ Error,    Error,    Error,    Comment,
-/* LetB  */ Error,    Error,    Error,    Comment,
-/* LetD  */ Error,    Error,    Error,    Comment,
-/* LetO  */ Error,    Error,    Error,    Comment,
-/* LetX  */ Error,    Error,    Error,    Comment,
 /* Digit */ Error,    Error,    Error,    Comment,
 
 /*   (   */ ParenL,   ParenL,   ParenL,   Comment,

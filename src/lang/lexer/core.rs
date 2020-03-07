@@ -158,49 +158,6 @@ impl TransitionId {
     const COUNT: usize = Self::End as usize + 1;
 }
 
-/// Lexer transition.
-#[derive(Clone, Copy, Debug)]
-struct Transition {
-    state:  State,
-    action: Action,
-    flags:  u8, // 0b000000LT
-                //         │└Token increment
-                //         └─Line increment
-}
-
-impl Transition {
-    #[inline]
-    fn token_inc(&self) -> usize {
-        (self.flags & 1) as usize
-    }
-
-    #[inline]
-    fn line_inc(&self) -> usize {
-        (self.flags >> 1) as usize
-    }
-}
-
-/// Lexer transitions in order by transition ID.
-static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
-    use Action::*;
-    use State::*;
-[
-//                                                                             Token┐
-//                                                                         Newline┐ │
-/* Normal     */ Transition { state: Normal,  action: Continue,         flags: 0b_0_0 },
-/* Bol        */ Transition { state: Bol,     action: Continue,         flags: 0b_1_0 },
-/* BolEos     */ Transition { state: Bol,     action: Yield(T::Eos),    flags: 0b_1_0 },
-/* Cr         */ Transition { state: AfterCr, action: Continue,         flags: 0b_1_0 },
-/* CrEos      */ Transition { state: AfterCr, action: Yield(T::Eos),    flags: 0b_1_0 },
-/* CrLf       */ Transition { state: Bol,     action: Continue,         flags: 0b_0_0 },
-/* Comment    */ Transition { state: Comment, action: Continue,         flags: 0b_0_0 },
-/* CommentEos */ Transition { state: Comment, action: Yield(T::Eos),    flags: 0b_0_0 },
-/* ParenL     */ Transition { state: Normal,  action: Yield(T::ParenL), flags: 0b_0_1 },
-/* ParenR     */ Transition { state: Normal,  action: Yield(T::ParenR), flags: 0b_0_1 },
-/* Error      */ Transition { state: Normal,  action: Fail,             flags: 0b_0_0 },
-/* End        */ Transition { state: Normal,  action: Succeed,          flags: 0b_0_0 },
-]};
-
 /// Lexer state transition map.
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
     use TransitionId::*;
@@ -247,6 +204,60 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 
 /* Eof   */ End,      End,      End,      End,
 /* Other */ Error,    Error,    Error,    Comment,
+]};
+
+// ----------------------------------------------------------------------------
+
+/// Lexer transition.
+#[derive(Clone, Copy, Debug)]
+struct Transition {
+    state:  State,
+    action: Action,
+    flags:  u8, // 0b000000LT
+                //         │└Token increment
+                //         └─Line increment
+}
+
+impl Transition {
+    #[inline]
+    fn token_inc(&self) -> usize {
+        (self.flags & 1) as usize
+    }
+
+    #[inline]
+    fn line_inc(&self) -> usize {
+        (self.flags >> 1) as usize
+    }
+}
+
+/// Lexer transitions in order by transition ID.
+static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
+    use TransitionId as Id;
+    use Action::*;
+    use State::*;
+    const fn t(_: TransitionId, state: State, action: Action, flags: u8) -> Transition {
+        Transition { state,  action, flags }
+    }
+[
+//
+//                                               Token┐
+//                                           Newline┐ │
+// Whitespace                                       │ │
+    t(Id::Normal,     Normal,  Continue,         0b_0_0),
+    t(Id::Bol,        Bol,     Continue,         0b_1_0),
+    t(Id::BolEos,     Bol,     Yield(T::Eos),    0b_1_0),
+    t(Id::Cr,         AfterCr, Continue,         0b_1_0),
+    t(Id::CrEos,      AfterCr, Yield(T::Eos),    0b_1_0),
+    t(Id::CrLf,       Bol,     Continue,         0b_0_0),
+// Comments                                         │ │
+    t(Id::Comment,    Comment, Continue,         0b_0_0),
+    t(Id::CommentEos, Comment, Yield(T::Eos),    0b_0_0),
+// Tokens                                           │ │
+    t(Id::ParenL,     Normal,  Yield(T::ParenL), 0b_0_1),
+    t(Id::ParenR,     Normal,  Yield(T::ParenR), 0b_0_1),
+// Termination                                      │ │
+    t(Id::Error,      Normal,  Fail,             0b_0_0),
+    t(Id::End,        Normal,  Succeed,          0b_0_0),
 ]};
 
 // ----------------------------------------------------------------------------

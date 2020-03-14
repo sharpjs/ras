@@ -311,6 +311,8 @@ enum Action {
     Succeed,
 }
 
+// ----------------------------------------------------------------------------
+
 impl<'a> Lexer<'a> {
     /// Advances to the next token and returns its type.
     pub fn next(&mut self) -> Token {
@@ -324,7 +326,7 @@ impl<'a> Lexer<'a> {
         let mut action;
 
         // Discover next token
-        loop {
+        let token = loop {
             let next = self.input.next(&CHARS).0;
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
@@ -335,37 +337,37 @@ impl<'a> Lexer<'a> {
             len_inc |= next.token_inc();
             len     += len_inc;
 
-            if action != Continue { break }
-        }
+            // Return token
+            match action {
+                Continue     => continue,
+
+                // Sublexers
+                ScanBin      => panic!(), // self.scan_bin(),
+                ScanOct      => panic!(), // self.scan_oct(),
+                ScanDec      => panic!(), // self.scan_dec(),
+                ScanHex      => panic!(), // self.scan_hex(),
+                ScanStr      => panic!(), // self.scan_str(),
+
+                // Identifiers & Literals
+                YieldIdent   => break Token::Ident,
+                YieldLabel   => break Token::Label,
+                YieldParam   => break Token::Param,
+                YieldChar    => break Token::Char,
+
+                // Simple Tokens
+                Yield(token) => break token,
+
+                // Terminators
+                Succeed      => break Token::Eof,
+                Fail         => break Token::Error,
+            }
+        };
 
         // Save state for subsequent invocation
         self.state = state;
         self.line  = line;
         self.len   = len;
 
-        // Return token
-        match action {
-            Continue          => unreachable!(),
-
-            // Sublexers
-            ScanBin           => panic!(), // self.scan_bin(),
-            ScanOct           => panic!(), // self.scan_oct(),
-            ScanDec           => panic!(), // self.scan_dec(),
-            ScanHex           => panic!(), // self.scan_hex(),
-            ScanStr           => panic!(), // self.scan_str(),
-
-            // Identifiers & Literals
-            YieldIdent        => Token::Ident,
-            YieldLabel        => Token::Label,
-            YieldParam        => Token::Param,
-            YieldChar         => Token::Char,
-
-            // Simple Tokens
-            Yield(token)      => token,
-
-            // Terminators
-            Succeed           => Token::Eof,
-            Fail              => Token::Error,
-        }
+        token
     }
 }

@@ -27,7 +27,7 @@ mod core;
 mod int;
 mod reader;
 
-#[cfg(OLD)]//#[cfg(test)]
+#[cfg(test)]
 mod tests;
 
 use self::reader::Reader;

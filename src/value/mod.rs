@@ -14,15 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-#![allow(dead_code)]
-
-mod arch;
-mod lang;
-mod mem;
-mod num;
-mod util;
+mod error;
 mod value;
 
-fn main() {
-}
+pub use self::error::*;
+pub use self::value::*;
 

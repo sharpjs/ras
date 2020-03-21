@@ -15,7 +15,7 @@
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 use super::State;
-use super::reader::LogChar;
+use super::reader::LogicalChar;
 use super::super::token::Token::{self, self as T};
 use super::Lexer;
 
@@ -80,7 +80,7 @@ impl Char {
     const COUNT: usize = Self::Other as usize / State::COUNT + 1;
 }
 
-impl LogChar for Char {
+impl LogicalChar for Char {
     const EXT: Self = Self::Id;
     const EOF: Self = Self::Eof;
 }

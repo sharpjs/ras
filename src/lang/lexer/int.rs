@@ -68,7 +68,7 @@ enum Char {
     Sep = 0b_1000_0000
 }
 
-impl LogChar for Char {
+impl LogicalChar for Char {
     const EXT: Self = Self::Etc;
     const EOF: Self = Self::Eof;
 }

@@ -20,8 +20,14 @@ use std::slice;
 
 // ----------------------------------------------------------------------------
 
-/// Trait for logical character types used with [`Reader`].
-pub trait LogChar: Copy {
+/// Trait for logical characters yielded by a [`Reader`].
+///
+/// A 'logical character' in ras is effectively a character equivalence class:
+/// a value that represents a set of byte values which receive identical
+/// treatment during lexical analysis.  A 'logical character set' is a set that
+/// contains sufficient logical characters to represent all byte values.
+///
+pub trait LogicalChar: Copy {
 
     /// Logical character representing a byte beyond the 7-bit ASCII range.
     const EXT: Self;
@@ -32,9 +38,10 @@ pub trait LogChar: Copy {
 
 // ----------------------------------------------------------------------------
 
-/// Input reader specialized for lexical analysis.  A `Reader` takes a slice of
-/// bytes as input and provides a simple rewindable cursor over a sequence of
-/// logical characters (effectively, character equivalence classes).
+/// Input reader specialized for lexical analysis.
+///
+/// A `Reader` takes a slice of bytes as input and provides a simple rewindable
+/// cursor over a sequence of logical characters.
 ///
 #[derive(Clone, Copy)]
 pub struct Reader<'a> {
@@ -70,7 +77,7 @@ impl<'a> Reader<'a> {
     /// If the reader is positioned at the end of input, this method returns
     /// `(C::EOF, 0)`, and the reader's position remains unchanged.
     #[inline(always)]
-    pub fn next<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogChar {
+    pub fn next<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
         let p = self.ptr;
         if p == self.end {
             return (C::EOF, 0)
@@ -144,7 +151,7 @@ mod tests {
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     enum Char { Lc, Uc, Etc, Ext, Eof }
 
-    impl LogChar for Char {
+    impl LogicalChar for Char {
         const EXT: Self = Ext;
         const EOF: Self = Eof;
     }

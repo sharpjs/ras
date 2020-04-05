@@ -69,8 +69,8 @@ enum Char {
 }
 
 impl LogicalChar for Char {
-    const EXT: Self = Self::Etc;
-    const EOF: Self = Self::Eof;
+    const NON_ASCII: Self = Self::Etc;
+    const EOF:       Self = Self::Eof;
 }
 
 impl Char {

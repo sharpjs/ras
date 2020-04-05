@@ -81,8 +81,8 @@ impl Char {
 }
 
 impl LogicalChar for Char {
-    const EXT: Self = Self::Id;
-    const EOF: Self = Self::Eof;
+    const NON_ASCII: Self = Self::Id;
+    const EOF:       Self = Self::Eof;
 }
 
 /// Mapping of 7-bit ASCII to logical characters.

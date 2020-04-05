@@ -30,7 +30,7 @@ use std::slice;
 pub trait LogicalChar: Copy {
 
     /// Logical character representing a byte beyond the 7-bit ASCII range.
-    const EXT: Self;
+    const NON_ASCII: Self;
 
     /// Logical character representing an end-of-file condition.
     const EOF: Self;
@@ -88,7 +88,7 @@ impl<'a> Reader<'a> {
             if byte >= 0 {
                 map[byte as usize]
             } else {
-                C::EXT
+                C::NON_ASCII
             },
             byte as u8
         )
@@ -149,11 +149,11 @@ mod tests {
     use Char::*;
 
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-    enum Char { Lc, Uc, Etc, Ext, Eof }
+    enum Char { Lc, Uc, Etc, Non, Eof }
 
     impl LogicalChar for Char {
-        const EXT: Self = Ext;
-        const EOF: Self = Eof;
+        const NON_ASCII: Self = Non;
+        const EOF:       Self = Eof;
     }
 
     /// Mapping of 7-bit ASCII to logical characters.
@@ -210,7 +210,7 @@ mod tests {
         assert_eq!( reader.next(&CHARS), (Etc, b'!') );
         assert_eq!( reader.position(),   3           );
 
-        assert_eq!( reader.next(&CHARS), (Ext, b'\xED') );
+        assert_eq!( reader.next(&CHARS), (Non, b'\xED') );
         assert_eq!( reader.position(),   4           );
 
         assert_eq!( reader.next(&CHARS), (Eof, 0)    );

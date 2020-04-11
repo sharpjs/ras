@@ -57,10 +57,15 @@ impl<'a> Reader<'a> {
     // ensured by checks against the slice bounds.
 
     /// Creates a new [`Reader`] over the given slice of bytes.
-    #[inline(always)]
     pub fn new(bytes: &'a [u8]) -> Self {
+        let len = bytes.len();
+        if len > isize::MAX as usize {
+            // Rust pointer arithmetic requires offsets <= isize::MAX
+            panic!("Input exceeds maximum supported size of {} bytes.", isize::MAX)
+        }
+
         let beg = bytes.as_ptr();
-        let end = unsafe { beg.add(bytes.len()) };
+        let end = unsafe { beg.add(len) };
 
         Self { ptr: beg, beg, end, _lt: PhantomData }
     }

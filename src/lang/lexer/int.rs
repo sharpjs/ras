@@ -32,7 +32,7 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
         // Get digit value, or 0 for separator
         // Stop when digit is greater than the radix
         let digit = ch.digit();
-        if digit >= radix { break ch; }
+        if digit >= radix { break ch }
 
         // Get digit mask: 00 for separator, FF for digit
         let mask = ch.mask();

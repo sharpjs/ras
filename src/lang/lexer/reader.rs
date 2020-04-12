@@ -57,6 +57,11 @@ impl<'a> Reader<'a> {
     // ensured by checks against the slice bounds.
 
     /// Creates a new [`Reader`] over the given slice of bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the length of `bytes` is greater than `isize::MAX`.
+    ///
     pub fn new(bytes: &'a [u8]) -> Self {
         let len = bytes.len();
         if len > isize::MAX as usize {

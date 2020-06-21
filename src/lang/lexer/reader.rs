@@ -92,15 +92,15 @@ impl<'a> Reader<'a> {
         if p == self.end {
             return (C::EOF, 0)
         }
-        let byte = unsafe { *p } as i8;
+        let byte = unsafe { *p };
         self.ptr = unsafe { p.offset(1) };
         (
-            if byte >= 0 {
+            if byte as i8 >= 0 {
                 map[byte as usize]
             } else {
                 C::NON_ASCII
             },
-            byte as u8
+            byte
         )
     }
 

@@ -27,7 +27,7 @@ use std::slice;
 /// treatment during lexical analysis.  A 'logical character set' is a set that
 /// contains sufficient logical characters to represent all byte values.
 ///
-pub trait LogicalChar: Copy {
+pub trait LogicalChar: Copy + Eq {
 
     /// Logical character representing a byte beyond the 7-bit ASCII range.
     const NON_ASCII: Self;
@@ -111,12 +111,17 @@ impl<'a> Reader<'a> {
     /// Panics if the reader is positioned at the beginning of input.
     ///
     #[inline(always)]
-    pub fn rewind(&mut self) {
+    pub fn unread<C>(&mut self, c: C) where C: LogicalChar {
+        if c == C::EOF {
+            return
+        }
+
         let p = self.ptr;
         if p == self.beg {
             panic!("Attempted to rewind past the beginning of input.")
         }
-        self.ptr = unsafe { p.offset(-1) };
+
+        self.ptr = unsafe { p.sub(1) };
     }
 
     /// Returns a slice of the `len` bytes preceding the next byte to be read.
@@ -214,7 +219,7 @@ mod tests {
         assert_eq!( reader.next(&CHARS), (Etc, b'!') );
         assert_eq!( reader.position(),   3           );
 
-        reader.rewind();
+        reader.unread(Etc);
         assert_eq!( reader.position(),   2           );
 
         assert_eq!( reader.next(&CHARS), (Etc, b'!') );
@@ -232,7 +237,7 @@ mod tests {
     fn reader_rewind_panic() {
         let mut reader = Reader::new(b"ab");
 
-        reader.rewind();
+        reader.unread(Etc);
     }
 
     #[test]

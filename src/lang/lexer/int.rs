@@ -47,10 +47,7 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
     };
 
     // Un-read the byte that caused loop exit
-    match next {
-        Char::Eof => (),
-        _         => input.rewind()
-    }
+    input.unread(next);
 
     return (val, if ovf { 0 } else { len })
 }
@@ -58,7 +55,7 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
 // ----------------------------------------------------------------------------
 
 /// Entry in the mapping of bytes to logical characters.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Char {
     Dig0, Dig1, Dig2, Dig3, Dig4, Dig5, Dig6, Dig7,

@@ -26,7 +26,7 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
 
     // Read bytes until a non-digit is found
     let next = loop {
-        // Read next byte
+        // Read next logical character
         let (ch, _) = input.next(&CHARS);
 
         // Get digit value, or 0 for separator
@@ -46,7 +46,7 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
         len = len.wrapping_add(1 & mask); // 0 for separator, 1 for digit
     };
 
-    // Un-read the byte that caused loop exit
+    // Un-read the logical character that caused loop exit
     input.unread(next);
 
     return (val, if ovf { 0 } else { len })

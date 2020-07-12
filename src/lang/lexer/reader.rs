@@ -88,20 +88,24 @@ impl<'a> Reader<'a> {
     /// `(C::EOF, 0)`, and the reader's position remains unchanged.
     #[inline(always)]
     pub fn next<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
+        // Detect EOF
         let p = self.ptr;
         if p == self.end {
             return (C::EOF, 0)
         }
+
+        // Read byte and advance
         let byte = unsafe { *p };
         self.ptr = unsafe { p.offset(1) };
-        (
-            if byte as i8 >= 0 {
-                map[byte as usize]
-            } else {
-                C::NON_ASCII
-            },
-            byte
-        )
+
+        // Map byte to logical character
+        let c = if byte as i8 >= 0 {
+            unsafe { *map.get_unchecked(byte as usize) }
+        } else {
+            C::NON_ASCII // beyond 7-bit ASCII range
+        };
+
+        (c, byte)
     }
 
     /// Rewinds the reader by one byte.
@@ -112,15 +116,18 @@ impl<'a> Reader<'a> {
     ///
     #[inline(always)]
     pub fn unread<C>(&mut self, c: C) where C: LogicalChar {
+        // Detect EOF
         if c == C::EOF {
             return
         }
 
+        // Detect BOF
         let p = self.ptr;
         if p == self.beg {
             panic!("Attempted to rewind past the beginning of input.")
         }
 
+        // Rewind
         self.ptr = unsafe { p.sub(1) };
     }
 

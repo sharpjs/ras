@@ -96,7 +96,7 @@ impl<'a> Reader<'a> {
 
         // Read byte and advance
         let byte = unsafe { *p };
-        self.ptr = unsafe { p.offset(1) };
+        self.ptr = unsafe { p.add(1) };
 
         // Map byte to logical character
         let c = if byte as i8 >= 0 {

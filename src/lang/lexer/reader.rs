@@ -76,6 +76,9 @@ impl<'a> Reader<'a> {
     }
 
     /// Returns the position of the next byte to be read.
+    ///
+    /// The position is equivalent to the count of bytes that have been read.
+    ///
     #[inline(always)]
     pub fn position(&self) -> usize {
         self.ptr as usize - self.beg as usize
@@ -108,11 +111,15 @@ impl<'a> Reader<'a> {
         (c, byte)
     }
 
-    /// Rewinds the reader by one byte.
+    /// Unreads the given logical character.
+    ///
+    /// If `c` is `C::EOF`, then the reader remains unchanged.  Otherwise, this
+    /// method rewinds the reader by one byte.
     ///
     /// # Panics
     ///
-    /// Panics if the reader is positioned at the beginning of input.
+    /// Panics if `c` is not `C::EOF` and the reader is positioned at the
+    /// beginning of input.
     ///
     #[inline(always)]
     pub fn unread<C>(&mut self, c: C) where C: LogicalChar {

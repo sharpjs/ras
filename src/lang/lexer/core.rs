@@ -327,7 +327,7 @@ impl<'a> Lexer<'a> {
 
         // Discover next token
         let token = loop {
-            let next = self.input.next(&CHARS).0;
+            let next = self.input.read(&CHARS).0;
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 

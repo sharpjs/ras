@@ -27,7 +27,7 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
     // Read bytes until a non-digit is found
     let next = loop {
         // Read next logical character
-        let (ch, _) = input.next(&CHARS);
+        let (ch, _) = input.read(&CHARS);
 
         // Get digit value, or 0 for separator
         // Stop when digit is greater than the radix

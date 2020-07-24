@@ -90,7 +90,7 @@ impl<'a> Reader<'a> {
     /// If the reader is positioned at the end of input, this method returns
     /// `(C::EOF, 0)`, and the reader's position remains unchanged.
     #[inline(always)]
-    pub fn next<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
+    pub fn read<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
         // Detect EOF
         let p = self.ptr;
         if p == self.end {
@@ -214,7 +214,7 @@ mod tests {
 
         assert_eq!( reader.position(),   0        );
 
-        assert_eq!( reader.next(&CHARS), (Eof, 0) );
+        assert_eq!( reader.read(&CHARS), (Eof, 0) );
         assert_eq!( reader.position(),   0        );
     }
 
@@ -224,25 +224,25 @@ mod tests {
 
         assert_eq!( reader.position(),   0           );
 
-        assert_eq!( reader.next(&CHARS), (Uc,  b'H') );
+        assert_eq!( reader.read(&CHARS), (Uc,  b'H') );
         assert_eq!( reader.position(),   1           );
 
-        assert_eq!( reader.next(&CHARS), (Lc,  b'i') );
+        assert_eq!( reader.read(&CHARS), (Lc,  b'i') );
         assert_eq!( reader.position(),   2           );
 
-        assert_eq!( reader.next(&CHARS), (Etc, b'!') );
+        assert_eq!( reader.read(&CHARS), (Etc, b'!') );
         assert_eq!( reader.position(),   3           );
 
         reader.unread(Etc);
         assert_eq!( reader.position(),   2           );
 
-        assert_eq!( reader.next(&CHARS), (Etc, b'!') );
+        assert_eq!( reader.read(&CHARS), (Etc, b'!') );
         assert_eq!( reader.position(),   3           );
 
-        assert_eq!( reader.next(&CHARS), (Non, b'\xED') );
+        assert_eq!( reader.read(&CHARS), (Non, b'\xED') );
         assert_eq!( reader.position(),   4           );
 
-        assert_eq!( reader.next(&CHARS), (Eof, 0)    );
+        assert_eq!( reader.read(&CHARS), (Eof, 0)    );
         assert_eq!( reader.position(),   4           );
     }
 
@@ -260,18 +260,18 @@ mod tests {
 
         assert_eq!( reader.preceding(0),   b"" );
 
-        let _ = reader.next(&CHARS);
+        let _ = reader.read(&CHARS);
 
         assert_eq!( reader.preceding(0),   b"" );
         assert_eq!( reader.preceding(1),  b"a" );
 
-        let _ = reader.next(&CHARS);
+        let _ = reader.read(&CHARS);
 
         assert_eq!( reader.preceding(0),   b"" );
         assert_eq!( reader.preceding(1),  b"b" );
         assert_eq!( reader.preceding(2), b"ab" );
 
-        let _ = reader.next(&CHARS);
+        let _ = reader.read(&CHARS);
 
         assert_eq!( reader.preceding(0),   b"" );
         assert_eq!( reader.preceding(1),  b"b" );
@@ -292,15 +292,15 @@ mod tests {
 
         assert_eq!( reader.remaining(), b"ab" );
 
-        let _ = reader.next(&CHARS);
+        let _ = reader.read(&CHARS);
 
         assert_eq!( reader.remaining(), b"b" );
 
-        let _ = reader.next(&CHARS);
+        let _ = reader.read(&CHARS);
 
         assert_eq!( reader.remaining(), b"" );
 
-        let _ = reader.next(&CHARS);
+        let _ = reader.read(&CHARS);
 
         assert_eq!( reader.remaining(), b"" );
     }

@@ -219,7 +219,7 @@ mod tests {
     }
 
     #[test]
-    fn reader_next() {
+    fn reader_read() {
         let mut reader = Reader::new(b"Hi!\xED");
 
         assert_eq!( reader.position(),   0           );
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn reader_rewind_panic() {
+    fn reader_unread_panic() {
         let mut reader = Reader::new(b"ab");
 
         reader.unread(Etc);

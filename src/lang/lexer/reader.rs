@@ -216,6 +216,9 @@ mod tests {
 
         assert_eq!( reader.read(&CHARS), (Eof, 0) );
         assert_eq!( reader.position(),   0        );
+
+        reader.unread(Eof);
+        assert_eq!( reader.position(),   0        );
     }
 
     #[test]
@@ -244,6 +247,9 @@ mod tests {
 
         assert_eq!( reader.read(&CHARS), (Eof, 0)    );
         assert_eq!( reader.position(),   4           );
+
+        reader.unread(Eof);
+        assert_eq!( reader.position(),   4        );
     }
 
     #[test]

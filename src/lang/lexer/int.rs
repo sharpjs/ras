@@ -39,8 +39,8 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
 
         // Accumulate digit
         let scale  = (radix ^ 1) & mask ^ 1; // 1 for separator, radix for digit
-        let (v, f) = val.overflowing_mul(scale as u64); val = v; ovf |= f;
-        let (v, f) = val.overflowing_add(digit as u64); val = v; ovf |= f;
+        let (v, o) = val.overflowing_mul(scale as u64); val = v; ovf |= o;
+        let (v, o) = val.overflowing_add(digit as u64); val = v; ovf |= o;
 
         // Accumulate count
         len = len.wrapping_add(1 & mask); // 0 for separator, 1 for digit

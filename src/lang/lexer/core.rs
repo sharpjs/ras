@@ -14,10 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-use super::State;
-use super::reader::LogicalChar;
+use super::reader::{LogicalChar, Reader};
 use super::super::token::Token::{self, self as T};
-use super::Lexer;
 
 // ----------------------------------------------------------------------------
 
@@ -30,7 +28,6 @@ const fn char(n: u16) -> u16 {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u16)]
 enum Char {
-    // Ordered roughly by descending frequency.
     // space, newlines
     Space   = char( 0), // \s\t
     Cr      = char( 1), // \r
@@ -48,7 +45,7 @@ enum Char {
     // quotes
     DQuote  = char(11), // "
     SQuote  = char(12), // '
-    // isolated characters
+    // isolated characters, ordered by descending frequency
     Comma   = char(13), // ,
     Hash    = char(14), // #
     Equal   = char(15), // =
@@ -311,9 +308,65 @@ enum Action {
     Succeed,
 }
 
-// ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------- 
+
+/// Lexer states.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+enum State {
+    /// Normal state.  Any token is possible.
+    Normal,
+
+    /// At the begining of a line.  Any token is possible.
+    Bol,
+
+    /// After a carriage return (0x0D).
+    AfterCr,
+
+    /// In a comment.
+    Comment,
+}
+
+impl State {
+    /// Count of lexer states.
+    const COUNT: usize = Self::Comment as usize + 1;
+}
+
+// ---------------------------------------------------------------------------- 
+
+/// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
+#[derive(Debug)]
+pub struct Lexer<'a> {
+    input: Reader<'a>,
+    state: State,
+    line:  usize,
+    len:   usize,
+}
 
 impl<'a> Lexer<'a> {
+    /// Creates a lexical analyzer that takes as input the contents of the
+    /// given slice of bytes.
+    pub fn new(input: &'a [u8]) -> Self {
+        Self {
+            input: Reader::new(input),
+            state: State::Bol,
+            line:  1,
+            len:   0,
+        }
+    }
+
+    /// Returns the source line number (1-indexed) of the current token.
+    #[inline]
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    /// Returns the source text of the current token.
+    #[inline]
+    pub fn text(&self) -> &'a [u8] {
+        self.input.preceding(self.len)
+    }
+
     /// Advances to the next token and returns its type.
     pub fn next(&mut self) -> Token {
         use Action::*;
@@ -371,3 +424,4 @@ impl<'a> Lexer<'a> {
         token
     }
 }
+

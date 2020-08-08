@@ -75,3 +75,4 @@ fn lexer_parens() {
     assert_eq!( lexer.next(), Token::Eos    );
     assert_eq!( lexer.next(), Token::Eof    );
 }
+

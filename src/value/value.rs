@@ -20,7 +20,6 @@ use super::Error;
 
 /// Trait for literal values.
 pub trait Value: Any + Debug {
-
     fn as_any_ref (&     self) -> &     dyn Any;
     fn as_any_mut (& mut self) -> & mut dyn Any;
 
@@ -124,4 +123,3 @@ mod tests {
         );
     }
 }
-

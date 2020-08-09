@@ -57,4 +57,3 @@ impl Value for Error {
         Error::new()
     }
 }
-

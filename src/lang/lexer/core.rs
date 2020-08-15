@@ -14,8 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::lang::Base;
+use crate::lang::token::Token::{self, self as T};
+
 use super::reader::{LogicalChar, Reader};
-use super::super::token::Token::{self, self as T};
+use super::int::scan_int;
 
 // ----------------------------------------------------------------------------
 
@@ -208,11 +211,12 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 /// Lexer transition.
 #[derive(Clone, Copy, Debug)]
 struct Transition {
-    state:  State,
-    action: Action,
-    flags:  u8, // 0b000000LT
-                //         │└Token increment
-                //         └─Line increment
+    state:  State,  // 1 byte
+    action: Action, // 2 bytes
+    flags:  u8,     // 1 byte
+    // 0b000000LT
+    //         │└Token increment
+    //         └─Line increment
 }
 
 impl Transition {
@@ -233,7 +237,7 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
     use Action::*;
     use State::*;
     const fn t(_: TransitionId, state: State, action: Action, flags: u8) -> Transition {
-        Transition { state,  action, flags }
+        Transition { state, action, flags }
     }
 [
 //
@@ -380,25 +384,27 @@ impl<'a> Lexer<'a> {
 
         // Discover next token
         let token = loop {
+            // Get next transition
             let next = self.input.read(&CHARS).0;
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
+            // Update state
             state    = next.state;
             action   = next.action;
             line    += next.line_inc();
             len_inc |= next.token_inc();
             len     += len_inc;
 
-            // Return token
+            // Perform action
             match action {
                 Continue     => continue,
 
                 // Sublexers
-                ScanBin      => panic!(), // self.scan_bin(),
-                ScanOct      => panic!(), // self.scan_oct(),
-                ScanDec      => panic!(), // self.scan_dec(),
-                ScanHex      => panic!(), // self.scan_hex(),
+                ScanBin      => { let (_, _) = scan_int(&mut self.input, Base::Bin); },
+                ScanOct      => { let (_, _) = scan_int(&mut self.input, Base::Oct); },
+                ScanDec      => { let (_, _) = scan_int(&mut self.input, Base::Dec); },
+                ScanHex      => { let (_, _) = scan_int(&mut self.input, Base::Hex); },
                 ScanStr      => panic!(), // self.scan_str(),
 
                 // Identifiers & Literals

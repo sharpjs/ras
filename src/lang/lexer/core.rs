@@ -401,10 +401,10 @@ impl<'a> Lexer<'a> {
                 Continue     => continue,
 
                 // Sublexers
-                ScanBin      => { let (_, _) = scan_int(&mut self.input, Base::Bin); },
-                ScanOct      => { let (_, _) = scan_int(&mut self.input, Base::Oct); },
-                ScanDec      => { let (_, _) = scan_int(&mut self.input, Base::Dec); },
-                ScanHex      => { let (_, _) = scan_int(&mut self.input, Base::Hex); },
+                ScanBin      => { let (_val, _len) = scan_int(&mut self.input, Base::Bin); },
+                ScanOct      => { let (_val, _len) = scan_int(&mut self.input, Base::Oct); },
+                ScanDec      => { let (_val, _len) = scan_int(&mut self.input, Base::Dec); },
+                ScanHex      => { let (_val, _len) = scan_int(&mut self.input, Base::Hex); },
                 ScanStr      => panic!(), // self.scan_str(),
 
                 // Identifiers & Literals

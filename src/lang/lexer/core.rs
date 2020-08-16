@@ -54,7 +54,7 @@ enum Char {
     Equal   = char(15), // =
     Plus    = char(16), // +
     Minus   = char(17), // -
-    Amper   = char(18), // &
+    Amp     = char(18), // &
     Pipe    = char(19), // |
     Caret   = char(20), // ^
     Lt      = char(21), // <
@@ -63,13 +63,13 @@ enum Char {
     Bang    = char(24), // !
     Star    = char(25), // *
     Slash   = char(26), // /
-    Percent = char(27), // %
+    Pct     = char(27), // %
     Semi    = char(28), // ;
     Colon   = char(29), // :
     Quest   = char(30), // ?
     Dollar  = char(31), // $
     At      = char(32), // @    unsure if this will be used
-    BSlash  = char(33), // \
+    Escape  = char(33), // \
     // rare
     Eof     = char(34), // end of file
     Other   = char(35), // everything else
@@ -95,14 +95,14 @@ static CHARS: [Char; 128] = {
     __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 01x │·tn··r··│
     __,     __,     __,     __,     __,     __,     __,     __,     // 02x │········│
     __,     __,     __,     __,     __,     __,     __,     __,     // 03x │········│
-    Space,  Bang,   DQuote, Hash,   Dollar, Percent,Amper,  SQuote, // 04x │ !"#$%&'│
+    Space,  Bang,   DQuote, Hash,   Dollar, Pct,    Amp,    SQuote, // 04x │ !"#$%&'│
     LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // 05x │()*+,-./│
     Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 06x │01234567│
     Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 07x │89:;<=>?│
     At,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 10x │@ABCDEFG│
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 11x │HIJKLMNO│
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 12x │PQRSTUVW│
-    Id,     Id,     Id,     LSquare,BSlash, RSquare,Caret,  Id,     // 13x │XYZ[\]^_│
+    Id,     Id,     Id,     LSquare,Escape, RSquare,Caret,  Id,     // 13x │XYZ[\]^_│
     __,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 14x │`abcdefg│
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 15x │hijklmno│
     Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 16x │pqrstuvw│

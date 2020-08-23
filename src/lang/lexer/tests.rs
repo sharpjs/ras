@@ -70,8 +70,8 @@ fn lexer_crlf() {
 fn lexer_parens() {
     let mut lexer = Lexer::new(b"()#c\n\n");
 
-    assert_eq!( lexer.next(), Token::ParenL );
-    assert_eq!( lexer.next(), Token::ParenR );
+    assert_eq!( lexer.next(), Token::LParen );
+    assert_eq!( lexer.next(), Token::RParen );
     assert_eq!( lexer.next(), Token::Eos    );
     assert_eq!( lexer.next(), Token::Eof    );
 }

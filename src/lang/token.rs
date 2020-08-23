@@ -184,22 +184,22 @@ pub enum Token {
     // === Punctuation ===
 
     /// `{` - left curly brace.
-    BraceL,
+    LCurly,
 
     /// `}` - right curly brace.
-    BraceR,
+    RCurly,
 
     /// `(` - left parenthesis.
-    ParenL,
+    LParen,
 
     /// `)` - right parenthesis.
-    ParenR,
+    RParen,
 
     /// `[` - left square bracket.
-    BracketL,
+    LSquare,
 
     /// `]` - right square bracket.
-    BracketR,
+    RSquare,
 
     /// `:` - item joiner.
     Colon,

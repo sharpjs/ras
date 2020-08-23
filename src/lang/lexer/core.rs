@@ -254,8 +254,8 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
     t(Id::Comment,    Comment, Continue,         0b_0_0),
     t(Id::CommentEos, Comment, Yield(T::Eos),    0b_0_0),
 // Tokens                                           │ │
-    t(Id::ParenL,     Normal,  Yield(T::ParenL), 0b_0_1),
-    t(Id::ParenR,     Normal,  Yield(T::ParenR), 0b_0_1),
+    t(Id::ParenL,     Normal,  Yield(T::LParen), 0b_0_1),
+    t(Id::ParenR,     Normal,  Yield(T::RParen), 0b_0_1),
 // Termination                                      │ │
     t(Id::Error,      Normal,  Fail,             0b_0_0),
     t(Id::End,        Normal,  Succeed,          0b_0_0),

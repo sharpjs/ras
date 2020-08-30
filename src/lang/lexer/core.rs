@@ -140,11 +140,11 @@ enum TransitionId {
     /// Transition to `Comment` state and emit an `Eos` token.
     CommentEos,
 
-    /// Transition to `Normal` state and emit a `ParenL` token.
-    ParenL,
+    /// Transition to `Normal` state and emit a `LParen` token.
+    LParen,
 
-    /// Transition to `Normal` state and emit a `ParenR` token.
-    ParenR,
+    /// Transition to `Normal` state and emit a `RParen` token.
+    RParen,
 
     /// Terminate with failure.
     Error,
@@ -171,8 +171,8 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 /* Id    */ Error,    Error,    Error,    Comment,
 /* Digit */ Error,    Error,    Error,    Comment,
 
-/*   (   */ ParenL,   ParenL,   ParenL,   Comment,
-/*   )   */ ParenR,   ParenR,   ParenR,   Comment,
+/*   (   */ LParen,   LParen,   LParen,   Comment,
+/*   )   */ RParen,   RParen,   RParen,   Comment,
 /*   [   */ Error,    Error,    Error,    Comment,
 /*   ]   */ Error,    Error,    Error,    Comment,
 /*   {   */ Error,    Error,    Error,    Comment,
@@ -254,8 +254,8 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
     t(Id::Comment,    Comment, Continue,         0b_0_0),
     t(Id::CommentEos, Comment, Yield(T::Eos),    0b_0_0),
 // Tokens                                           │ │
-    t(Id::ParenL,     Normal,  Yield(T::LParen), 0b_0_1),
-    t(Id::ParenR,     Normal,  Yield(T::RParen), 0b_0_1),
+    t(Id::LParen,     Normal,  Yield(T::LParen), 0b_0_1),
+    t(Id::RParen,     Normal,  Yield(T::RParen), 0b_0_1),
 // Termination                                      │ │
     t(Id::Error,      Normal,  Fail,             0b_0_0),
     t(Id::End,        Normal,  Succeed,          0b_0_0),

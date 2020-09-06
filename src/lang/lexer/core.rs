@@ -430,4 +430,3 @@ impl<'a> Lexer<'a> {
         token
     }
 }
-

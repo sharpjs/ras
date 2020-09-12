@@ -23,6 +23,32 @@ mod num;
 mod util;
 mod value;
 
-fn main() {
+use std::env::args;
+use std::io::{self, stdin, stdout, stderr, Read, Write};
+use std::fs::File;
+
+fn main() -> Result<(), io::Error> {
+    let mut args = args();
+    args.next();
+
+    let mut buffer = String::new();
+
+    if args.len() == 0 {
+        writeln!(stderr(), "reading stdin")?;
+        stdin().read_to_string(&mut buffer)?;
+    } else {
+        for arg in args {
+            if arg == "-" {
+                writeln!(stderr(), "reading stdin")?;
+                stdin().read_to_string(&mut buffer)?;
+            } else {
+                writeln!(stderr(),"reading {}", arg)?;
+                File::open(arg)?.read_to_string(&mut buffer)?;
+            }
+        }
+    }
+
+    write!(stdout(), "{}", buffer)?;
+    Ok(())
 }
 

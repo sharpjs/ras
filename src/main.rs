@@ -27,7 +27,7 @@ use std::env::args;
 use std::io::{self, stdin, stdout, stderr, Read, Write};
 use std::fs::File;
 
-fn main() -> Result<(), io::Error> {
+fn main() -> io::Result<()> {
     let mut args = args();
     args.next();
 

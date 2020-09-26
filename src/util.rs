@@ -17,7 +17,7 @@
 use std::fmt::{self, Display, Formatter};
 
 /// A source code location.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Location {
     /// The 1-based line number, or `0` to indicate an unknown line.
     pub line: u32,

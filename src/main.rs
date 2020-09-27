@@ -19,6 +19,7 @@
 mod arch;
 mod lang;
 mod mem;
+mod message;
 mod num;
 mod util;
 mod value;
@@ -26,6 +27,9 @@ mod value;
 use std::env::args;
 use std::io::{self, stdin, stdout, stderr, Read, Write};
 use std::fs::File;
+
+/// The name of the assembler.
+pub const PROGRAM_NAME: &str = "ras";
 
 fn main() -> io::Result<()> {
     let mut args = args();

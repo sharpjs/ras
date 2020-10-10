@@ -107,6 +107,18 @@ impl<'a, M: Message> Display for FileMessage<'a, M> {
 
 // -----------------------------------------------------------------------------
 
+/// Trait to add file origin information to an assembler message.
+pub trait At: Message + Sized {
+    #[inline]
+    fn at(self, path: &str, loc: Location) -> FileMessage<Self> {
+        FileMessage { msg: self, path, loc }
+    }
+}
+
+impl<T> At for T where T: Message + Sized {}
+
+// -----------------------------------------------------------------------------
+
 /// Message severity levels.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Severity {

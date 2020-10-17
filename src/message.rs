@@ -227,9 +227,5 @@ impl<T: Message> Display for Fatal<T> {
 // -----------------------------------------------------------------------------
 
 pub fn file_not_found_error(path: &str) -> impl Message + '_ {
-    FileMessage {
-        msg: Error("file not found"),
-        path: path,
-        loc: Location::UNKNOWN,
-    }
+    Error("file not found").at(path, Location::UNKNOWN)
 }

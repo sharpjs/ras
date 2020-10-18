@@ -1,5 +1,7 @@
+//! Assembler Messages
+//
 // This file is part of ras, an assembler.
-// Copyright (C) 2020 Jeffrey Sharp
+// Copyright 2020 Jeffrey Sharp
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published
@@ -14,109 +16,62 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Assembler Messages
-
 use std::fmt::{self, Arguments, Display, Formatter};
 use crate::util::Location;
 
 // -----------------------------------------------------------------------------
 
-/// Trait for assembler message types.
-pub trait Message: Display {
-    /// Returns the origin (e.g. path, line, and column) of the message.
-    #[inline]
-    fn origin(&self) -> Origin { Origin::General }
+/// An assembler message.
+#[derive(Copy, Clone, Debug)]
+pub struct Message<'a> {
+    /// Severity of the message.
+    pub severity: Severity,
 
-    /// Returns the severity level of the message.
-    #[inline]
-    fn severity(&self) -> Severity { Severity::Normal }
+    /// Path of a source file related to the message, or the program name if no
+    /// source file is related.
+    pub source: &'a str,
+
+    /// Textual location within source file related to the message, or
+    /// [`Location::Unknown`] if no location is related.
+    pub location: Location,
+
+    /// Message content.
+    content: Arguments<'a>
 }
 
-impl Message for str           {}
-impl Message for String        {}
-impl Message for Arguments<'_> {}
-
-impl<T> Message for &T where T: Message + ?Sized {
+impl<'a> Message<'a> {
+    /// Creates a `Message` with the given severity and format arguments,
+    /// without a related source file path or textual location.
     #[inline]
-    fn origin(&self) -> Origin { (*self).origin() }
+    pub fn new(sev: Severity, args: Arguments<'a>) -> Self {
+        Self::at(crate::PROGRAM_NAME, Location::UNKNOWN, sev, args)
+    }
 
+    /// Creates a `Message` with the given severity and format arguments,
+    /// related to the given source file path and textual location.
     #[inline]
-    fn severity(&self) -> Severity { (*self).severity() }
-}
-
-// -----------------------------------------------------------------------------
-
-/// Assembler message origins.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Origin<'a> {
-    /// The message originates from the assembler itself.
-    General,
-
-    /// The message originates from a source code file.
-    File {
-        /// Path of the source code file.
-        path: &'a str,
-
-        /// Line-and-column location within the source code file.
-        loc: Location
-    },
-}
-
-impl Display for Origin<'_> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match *self {
-            Origin::General            => write!(f, "{}", crate::PROGRAM_NAME),
-            Origin::File { path, loc } => write!(f, "{}:{}", path, loc),
+    pub fn at(path: &'a str, loc: Location, sev: Severity, args: Arguments<'a>) -> Self {
+        Self {
+            severity: sev,
+            source:   path,
+            location: loc,
+            content:  args
         }
     }
 }
 
-// -----------------------------------------------------------------------------
-
-/// Wrapper type that adds file origin information to an assembler message.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct FileMessage<'a, M: Message> {
-    /// The assembler message.
-    msg: M,
-
-    /// Path of the source code file.
-    path: &'a str,
-
-    /// Line-and-column location within the source code file.
-    loc: Location,
-}
-
-impl<'a, M: Message> Message for FileMessage<'a, M> {
-    #[inline]
-    fn origin(&self) -> Origin {
-        Origin::File { path: self.path, loc: self.loc }
-    }
-
-    #[inline]
-    fn severity(&self) -> Severity {
-        self.msg.severity()
-    }
-}
-
-impl<'a, M: Message> Display for FileMessage<'a, M> {
-    #[inline]
+// Display is used when a Message is printed as output.
+impl Display for Message<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.msg.fmt(f)
+        write!(f, "{}{}: {}{}",
+            self.source,
+            self.location,
+            self.severity,
+            self.content
+        )
     }
 }
-
-// -----------------------------------------------------------------------------
-
-/// Trait to add file origin information to an assembler message.
-pub trait At: Message + Sized {
-    #[inline]
-    fn at(self, path: &str, loc: Location) -> FileMessage<Self> {
-        FileMessage { msg: self, path, loc }
-    }
-}
-
-impl<T> At for T where T: Message + Sized {}
-
+ 
 // -----------------------------------------------------------------------------
 
 /// Message severity levels.
@@ -138,9 +93,10 @@ pub enum Severity {
     Fatal,
 }
 
+// Display is used when a Severity is printed in an assembler message.
 impl Display for Severity {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.write_str(match *self {
+        write!(f, "{}", match *self {
             Severity::Normal  => "",
             Severity::Warning => "warning: ",
             Severity::Error   => "error: ",
@@ -151,81 +107,24 @@ impl Display for Severity {
 
 // -----------------------------------------------------------------------------
 
-/// Wrapper type that gives warning severity to an assembler message.
-#[derive(Copy, Clone, Debug)]
-pub struct Warning<T: Message>(T);
-
-impl<T: Message> Message for Warning<T> {
-    #[inline]
-    fn origin(&self) -> Origin {
-        self.0.origin()
-    }
-
-    #[inline]
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-}
-
-impl<T: Message> Display for Warning<T> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
+/// Creates a 'file not found' message.
+pub fn file_not_found_error(path: &str) -> Message {
+    Message::at(path, Location::UNKNOWN, Severity::Error, format_args!(
+        "file not found"
+    ))
 }
 
 // -----------------------------------------------------------------------------
 
-/// Wrapper type that gives error severity to an assembler message.
-#[derive(Copy, Clone, Debug)]
-pub struct Error<T: Message>(T);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl<T: Message> Message for Error<T> {
-    #[inline]
-    fn origin(&self) -> Origin {
-        self.0.origin()
+    #[test]
+    fn test_file_not_found_error() {
+        assert_eq!(
+            format!("{}", file_not_found_error("foo.s")),
+            "foo.s: error: file not found"
+        )
     }
-
-    #[inline]
-    fn severity(&self) -> Severity {
-        Severity::Error
-    }
-}
-
-impl<T: Message> Display for Error<T> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-/// Wrapper type that gives fatal severity to an assembler message.
-#[derive(Copy, Clone, Debug)]
-pub struct Fatal<T: Message>(T);
-
-impl<T: Message> Message for Fatal<T> {
-    #[inline]
-    fn origin(&self) -> Origin {
-        self.0.origin()
-    }
-
-    #[inline]
-    fn severity(&self) -> Severity {
-        Severity::Fatal
-    }
-}
-
-impl<T: Message> Display for Fatal<T> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-pub fn file_not_found_error(path: &str) -> impl Message + '_ {
-    Error("file not found").at(path, Location::UNKNOWN)
 }

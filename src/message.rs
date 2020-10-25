@@ -43,14 +43,14 @@ impl<'a> Message<'a> {
     /// Creates a `Message` with the given severity and format arguments,
     /// without a related source file path or textual location.
     #[inline]
-    pub fn new(sev: Severity, args: Arguments<'a>) -> Self {
+    pub const fn new(sev: Severity, args: Arguments<'a>) -> Self {
         Self::at(crate::PROGRAM_NAME, Location::UNKNOWN, sev, args)
     }
 
     /// Creates a `Message` with the given severity and format arguments,
     /// related to the given source file path and textual location.
     #[inline]
-    pub fn at(path: &'a str, loc: Location, sev: Severity, args: Arguments<'a>) -> Self {
+    pub const fn at(path: &'a str, loc: Location, sev: Severity, args: Arguments<'a>) -> Self {
         Self {
             severity: sev,
             source:   path,

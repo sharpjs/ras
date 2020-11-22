@@ -1,5 +1,7 @@
+//! Character Reader
+//
 // This file is part of ras, an assembler.
-// Copyright (C) 2020 Jeffrey Sharp
+// Copyright 2020 Jeffrey Sharp
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published
@@ -16,6 +18,7 @@
 
 use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData;
+use std::ops::Range;
 use std::slice;
 
 // ----------------------------------------------------------------------------
@@ -45,9 +48,10 @@ pub trait LogicalChar: Copy + Eq {
 ///
 #[derive(Clone, Copy)]
 pub struct Reader<'a> {
-    ptr: *const u8,
-    beg: *const u8,
-    end: *const u8,
+    ptr: *const u8, // pointer to current position
+    len: usize,     // length in bytes of current character
+    beg: *const u8, // pointer to first byte of slice
+    end: *const u8, // pointer to first byte after slice
     _lt: PhantomData<&'a ()>,
 }
 
@@ -69,10 +73,9 @@ impl<'a> Reader<'a> {
             panic!("Input exceeds maximum supported size of {} bytes.", isize::MAX)
         }
 
-        let beg = bytes.as_ptr();
-        let end = unsafe { beg.add(len) };
+        let Range { start: beg, end } = bytes.as_ptr_range();
 
-        Self { ptr: beg, beg, end, _lt: PhantomData }
+        Self { ptr: beg, len: 0, beg, end, _lt: PhantomData }
     }
 
     /// Returns the position of the next byte to be read.
@@ -82,6 +85,44 @@ impl<'a> Reader<'a> {
     #[inline(always)]
     pub fn position(&self) -> usize {
         self.ptr as usize - self.beg as usize
+    }
+
+    /// Returns the byte at the current position and the corresponding logical
+    /// character from the given character set `map`.
+    ///
+    /// If the reader is positioned at the end of input, this method returns
+    /// `(C::EOF, 0)`, and the reader's position remains unchanged.
+    pub fn classify<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
+        // Detect EOF
+        let p = self.ptr;
+        if p == self.end {
+            self.len = 0;
+            return (C::EOF, 0)
+        }
+
+        // Read byte and advance
+        let byte = unsafe { *p };
+        self.len = 1;
+
+        // Map byte to logical character
+        let c = if byte as i8 >= 0 {
+            // SAFETY: byte is in [0,127] here and map.len is 128.
+            unsafe { *map.get_unchecked(byte as usize) }
+        } else {
+            C::NON_ASCII // beyond 7-bit ASCII range
+        };
+
+        (c, byte)
+    }
+
+    /// Advances the reader past the current character.
+    ///
+    /// If [`classify`] has not yet been called at least once for the current
+    /// character, or if the reader is positioned at the end of input, this
+    /// method does nothing.
+    pub fn advance(&mut self) {
+        // SAFETY: self.len is 0 initially. EOF is checked in classify.
+        unsafe { self.ptr = self.ptr.add(self.len) }
     }
 
     /// Reads the next byte, advances the reader, and returns both the byte and

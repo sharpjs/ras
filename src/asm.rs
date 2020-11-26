@@ -22,6 +22,7 @@ use std::io::{stdin, stdout, Read, Write};
 
 use crate::message::*;
 use crate::message::Severity::*;
+use crate::util::Location;
 
 /// The type returned by fallible assembler methods.
 pub type Result<T=(), E=()> = std::result::Result<T, E>;
@@ -66,8 +67,8 @@ impl Assembler {
         match fs::read_to_string(path) {
             Ok (s) => self.assemble_bytes(path, s.as_bytes()),
             Err(e) => {
-                // TODO: Message type needs to be fixed
-                eprintln!("{}: error: {}", path, e);
+                // TODO: This is ugly
+                self.print(&Message::at(path, Location::UNKNOWN, Severity::Error, format_args!("{}", e)));
                 Err(())
             },
         }
@@ -84,8 +85,8 @@ impl Assembler {
         match src.read_to_string(&mut s) {
             Ok (_) => self.assemble_bytes(path, s.as_bytes()),
             Err(e) => {
-                // TODO: Message type needs to be fixed
-                eprintln!("{}: error: {}", path, e);
+                // TODO: This is ugly
+                self.print(&Message::at(path, Location::UNKNOWN, Severity::Error, format_args!("{}", e)));
                 Err(())
             },
         }
@@ -106,8 +107,8 @@ impl Assembler {
         match stdout().write_all(&self.output) {
             Ok (_) => Ok(()),
             Err(e) => {
-                // TODO: Message type needs to be fixed
-                eprintln!("ras: error: {}", e);
+                // TODO: This is ugly
+                self.print(&Message::new(Severity::Fatal, format_args!("{}", e)));
                 Err(())
             },
         }

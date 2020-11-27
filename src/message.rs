@@ -151,6 +151,34 @@ impl Display for SyntaxError<'_> {
 
 // -----------------------------------------------------------------------------
 
+#[derive(Debug)]
+pub struct General<M: Message> {
+    pub msg: M,
+}
+
+impl<M: Message> Display for General<M> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "ras: {}{}", self.msg.severity(), self.msg)
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct Located<'a, M: Message> {
+    pub path: &'a str,
+    pub loc:  Location,
+    pub msg:  M,
+}
+
+impl<M: Message> Display for Located<'_, M> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}{}: {}{}", self.path, self.loc, self.msg.severity(), self.msg)
+    }
+}
+
+// -----------------------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
     //use super::*;

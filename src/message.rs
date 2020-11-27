@@ -53,7 +53,16 @@ pub trait Log {
 /// Trait for types that represent assembler messages.
 pub trait Message: Display {
     /// Returns the severity of the message.
-    fn severity(&self) -> Severity;
+    #[inline]
+    fn severity(&self) -> Severity {
+        Severity::Error
+    }
+
+    /// Sends the message to the given `log`.
+    #[inline]
+    fn tell<L: Log>(&self, log: &mut L) -> Result {
+        log.log_error(self)
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -97,16 +106,7 @@ pub struct ReadError<'a>(
     pub &'a std::io::Error  // error
 );
 
-impl ReadError<'_> {
-    pub fn tell<L: Log>(&self, log: &mut L) -> Result {
-        log.log_error(self)
-    }
-}
-
-impl Message for ReadError<'_> {
-    #[inline]
-    fn severity(&self) -> Severity { Severity::Error }
-}
+impl Message for ReadError<'_> { }
 
 impl Display for ReadError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -123,16 +123,7 @@ pub struct WriteError<'a>(
     pub &'a std::io::Error  // error
 );
 
-impl WriteError<'_> {
-    pub fn tell<L: Log>(&self, log: &mut L) -> Result {
-        log.log_error(self)
-    }
-}
-
-impl Message for WriteError<'_> {
-    #[inline]
-    fn severity(&self) -> Severity { Severity::Error }
-}
+impl Message for WriteError<'_> { }
 
 impl Display for WriteError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -148,16 +139,7 @@ pub struct SyntaxError<'a>(
     pub Location            // line/column location
 );
 
-impl SyntaxError<'_> {
-    pub fn tell<L: Log>(&self, log: &mut L) -> Result {
-        log.log_error(self)
-    }
-}
-
-impl Message for SyntaxError<'_> {
-    #[inline]
-    fn severity(&self) -> Severity { Severity::Error }
-}
+impl Message for SyntaxError<'_> { }
 
 impl Display for SyntaxError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {

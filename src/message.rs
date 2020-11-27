@@ -16,62 +16,46 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::fmt::{self, Arguments, Display, Formatter};
+use std::fmt::{self, Display, Formatter};
 use crate::util::Location;
+
+use crate::asm::Result;
 
 // -----------------------------------------------------------------------------
 
-/// An assembler message.
-#[derive(Copy, Clone, Debug)]
-pub struct Message<'a> {
-    /// Severity of the message.
-    pub severity: Severity,
+/// Trait for types that log assembler messages.
+pub trait Log {
+    /// Logs the given message `msg` at `Normal` severity.  Returns `Ok(())`.
+    fn log<M: Message>(&mut self, msg: &M) -> Result;
 
-    /// Path of a source file related to the message, or the program name if no
-    /// source file is related.
-    pub source: &'a str,
-
-    /// Textual location within source file related to the message, or
-    /// [`Location::Unknown`] if no location is related.
-    pub location: Location,
-
-    /// Message content.
-    content: Arguments<'a>
-}
-
-impl<'a> Message<'a> {
-    /// Creates a `Message` with the given severity and format arguments,
-    /// without a related source file path or textual location.
+    /// Logs the given message `msg` at `Warning`] severity.  Returns `Ok(())`.
     #[inline]
-    pub const fn new(sev: Severity, args: Arguments<'a>) -> Self {
-        Self::at(crate::PROGRAM_NAME, Location::UNKNOWN, sev, args)
+    fn log_warning<M: Message>(&mut self, msg: &M) -> Result {
+        self.log(msg)
     }
 
-    /// Creates a `Message` with the given severity and format arguments,
-    /// related to the given source file path and textual location.
+    /// Logs the given message `msg` at `Error` severity.  Returns `Ok(())`.
     #[inline]
-    pub const fn at(path: &'a str, loc: Location, sev: Severity, args: Arguments<'a>) -> Self {
-        Self {
-            severity: sev,
-            source:   path,
-            location: loc,
-            content:  args
-        }
+    fn log_error<M: Message>(&mut self, msg: &M) -> Result {
+        self.log(msg)
+    }
+
+    /// Logs the given message `msg` at `Fatal` severity.  Returns `Err(())`.
+    #[inline]
+    fn log_fatal<M: Message>(&mut self, msg: &M) -> Result {
+        let _ = self.log_error(msg);
+        Err(())
     }
 }
 
-// Display is used when a Message is printed as output.
-impl Display for Message<'_> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}{}: {}{}",
-            self.source,
-            self.location,
-            self.severity,
-            self.content
-        )
-    }
+// -----------------------------------------------------------------------------
+
+/// Trait for types that represent assembler messages.
+pub trait Message: Display {
+    /// Returns the severity of the message.
+    fn severity(&self) -> Severity;
 }
- 
+
 // -----------------------------------------------------------------------------
 
 /// Message severity levels.
@@ -107,24 +91,83 @@ impl Display for Severity {
 
 // -----------------------------------------------------------------------------
 
-/// Creates a 'file not found' message.
-pub fn file_not_found_error(path: &str) -> Message {
-    Message::at(path, Location::UNKNOWN, Severity::Error, format_args!(
-        "file not found"
-    ))
+#[derive(Debug)]
+pub struct ReadError<'a>(
+    pub &'a str,            // path
+    pub &'a std::io::Error  // error
+);
+
+impl ReadError<'_> {
+    pub fn tell<L: Log>(&self, log: &mut L) -> Result {
+        log.log_error(self)
+    }
+}
+
+impl Message for ReadError<'_> {
+    #[inline]
+    fn severity(&self) -> Severity { Severity::Error }
+}
+
+impl Display for ReadError<'_> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let ReadError(path, err) = self;
+        write!(f, "ras: error: reading {}: {}", path, err)
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct WriteError<'a>(
+    pub &'a str,            // path
+    pub &'a std::io::Error  // error
+);
+
+impl WriteError<'_> {
+    pub fn tell<L: Log>(&self, log: &mut L) -> Result {
+        log.log_error(self)
+    }
+}
+
+impl Message for WriteError<'_> {
+    #[inline]
+    fn severity(&self) -> Severity { Severity::Error }
+}
+
+impl Display for WriteError<'_> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "ras: error: writing {}: {}", self.0, self.1)
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct SyntaxError<'a>(
+    pub &'a str,            // path
+    pub Location            // line/column location
+);
+
+impl SyntaxError<'_> {
+    pub fn tell<L: Log>(&self, log: &mut L) -> Result {
+        log.log_error(self)
+    }
+}
+
+impl Message for SyntaxError<'_> {
+    #[inline]
+    fn severity(&self) -> Severity { Severity::Error }
+}
+
+impl Display for SyntaxError<'_> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}{}: error: syntax error", self.0, self.1)
+    }
 }
 
 // -----------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn test_file_not_found_error() {
-        assert_eq!(
-            format!("{}", file_not_found_error("foo.s")),
-            "foo.s: error: file not found"
-        )
-    }
+    //use super::*;
 }

@@ -22,7 +22,6 @@ use std::io::{stdin, stdout, Read, Write};
 
 use crate::message::*;
 use crate::message::Severity::*;
-use crate::util::Location;
 
 /// The type returned by fallible assembler methods.
 pub type Result<T=(), E=()> = std::result::Result<T, E>;
@@ -53,8 +52,8 @@ impl Assembler {
     }
 
     /// Prints an assembler message to the standard error stream.
-    pub fn print(&mut self, msg: &Message) {
-        match msg.severity {
+    pub fn print<M: Message>(&mut self, msg: &M) {
+        match msg.severity() {
             Normal  => (),
             Warning => self.warning_count += 1,
             _       => self.error_count   += 1,
@@ -66,11 +65,7 @@ impl Assembler {
     pub fn assemble_file(&mut self, path: &str) -> Result {
         match fs::read_to_string(path) {
             Ok (s) => self.assemble_bytes(path, s.as_bytes()),
-            Err(e) => {
-                // TODO: This is ugly
-                self.print(&Message::at(path, Location::UNKNOWN, Severity::Error, format_args!("{}", e)));
-                Err(())
-            },
+            Err(e) => ReadError(path, &e).tell(self),
         }
     }
 
@@ -84,11 +79,7 @@ impl Assembler {
         let mut s = String::new();
         match src.read_to_string(&mut s) {
             Ok (_) => self.assemble_bytes(path, s.as_bytes()),
-            Err(e) => {
-                // TODO: This is ugly
-                self.print(&Message::at(path, Location::UNKNOWN, Severity::Error, format_args!("{}", e)));
-                Err(())
-            },
+            Err(e) => ReadError(path, &e).tell(self),
         }
     }
 
@@ -106,11 +97,27 @@ impl Assembler {
     pub fn write_output(&mut self) -> Result {
         match stdout().write_all(&self.output) {
             Ok (_) => Ok(()),
-            Err(e) => {
-                // TODO: This is ugly
-                self.print(&Message::new(Severity::Fatal, format_args!("{}", e)));
-                Err(())
-            },
+            Err(e) => WriteError("stdout", &e).tell(self),
         }
+    }
+}
+
+impl Log for Assembler {
+    #[inline]
+    fn log<M: Message>(&mut self, msg: &M) -> Result {
+        eprintln!("{}", msg);
+        Ok(())
+    }
+
+    #[inline]
+    fn log_warning<M: Message>(&mut self, msg: &M) -> Result {
+        self.warning_count += 1;
+        self.log(msg)
+    }
+
+    #[inline]
+    fn log_error<M: Message>(&mut self, msg: &M) -> Result {
+        self.error_count += 1;
+        self.log(msg)
     }
 }

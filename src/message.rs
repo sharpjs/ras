@@ -110,8 +110,8 @@ impl Message for ReadError<'_> { }
 
 impl Display for ReadError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let ReadError(path, err) = self;
-        write!(f, "ras: error: reading {}: {}", path, err)
+        let ReadError(path, err) = *self;
+        write!(f, "{}{}: {}reading {}: {}", "ras", "", self.severity(), path, err)
     }
 }
 
@@ -127,7 +127,8 @@ impl Message for WriteError<'_> { }
 
 impl Display for WriteError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "ras: error: writing {}: {}", self.0, self.1)
+        let WriteError(path, err) = *self;
+        write!(f, "{}{}: {}writing {}: {}", "ras", "", self.severity(), path, err)
     }
 }
 
@@ -143,7 +144,8 @@ impl Message for SyntaxError<'_> { }
 
 impl Display for SyntaxError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}{}: error: syntax error", self.0, self.1)
+        let SyntaxError(path, loc) = *self;
+        write!(f, "{}{}: {}syntax error", path, loc, self.severity())
     }
 }
 

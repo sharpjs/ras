@@ -21,7 +21,6 @@ use std::fs;
 use std::io::{stdin, stdout, Read, Write};
 
 use crate::message::*;
-use crate::message::Severity::*;
 
 /// The type returned by fallible assembler methods.
 pub type Result<T=(), E=()> = std::result::Result<T, E>;
@@ -49,16 +48,6 @@ impl Assembler {
             0 => Ok  (()),
             _ => Err (()),
         }
-    }
-
-    /// Prints an assembler message to the standard error stream.
-    pub fn print<M: Message>(&mut self, msg: &M) {
-        match msg.severity() {
-            Normal  => (),
-            Warning => self.warning_count += 1,
-            _       => self.error_count   += 1,
-        };
-        eprintln!("{}", msg)
     }
 
     /// Assembles the file at the given `path`.

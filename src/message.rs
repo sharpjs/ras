@@ -61,7 +61,7 @@ pub trait Message: Display {
     /// Sends the message to the given log.
     #[inline]
     fn tell<L: Log>(&self, log: &mut L) -> Result {
-        log.log_error(self)
+        self.severity().dispatch(self, log)
     }
 }
 
@@ -84,6 +84,25 @@ pub enum Severity {
     /// For severe, unrecoverable problems.
     /// The assembler terminates immediately and does not produce output.
     Fatal,
+}
+
+impl Severity {
+    /// Logs the given message, dispatching to the [`Log`] method appropriate
+    /// for the message's severity.
+    #[inline]
+    fn dispatch<M, L>(self, msg: &M, log: &mut L) -> Result
+    where
+        M: Message + ?Sized,
+        L: Log     + ?Sized,
+    {
+        use Severity::*;
+        match self {
+            Normal  => log.log(msg),
+            Warning => log.log_warning(msg),
+            Error   => log.log_error(msg),
+            Fatal   => log.log_fatal(msg),
+        }
+    }
 }
 
 // Display is used when a Severity is printed in an assembler message.

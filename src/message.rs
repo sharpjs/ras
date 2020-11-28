@@ -58,6 +58,12 @@ pub trait Message: Display + Sized {
         Severity::Error
     }
 
+    /// Returns the severity of the message.
+    #[inline]
+    fn at(self, path: &str, loc: Location) -> Located<Self> {
+        Located { msg: self, path, loc }
+    }
+
     /// Sends the message to the given log.
     #[inline]
     fn tell<L: Log>(self, log: &mut L) -> Result {
@@ -126,6 +132,7 @@ impl Display for Severity {
 pub struct Full<M: Message>(pub M);
 
 impl<M: Message> Display for Full<M> {
+    /// Forwards invocation to [`Message::fmt_full`].
     #[inline]
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.0.fmt_full(f)
@@ -134,6 +141,7 @@ impl<M: Message> Display for Full<M> {
 
 // -----------------------------------------------------------------------------
 
+/// Represents an I/O error that occurred when reading input.
 #[derive(Debug)]
 pub struct ReadError<'a>(
     pub &'a str,            // path
@@ -145,12 +153,13 @@ impl Message for ReadError<'_> { }
 impl Display for ReadError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let ReadError(path, err) = *self;
-        write!(f, "{}{}: {}reading {}: {}", "ras", "", self.severity(), path, err)
+        write!(f, "reading {}: {}", path, err)
     }
 }
 
 // -----------------------------------------------------------------------------
 
+/// Represents an I/O error that occurred when writing output.
 #[derive(Debug)]
 pub struct WriteError<'a>(
     pub &'a str,            // path
@@ -162,37 +171,21 @@ impl Message for WriteError<'_> { }
 impl Display for WriteError<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let WriteError(path, err) = *self;
-        write!(f, "{}{}: {}writing {}: {}", "ras", "", self.severity(), path, err)
+        write!(f, "writing {}: {}", path, err)
     }
 }
 
 // -----------------------------------------------------------------------------
 
+/// Represents a syntax error.
 #[derive(Debug)]
-pub struct SyntaxError<'a>(
-    pub &'a str,            // path
-    pub Location            // line/column location
-);
+pub struct SyntaxError;
 
-impl Message for SyntaxError<'_> { }
+impl Message for SyntaxError { }
 
-impl Display for SyntaxError<'_> {
+impl Display for SyntaxError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let SyntaxError(path, loc) = *self;
-        write!(f, "{}{}: {}syntax error", path, loc, self.severity())
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-#[derive(Debug)]
-pub struct General<M: Message> {
-    pub msg: M,
-}
-
-impl<M: Message> Display for General<M> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "ras: {}{}", self.msg.severity(), self.msg)
+        write!(f, "syntax error")
     }
 }
 
@@ -200,14 +193,28 @@ impl<M: Message> Display for General<M> {
 
 #[derive(Debug)]
 pub struct Located<'a, M: Message> {
+    pub msg:  M,
     pub path: &'a str,
     pub loc:  Location,
-    pub msg:  M,
+}
+
+impl<'a, M: Message> Located<'a, M> {
+    pub fn at(self, path: &'a str, loc: Location) -> Located<M> {
+        Self { path, loc, .. self }
+    }
+}
+
+impl<M: Message> Message for Located<'_, M> {
+    /// Formats the message for logging using the given formatter.
+    fn fmt_full(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}{}: {}{}", self.path, self.loc, self.severity(), self)
+    }
 }
 
 impl<M: Message> Display for Located<'_, M> {
+    #[inline]
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}{}: {}{}", self.path, self.loc, self.msg.severity(), self.msg)
+        self.msg.fmt(f)
     }
 }
 

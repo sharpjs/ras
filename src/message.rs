@@ -51,7 +51,7 @@ pub trait Log {
 // -----------------------------------------------------------------------------
 
 /// Trait for types that represent assembler messages.
-pub trait Message: Display {
+pub trait Message: Display + Sized {
     /// Returns the severity of the message.
     #[inline]
     fn severity(&self) -> Severity {
@@ -60,8 +60,8 @@ pub trait Message: Display {
 
     /// Sends the message to the given log.
     #[inline]
-    fn tell<L: Log>(&self, log: &mut L) -> Result {
-        self.severity().dispatch(self, log)
+    fn tell<L: Log>(self, log: &mut L) -> Result {
+        self.severity().dispatch(Full(self), log)
     }
 
     /// Formats the message for logging using the given formatter.
@@ -95,11 +95,7 @@ impl Severity {
     /// Logs the given message, dispatching to the [`Log`] method appropriate
     /// for the message's severity.
     #[inline]
-    fn dispatch<M, L>(self, msg: &M, log: &mut L) -> Result
-    where
-        M: Message + ?Sized,
-        L: Log     + ?Sized,
-    {
+    fn dispatch<M: Display, L: Log>(self, msg: M, log: &mut L) -> Result {
         use Severity::*;
         match self {
             Normal  => log.log(msg),

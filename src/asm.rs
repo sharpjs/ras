@@ -1,5 +1,3 @@
-//! Top-Level Assembler
-//
 // This file is part of ras, an assembler.
 // Copyright 2020 Jeffrey Sharp
 //
@@ -15,6 +13,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
+
+//! Top-level assembler interface.
 
 //use std::fmt::{self, Display, Formatter};
 use std::fmt::Display;

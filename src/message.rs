@@ -1,5 +1,3 @@
-//! Assembler Messages
-//
 // This file is part of ras, an assembler.
 // Copyright 2020 Jeffrey Sharp
 //
@@ -15,6 +13,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
+
+//! Assembler message types.
 
 use std::fmt::{self, Display, Formatter};
 use crate::util::Location;
@@ -58,7 +58,9 @@ pub trait Message: Display + Sized {
         Severity::Error
     }
 
-    /// Returns the severity of the message.
+    /// Augments the message with the given `path` and `loc` metadata
+    /// identifying the path and textual location of the source code that
+    /// caused the message.
     #[inline]
     fn at(self, path: &str, loc: Location) -> Located<Self> {
         Located { msg: self, path, loc }
@@ -71,6 +73,9 @@ pub trait Message: Display + Sized {
     }
 
     /// Formats the message for logging using the given formatter.
+    ///
+    /// *Full* in this context means that this method will augment the message
+    /// with available contextual metadata, such as source and severity.
     fn fmt_full(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "ras: {}{}", self.severity(), self)
     }
@@ -98,8 +103,8 @@ pub enum Severity {
 }
 
 impl Severity {
-    /// Logs the given message, dispatching to the [`Log`] method appropriate
-    /// for the message's severity.
+    /// Dispatches the given message to the [`Log`] method appropriate for the
+    /// message's severity.
     #[inline]
     fn dispatch<M: Display, L: Log>(self, msg: M, log: &mut L) -> Result {
         use Severity::*;
@@ -112,8 +117,8 @@ impl Severity {
     }
 }
 
-// Display is used when a Severity is printed in an assembler message.
 impl Display for Severity {
+    /// Formats the message for output in an assember message.
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Severity::*;
         write!(f, "{}", match *self {
@@ -127,7 +132,11 @@ impl Display for Severity {
 
 // -----------------------------------------------------------------------------
 
-/// Wrapper that causes a [`Message`] to format for logging.
+/// Wrapper struct that causes a [`Message`] to format (via [`Display`]) as a
+/// full assembler message appropriate for logging.
+///
+/// *Full* in this context means that [`Display.fmt`] will augment the inner
+/// message with available contextual metadata, such as source and severity.
 #[derive(Debug)]
 pub struct Full<M: Message>(pub M);
 
@@ -191,21 +200,32 @@ impl Display for SyntaxError {
 
 // -----------------------------------------------------------------------------
 
+/// Wrapper struct that adds source path and textual location metadata to an
+/// assembler message.
 #[derive(Debug)]
 pub struct Located<'a, M: Message> {
-    pub msg:  M,
+    /// Inner message.
+    pub msg: M,
+
+    /// Path of the source file that caused the message.
     pub path: &'a str,
-    pub loc:  Location,
+
+    /// Textual location that caused the message.
+    pub loc: Location,
 }
 
 impl<'a, M: Message> Located<'a, M> {
-    pub fn at(self, path: &'a str, loc: Location) -> Located<M> {
+    /// Returns a new [`Located`] value with the same inner message but with
+    /// the given `path` and `src` (textual location).
+    ///
+    /// This method is a specialization of [`Message::at`] that avoids
+    /// double-wrapping.
+    pub fn at(self, path: &'a str, loc: Location) -> Self {
         Self { path, loc, .. self }
     }
 }
 
 impl<M: Message> Message for Located<'_, M> {
-    /// Formats the message for logging using the given formatter.
     fn fmt_full(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}{}: {}{}", self.path, self.loc, self.severity(), self)
     }

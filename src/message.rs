@@ -25,22 +25,22 @@ use crate::asm::Result;
 
 /// Trait for types that log assembler messages.
 pub trait Log {
-    /// Logs the given message `msg` at `Normal` severity.  Returns `Ok(())`.
+    /// Logs the given message at `Normal` severity.  Returns `Ok(())`.
     fn log<M: Message + ?Sized>(&mut self, msg: &M) -> Result;
 
-    /// Logs the given message `msg` at `Warning` severity.  Returns `Ok(())`.
+    /// Logs the given message at `Warning` severity.  Returns `Ok(())`.
     #[inline]
     fn log_warning<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
         self.log(msg)
     }
 
-    /// Logs the given message `msg` at `Error` severity.  Returns `Ok(())`.
+    /// Logs the given message at `Error` severity.  Returns `Ok(())`.
     #[inline]
     fn log_error<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
         self.log(msg)
     }
 
-    /// Logs the given message `msg` at `Fatal` severity.  Returns `Err(())`.
+    /// Logs the given message at `Fatal` severity.  Returns `Err(())`.
     #[inline]
     fn log_fatal<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
         let _ = self.log_error(msg);
@@ -58,7 +58,7 @@ pub trait Message: Display {
         Severity::Error
     }
 
-    /// Sends the message to the given `log`.
+    /// Sends the message to the given log.
     #[inline]
     fn tell<L: Log>(&self, log: &mut L) -> Result {
         log.log_error(self)
@@ -89,11 +89,12 @@ pub enum Severity {
 // Display is used when a Severity is printed in an assembler message.
 impl Display for Severity {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        use Severity::*;
         write!(f, "{}", match *self {
-            Severity::Normal  => "",
-            Severity::Warning => "warning: ",
-            Severity::Error   => "error: ",
-            Severity::Fatal   => "fatal: ",
+            Normal  => "",
+            Warning => "warning: ",
+            Error   => "error: ",
+            Fatal   => "fatal: ",
         })
     }
 }

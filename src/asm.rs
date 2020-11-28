@@ -16,14 +16,13 @@
 
 //! Top-level assembler interface.
 
-//use std::fmt::{self, Display, Formatter};
 use std::fmt::Display;
 use std::fs;
 use std::io::{stdin, stdout, Read, Write};
 
 use crate::message::*;
 
-/// The type returned by fallible assembler methods.
+/// Type returned by fallible assembler methods.
 pub type Result<T=(), E=()> = std::result::Result<T, E>;
 
 /// Top-level assembler interface.
@@ -44,10 +43,12 @@ impl Assembler {
         }
     }
 
+    /// Returns the result of assembly: `Err(())` if any condition prevented
+    /// the assembler from producing output, and `Ok(())` otherwise.
     pub fn result(&self) -> Result {
         match self.error_count {
-            0 => Ok  (()),
-            _ => Err (()),
+            0 => Ok (()),
+            _ => Err(()),
         }
     }
 
@@ -80,10 +81,10 @@ impl Assembler {
         self.output.push(b':');
         self.output.push(b'\n');
         self.output.extend_from_slice(bytes);
-
-        if self.error_count == 0 { Ok(()) } else { Err(()) }
+        self.result()
     }
 
+    /// Writes assembly output.
     pub fn write_output(&mut self) -> Result {
         match stdout().write_all(&self.output) {
             Ok (_) => Ok(()),

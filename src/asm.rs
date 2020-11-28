@@ -17,6 +17,7 @@
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 //use std::fmt::{self, Display, Formatter};
+use std::fmt::Display;
 use std::fs;
 use std::io::{stdin, stdout, Read, Write};
 
@@ -93,19 +94,19 @@ impl Assembler {
 
 impl Log for Assembler {
     #[inline]
-    fn log<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
-        eprintln!("{}", msg);
+    fn log<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
+        eprintln!("{}", msg );
         Ok(())
     }
 
     #[inline]
-    fn log_warning<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_warning<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
         self.warning_count += 1;
         self.log(msg)
     }
 
     #[inline]
-    fn log_error<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_error<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
         self.error_count += 1;
         self.log(msg)
     }

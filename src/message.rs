@@ -26,23 +26,23 @@ use crate::asm::Result;
 /// Trait for types that log assembler messages.
 pub trait Log {
     /// Logs the given message at `Normal` severity.  Returns `Ok(())`.
-    fn log<M: Message + ?Sized>(&mut self, msg: &M) -> Result;
+    fn log<M: Display + ?Sized>(&mut self, msg: &M) -> Result;
 
     /// Logs the given message at `Warning` severity.  Returns `Ok(())`.
     #[inline]
-    fn log_warning<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_warning<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
         self.log(msg)
     }
 
     /// Logs the given message at `Error` severity.  Returns `Ok(())`.
     #[inline]
-    fn log_error<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_error<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
         self.log(msg)
     }
 
     /// Logs the given message at `Fatal` severity.  Returns `Err(())`.
     #[inline]
-    fn log_fatal<M: Message + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_fatal<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
         let _ = self.log_error(msg);
         Err(())
     }

@@ -63,6 +63,11 @@ pub trait Message: Display {
     fn tell<L: Log>(&self, log: &mut L) -> Result {
         self.severity().dispatch(self, log)
     }
+
+    /// Formats the message for logging using the given formatter.
+    fn fmt_full(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "ras: {}{}", self.severity(), self)
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -115,6 +120,19 @@ impl Display for Severity {
             Error   => "error: ",
             Fatal   => "fatal: ",
         })
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+/// Wrapper that causes a [`Message`] to format for logging.
+#[derive(Debug)]
+pub struct Full<M: Message>(pub M);
+
+impl<M: Message> Display for Full<M> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.0.fmt_full(f)
     }
 }
 

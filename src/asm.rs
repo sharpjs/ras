@@ -94,19 +94,19 @@ impl Assembler {
 
 impl Log for Assembler {
     #[inline]
-    fn log<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log<M: Display>(&mut self, msg: M) -> Result {
         eprintln!("{}", msg );
         Ok(())
     }
 
     #[inline]
-    fn log_warning<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_warning<M: Display>(&mut self, msg: M) -> Result {
         self.warning_count += 1;
         self.log(msg)
     }
 
     #[inline]
-    fn log_error<M: Display + ?Sized>(&mut self, msg: &M) -> Result {
+    fn log_error<M: Display>(&mut self, msg: M) -> Result {
         self.error_count += 1;
         self.log(msg)
     }

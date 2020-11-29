@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Primary lexical analyzer.
+
 use crate::lang::Base;
 use crate::lang::token::Token::{self, self as T};
 
@@ -36,7 +38,7 @@ enum Char {
     Cr      = char( 1), // \r
     Lf      = char( 2), // \n
     // identifiers, numbers
-    Id      = char( 3), // A-Za-z., code points above U+007F
+    Ident   = char( 3), // A-Za-z., code points above U+007F
     Digit   = char( 4), // 0-9
     // open/close pairs
     LParen  = char( 5), // (
@@ -73,6 +75,8 @@ enum Char {
     // rare
     Eof     = char(34), // end of file
     Other   = char(35), // everything else
+
+    // NOTE: backquote ` is not used
 }
 
 impl Char {
@@ -81,7 +85,7 @@ impl Char {
 }
 
 impl LogicalChar for Char {
-    const NON_ASCII: Self = Self::Id;
+    const NON_ASCII: Self = Self::Ident;
     const EOF:       Self = Self::Eof;
 }
 
@@ -90,23 +94,24 @@ static CHARS: [Char; 128] = {
     use Char::*;
     const __: Char = Other;
 [
-//  xx0     xx1     xx2     xx3     xx4     xx5     xx6     xx7
-    __,     __,     __,     __,     __,     __,     __,     __,     // 00x │········│
-    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 01x │·tn··r··│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 02x │········│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 03x │········│
-    Space,  Bang,   DQuote, Hash,   Dollar, Pct,    Amp,    SQuote, // 04x │ !"#$%&'│
-    LParen, RParen, Star,   Plus,   Comma,  Minus,  Id,     Slash,  // 05x │()*+,-./│
-    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 06x │01234567│
-    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 07x │89:;<=>?│
-    At,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 10x │@ABCDEFG│
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 11x │HIJKLMNO│
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 12x │PQRSTUVW│
-    Id,     Id,     Id,     LSquare,Escape, RSquare,Caret,  Id,     // 13x │XYZ[\]^_│
-    __,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 14x │`abcdefg│
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 15x │hijklmno│
-    Id,     Id,     Id,     Id,     Id,     Id,     Id,     Id,     // 16x │pqrstuvw│
-    Id,     Id,     Id,     LCurly, Pipe,   RCurly, Tilde,  __,     // 17x │xyz{|}~·│
+//  x0      x1      x2      x3      x4      x5      x6      x7
+//  x8      x9      xA      xB      xC      xD      xE      xF
+    __,     __,     __,     __,     __,     __,     __,     __,     // 0x │········│
+    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 0x │·tn··r··│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
+    Space,  Bang,   DQuote, Hash,   Dollar, Pct,    Amp,    SQuote, // 2x │ !"#$%&'│
+    LParen, RParen, Star,   Plus,   Comma,  Minus,  Ident,  Slash,  // 2x │()*+,-./│
+    Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 3x │01234567│
+    Digit,  Digit,  Colon,  Semi,   Lt,     Equal,  Gt,     Quest,  // 3x │89:;<=>?│
+    At,     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 4x │@ABCDEFG│
+    Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 4x │HIJKLMNO│
+    Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 5x │PQRSTUVW│
+    Ident,  Ident,  Ident,  LSquare,Escape, RSquare,Caret,  Ident,  // 5x │XYZ[\]^_│
+    __,     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 6x │`abcdefg│
+    Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 6x │hijklmno│
+    Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 7x │pqrstuvw│
+    Ident,  Ident,  Ident,  LCurly, Pipe,   RCurly, Tilde,  __,     // 7x │xyz{|}~·│
 ]};
 
 // ----------------------------------------------------------------------------
@@ -168,7 +173,7 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 /* Cr    */ CrEos,    Cr,       Cr,       Cr,
 /* Lf    */ BolEos,   Bol,      CrLf,     Bol,
 
-/* Id    */ Error,    Error,    Error,    Comment,
+/* Ident */ Error,    Error,    Error,    Comment,
 /* Digit */ Error,    Error,    Error,    Comment,
 
 /*   (   */ LParen,   LParen,   LParen,   Comment,
@@ -240,10 +245,9 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
         Transition { state, action, flags }
     }
 [
-//
 //                                               Token┐
-//                                           Newline┐ │
-// Whitespace                                       │ │
+//                    ┌State   ┌Action       Newline┐ │
+// Whitespace         │        │                    │ │
     t(Id::Normal,     Normal,  Continue,         0b_0_0),
     t(Id::Bol,        Bol,     Continue,         0b_1_0),
     t(Id::BolEos,     Bol,     Yield(T::Eos),    0b_1_0),
@@ -405,7 +409,7 @@ impl<'a> Lexer<'a> {
                 ScanOct      => { let (_val, _len) = scan_int(&mut self.input, Base::Oct); },
                 ScanDec      => { let (_val, _len) = scan_int(&mut self.input, Base::Dec); },
                 ScanHex      => { let (_val, _len) = scan_int(&mut self.input, Base::Hex); },
-                ScanStr      => panic!(), // self.scan_str(),
+                ScanStr      => continue, // self.scan_str(),
 
                 // Identifiers & Literals
                 YieldIdent   => break Token::Ident,

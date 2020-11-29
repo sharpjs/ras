@@ -76,6 +76,10 @@ impl Assembler {
 
     /// Assembles the given `bytes`, using `path` as the pathname.
     pub fn assemble_bytes(&mut self, path: &str, bytes: &[u8]) -> Result {
+        let mut lexer = crate::lang::lexer::Lexer::new(bytes);
+
+        assert_eq!( lexer.line(), 1 );
+
         // TODO: Everything.  For now just copy input to output.
         self.output.extend_from_slice(path.as_bytes());
         self.output.push(b':');

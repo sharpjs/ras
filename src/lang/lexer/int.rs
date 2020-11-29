@@ -25,14 +25,14 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
     let radix = base.radix();
 
     // Read until a non-digit is found
-    let next = loop {
+    loop {
         // Read next logical character
         let (ch, _) = input.read(&CHARS);
 
         // Get digit value, or 0 for separator
         // Stop when digit is greater than the radix
         let digit = ch.digit();
-        if digit >= radix { break ch }
+        if digit >= radix { break }
 
         // Get digit mask: 00 for separator, FF for digit
         let mask = ch.mask();
@@ -46,8 +46,8 @@ pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
         len = len.wrapping_add(1 & mask); // 0 for separator, 1 for digit
     };
 
-    // Un-read the logical character that caused loop exit
-    input.unread(next);
+    // Unread the logical character that caused loop exit
+    input.unread();
 
     return (val, if ovf { 0 } else { len })
 }

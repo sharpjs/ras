@@ -49,7 +49,7 @@ pub trait LogicalChar: Copy + Eq {
 #[derive(Clone, Copy)]
 pub struct Reader<'a> {
     ptr: *const u8, // pointer to current position
-    len: usize,     // length in bytes of current character
+    old: *const u8, // pointer to previous position
     beg: *const u8, // pointer to first byte of slice
     end: *const u8, // pointer to first byte after slice
     _lt: PhantomData<&'a ()>,
@@ -67,15 +67,14 @@ impl<'a> Reader<'a> {
     /// Panics if the length of `bytes` is greater than `isize::MAX`.
     ///
     pub fn new(bytes: &'a [u8]) -> Self {
-        let len = bytes.len();
-        if len > isize::MAX as usize {
+        if bytes.len() > isize::MAX as usize {
             // Rust pointer arithmetic requires offsets <= isize::MAX
             panic!("Input exceeds maximum supported size of {} bytes.", isize::MAX)
         }
 
         let Range { start: beg, end } = bytes.as_ptr_range();
 
-        Self { ptr: beg, len: 0, beg, end, _lt: PhantomData }
+        Self { ptr: beg, old: beg, beg, end, _lt: PhantomData }
     }
 
     /// Returns the position of the next byte to be read.
@@ -87,53 +86,17 @@ impl<'a> Reader<'a> {
         self.ptr as usize - self.beg as usize
     }
 
-    /// Returns the byte at the current position and the corresponding logical
-    /// character from the given character set `map`.
-    ///
-    /// If the reader is positioned at the end of input, this method returns
-    /// `(C::EOF, 0)`, and the reader's position remains unchanged.
-    pub fn classify<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
-        // Detect EOF
-        let p = self.ptr;
-        if p == self.end {
-            self.len = 0;
-            return (C::EOF, 0)
-        }
-
-        // Read byte and advance
-        let byte = unsafe { *p };
-        self.len = 1;
-
-        // Map byte to logical character
-        let c = if byte as i8 >= 0 {
-            // SAFETY: byte is in [0,127] here and map.len is 128.
-            unsafe { *map.get_unchecked(byte as usize) }
-        } else {
-            C::NON_ASCII // beyond 7-bit ASCII range
-        };
-
-        (c, byte)
-    }
-
-    /// Advances the reader past the current character.
-    ///
-    /// If [`classify`] has not yet been called at least once for the current
-    /// character, or if the reader is positioned at the end of input, this
-    /// method does nothing.
-    pub fn advance(&mut self) {
-        // SAFETY: self.len is 0 initially. EOF is checked in classify.
-        unsafe { self.ptr = self.ptr.add(self.len) }
-    }
-
     /// Reads the next byte, advances the reader, and returns both the byte and
     /// its corresponding logical character from the given character set `map`.
     ///
     /// If the reader is positioned at the end of input, this method returns
     /// `(C::EOF, 0)`, and the reader's position remains unchanged.
-    #[inline(always)]
     pub fn read<C>(&mut self, map: &[C; 128]) -> (C, u8) where C: LogicalChar {
-        // Detect EOF
+        // Update rewind position to current
         let p = self.ptr;
+        self.old = p;
+
+        // Detect EOF
         if p == self.end {
             return (C::EOF, 0)
         }
@@ -152,31 +115,16 @@ impl<'a> Reader<'a> {
         (c, byte)
     }
 
-    /// Unreads the given logical character.
+    /// Unreads the most-recently-read logical character.
     ///
-    /// If `c` is `C::EOF`, then the reader remains unchanged.  Otherwise, this
-    /// method rewinds the reader by one byte.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `c` is not `C::EOF` and the reader is positioned at the
-    /// beginning of input.
+    /// This method can have effect only once after each call to [`read`].  It
+    /// is safe to call this method an arbitrary number of times before or
+    /// after [`read`]; these additional calls have no effect and leave the
+    /// reader state unchanged.
     ///
     #[inline(always)]
-    pub fn unread<C>(&mut self, c: C) where C: LogicalChar {
-        // Detect EOF
-        if c == C::EOF {
-            return
-        }
-
-        // Detect BOF
-        let p = self.ptr;
-        if p == self.beg {
-            panic!("Attempted to rewind past the beginning of input.")
-        }
-
-        // Rewind
-        self.ptr = unsafe { p.sub(1) };
+    pub fn unread(&mut self) {
+        self.ptr = self.old;
     }
 
     /// Returns a slice of the `len` bytes preceding the next byte to be read.
@@ -255,10 +203,13 @@ mod tests {
 
         assert_eq!( reader.position(),   0        );
 
+        reader.unread();
+        assert_eq!( reader.position(),   0        );
+
         assert_eq!( reader.read(&CHARS), (Eof, 0) );
         assert_eq!( reader.position(),   0        );
 
-        reader.unread(Eof);
+        reader.unread();
         assert_eq!( reader.position(),   0        );
     }
 
@@ -266,39 +217,37 @@ mod tests {
     fn reader_read() {
         let mut reader = Reader::new(b"Hi!\xED");
 
-        assert_eq!( reader.position(),   0           );
+        assert_eq!( reader.position(),   0              );
 
-        assert_eq!( reader.read(&CHARS), (Uc,  b'H') );
-        assert_eq!( reader.position(),   1           );
+        reader.unread();
+        assert_eq!( reader.position(),   0              );
 
-        assert_eq!( reader.read(&CHARS), (Lc,  b'i') );
-        assert_eq!( reader.position(),   2           );
+        assert_eq!( reader.read(&CHARS), (Uc,  b'H')    );
+        assert_eq!( reader.position(),   1              );
 
-        assert_eq!( reader.read(&CHARS), (Etc, b'!') );
-        assert_eq!( reader.position(),   3           );
+        assert_eq!( reader.read(&CHARS), (Lc,  b'i')    );
+        assert_eq!( reader.position(),   2              );
 
-        reader.unread(Etc);
-        assert_eq!( reader.position(),   2           );
+        assert_eq!( reader.read(&CHARS), (Etc, b'!')    );
+        assert_eq!( reader.position(),   3              );
 
-        assert_eq!( reader.read(&CHARS), (Etc, b'!') );
-        assert_eq!( reader.position(),   3           );
+        reader.unread();
+        assert_eq!( reader.position(),   2              );
+
+        reader.unread();
+        assert_eq!( reader.position(),   2              );
+
+        assert_eq!( reader.read(&CHARS), (Etc, b'!')    );
+        assert_eq!( reader.position(),   3              );
 
         assert_eq!( reader.read(&CHARS), (Non, b'\xED') );
-        assert_eq!( reader.position(),   4           );
+        assert_eq!( reader.position(),   4              );
 
-        assert_eq!( reader.read(&CHARS), (Eof, 0)    );
-        assert_eq!( reader.position(),   4           );
+        assert_eq!( reader.read(&CHARS), (Eof, 0)       );
+        assert_eq!( reader.position(),   4              );
 
-        reader.unread(Eof);
-        assert_eq!( reader.position(),   4        );
-    }
-
-    #[test]
-    #[should_panic]
-    fn reader_unread_panic() {
-        let mut reader = Reader::new(b"ab");
-
-        reader.unread(Etc);
+        reader.unread();
+        assert_eq!( reader.position(),   4              );
     }
 
     #[test]

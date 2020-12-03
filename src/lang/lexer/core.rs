@@ -16,6 +16,7 @@
 
 //! Primary lexical analyzer.
 
+use crate::asm::Result;
 use crate::lang::Base;
 use crate::lang::token::Token::{self, self as T};
 
@@ -96,10 +97,10 @@ static CHARS: [Char; 128] = {
 [
 //  x0      x1      x2      x3      x4      x5      x6      x7
 //  x8      x9      xA      xB      xC      xD      xE      xF
-    __,     __,     __,     __,     __,     __,     __,     __,     // 0x │░░░░░░░░│
-    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 0x │░tn░░r░░│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │░░░░░░░░│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │░░░░░░░░│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 0x │········│
+    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 0x │·tn··r··│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
     Space,  Bang,   DQuote, Hash,   Dollar, Pct,    Amp,    SQuote, // 2x │ !"#$%&'│
     LParen, RParen, Star,   Plus,   Comma,  Minus,  Ident,  Slash,  // 2x │()*+,-./│
     Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 3x │01234567│
@@ -113,6 +114,33 @@ static CHARS: [Char; 128] = {
     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 7x │pqrstuvw│
     Ident,  Ident,  Ident,  LCurly, Pipe,   RCurly, Tilde,  __,     // 7x │xyz{|}~░│
 ]};
+
+// ---------------------------------------------------------------------------- 
+
+/// Lexer states.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+enum State {
+    /// Normal state.  Any token is possible.
+    Normal,
+
+    /// At the begining of a line.  Any token is possible.
+    Bol,
+
+    /// After a carriage return (0x0D).  Line feed (0x0A) is expected.
+    AfterCr,
+
+    /// After a integer or magnitude.
+    AfterInt,
+
+    /// In a comment.
+    Comment,
+}
+
+impl State {
+    /// Count of lexer states.
+    const COUNT: usize = Self::Comment as usize + 1;
+}
 
 // ----------------------------------------------------------------------------
 
@@ -144,6 +172,12 @@ enum TransitionId {
 
     /// Transition to `Comment` state and emit an `Eos` token.
     CommentEos,
+
+    /// Transition to `AfterInt` state, un-read a byte, and scan an integer.
+    IntDec,
+
+    /// Transition to `Normal` state, un-read a byte, and emit an `Int` token.
+    Int,
 
     /// Transition to `Normal` state and emit a `LParen` token.
     LParen,
@@ -185,48 +219,48 @@ impl TransitionId {
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
     use TransitionId::*;
 [
-//          Normal      Bol         AfterCr     Comment
+//          Normal      Bol         AfterCr     AfterInt    Comment
 //          ------------------------------------------------------------------------
-/* Space */ Normal,     Bol,        Error,      Comment,
-/* Cr    */ CrEos,      Cr,         Error,      Cr,
-/* Lf    */ EolEos,     Eol,        Eol,        Eol,
+/* Space */ Normal,     Bol,        Error,      Int,        Comment,
+/* Cr    */ CrEos,      Cr,         Error,      Int,        Cr,
+/* Lf    */ EolEos,     Eol,        Eol,        Int,        Eol,
+                                                            
+/* Ident */ Error,      Error,      Error,      Error,      Comment,
+/* Digit */ IntDec,     IntDec,     Error,      Error,      Comment,
+                                                            
+/*   (   */ LParen,     LParen,     Error,      Int,        Comment,
+/*   )   */ RParen,     RParen,     Error,      Int,        Comment,
+/*   [   */ LSquare,    LSquare,    Error,      Int,        Comment,
+/*   ]   */ RSquare,    RSquare,    Error,      Int,        Comment,
+/*   {   */ LCurly,     LCurly,     Error,      Int,        Comment,
+/*   }   */ RCurly,     RCurly,     Error,      Int,        Comment,
+/*   "   */ Error,      Error,      Error,      Int,        Comment,
+/*   '   */ Error,      Error,      Error,      Int,        Comment,
 
-/* Ident */ Error,      Error,      Error,      Comment,
-/* Digit */ Error,      Error,      Error,      Comment,
-
-/*   (   */ LParen,     LParen,     Error,      Comment,
-/*   )   */ RParen,     RParen,     Error,      Comment,
-/*   [   */ LSquare,    LSquare,    Error,      Comment,
-/*   ]   */ RSquare,    RSquare,    Error,      Comment,
-/*   {   */ LCurly,     LCurly,     Error,      Comment,
-/*   }   */ RCurly,     RCurly,     Error,      Comment,
-/*   "   */ Error,      Error,      Error,      Comment,
-/*   '   */ Error,      Error,      Error,      Comment,
-
-/*   ,   */ Comma,      Comma,      Error,      Comment,
-/*   #   */ CommentEos, Comment,    Error,      Comment,
-/*   =   */ Error,      Error,      Error,      Comment,
-/*   +   */ Error,      Error,      Error,      Comment,
-/*   -   */ Error,      Error,      Error,      Comment,
-/*   &   */ Error,      Error,      Error,      Comment,
-/*   |   */ Error,      Error,      Error,      Comment,
-/*   ^   */ Error,      Error,      Error,      Comment,
-/*   <   */ Error,      Error,      Error,      Comment,
-/*   >   */ Error,      Error,      Error,      Comment,
-/*   ~   */ Error,      Error,      Error,      Comment,
-/*   !   */ Error,      Error,      Error,      Comment,
-/*   *   */ Error,      Error,      Error,      Comment,
-/*   /   */ Error,      Error,      Error,      Comment,
-/*   %   */ Error,      Error,      Error,      Comment,
-/*   ;   */ Error,      Error,      Error,      Comment,
-/*   :   */ Colon,      Colon,      Error,      Comment,
-/*   ?   */ Error,      Error,      Error,      Comment,
-/*   $   */ Error,      Error,      Error,      Comment,
-/*   @   */ Error,      Error,      Error,      Comment,
-/*   \   */ Error,      Error,      Error,      Comment,
-
-/* Eof   */ End,        End,        Error,      End,
-/* Other */ Error,      Error,      Error,      Comment,
+/*   ,   */ Comma,      Comma,      Error,      Int,        Comment,
+/*   #   */ CommentEos, Comment,    Error,      Int,        Comment,
+/*   =   */ Error,      Error,      Error,      Int,        Comment,
+/*   +   */ Error,      Error,      Error,      Int,        Comment,
+/*   -   */ Error,      Error,      Error,      Int,        Comment,
+/*   &   */ Error,      Error,      Error,      Int,        Comment,
+/*   |   */ Error,      Error,      Error,      Int,        Comment,
+/*   ^   */ Error,      Error,      Error,      Int,        Comment,
+/*   <   */ Error,      Error,      Error,      Int,        Comment,
+/*   >   */ Error,      Error,      Error,      Int,        Comment,
+/*   ~   */ Error,      Error,      Error,      Int,        Comment,
+/*   !   */ Error,      Error,      Error,      Int,        Comment,
+/*   *   */ Error,      Error,      Error,      Int,        Comment,
+/*   /   */ Error,      Error,      Error,      Int,        Comment,
+/*   %   */ Error,      Error,      Error,      Int,        Comment,
+/*   ;   */ Error,      Error,      Error,      Int,        Comment,
+/*   :   */ Colon,      Colon,      Error,      Int,        Comment,
+/*   ?   */ Error,      Error,      Error,      Int,        Comment,
+/*   $   */ Error,      Error,      Error,      Int,        Comment,
+/*   @   */ Error,      Error,      Error,      Int,        Comment,
+/*   \   */ Error,      Error,      Error,      Int,        Comment,
+                                                            
+/* Eof   */ End,        End,        Error,      Int,        End,
+/* Other */ Error,      Error,      Error,      Error,      Comment,
 ]};
 
 // ----------------------------------------------------------------------------
@@ -263,8 +297,8 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
         Transition { state, action, flags }
     }
 [
-//                      New                             Token┐
-//    TransitionId      State       Action          Newline┐ │
+//                      New                              +len┐
+//    TransitionId      State       Action            +line┐ │
 // ------------------------------------------------------------
 // Whitespace                                              │ │
     t(X::Normal,        Normal,     Continue,           0b_0_0),
@@ -276,7 +310,10 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
 // Comments                                                │ │
     t(X::Comment,       Comment,    Continue,           0b_0_0),
     t(X::CommentEos,    Comment,    Yield(T::Eos),      0b_0_0),
-// Tokens                                                  │ │
+// Numbers
+    t(X::IntDec,        AfterInt,   ScanDec,            0b_0_1),
+    t(X::Int,           Normal,     UYield(T::Int),     0b_0_0),
+// Simple Tokens
     t(X::LParen,        Normal,     Yield(T::LParen),   0b_0_1),
     t(X::RParen,        Normal,     Yield(T::RParen),   0b_0_1),
     t(X::LSquare,       Normal,     Yield(T::LSquare),  0b_0_1),
@@ -333,6 +370,9 @@ enum Action {
     /// Yield a token.
     Yield(Token),
 
+    /// Unread a byte and yield a token.
+    UYield(Token),
+
     // === Terminators ===
 
     /// Terminate unsuccessfully.
@@ -344,37 +384,16 @@ enum Action {
 
 // ---------------------------------------------------------------------------- 
 
-/// Lexer states.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u8)]
-enum State {
-    /// Normal state.  Any token is possible.
-    Normal,
-
-    /// At the begining of a line.  Any token is possible.
-    Bol,
-
-    /// After a carriage return (0x0D).
-    AfterCr,
-
-    /// In a comment.
-    Comment,
-}
-
-impl State {
-    /// Count of lexer states.
-    const COUNT: usize = Self::Comment as usize + 1;
-}
-
-// ---------------------------------------------------------------------------- 
-
 /// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
 #[derive(Debug)]
 pub struct Lexer<'a> {
     input: Reader<'a>,
     state: State,
+
+    // Token info
     line:  usize,
     len:   usize,
+    mag:   u64,
 }
 
 impl<'a> Lexer<'a> {
@@ -386,6 +405,7 @@ impl<'a> Lexer<'a> {
             state: State::Bol,
             line:  1,
             len:   0,
+            mag:   0,
         }
     }
 
@@ -399,6 +419,12 @@ impl<'a> Lexer<'a> {
     #[inline]
     pub fn text(&self) -> &'a [u8] {
         self.input.preceding(self.len)
+    }
+
+    /// Returns the integer magnitude of the current token.
+    #[inline]
+    pub fn magnitude(&self) -> u64 {
+        self.mag
     }
 
     /// Advances to the next token and returns its type.
@@ -428,14 +454,14 @@ impl<'a> Lexer<'a> {
 
             // Perform action
             match action {
-                Continue     => continue,
+                Continue => continue,
 
                 // Sublexers
-                ScanBin      => { let (_val, _len) = scan_int(&mut self.input, Base::Bin); },
-                ScanOct      => { let (_val, _len) = scan_int(&mut self.input, Base::Oct); },
-                ScanDec      => { let (_val, _len) = scan_int(&mut self.input, Base::Dec); },
-                ScanHex      => { let (_val, _len) = scan_int(&mut self.input, Base::Hex); },
-                ScanStr      => continue, // self.scan_str(),
+                ScanBin => { if self.scan_mag(Base::Bin).is_err() { break Token::Error; } },
+                ScanOct => { if self.scan_mag(Base::Oct).is_err() { break Token::Error; } },
+                ScanDec => { if self.scan_mag(Base::Dec).is_err() { break Token::Error; } },
+                ScanHex => { if self.scan_mag(Base::Hex).is_err() { break Token::Error; } },
+                ScanStr => continue, // self.scan_str(),
 
                 // Identifiers & Literals
                 YieldIdent   => break Token::Ident,
@@ -444,7 +470,8 @@ impl<'a> Lexer<'a> {
                 YieldChar    => break Token::Char,
 
                 // Simple Tokens
-                Yield(token) => break token,
+                Yield(token)  => break token,
+                UYield(token) => { self.input.unread(); break token },
 
                 // Terminators
                 Succeed      => break Token::Eof,
@@ -458,5 +485,25 @@ impl<'a> Lexer<'a> {
         self.len   = len;
 
         token
+    }
+
+    fn scan_mag(&mut self, base: Base) -> Result {
+        // Un-read first digit so that sublexer sees it
+        self.input.unread();
+
+        match scan_int(&mut self.input, base) {
+            (_, 0) => {
+                // overflow
+                self.mag = 0;
+                self.len = 0;
+                Err(())
+            },
+            (v, l) => {
+                // success
+                self.mag  = v;
+                self.len += l as usize;
+                Ok(())
+            }
+        }
     }
 }

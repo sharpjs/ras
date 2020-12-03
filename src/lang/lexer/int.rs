@@ -19,7 +19,7 @@
 use crate::lang::Base;
 use super::reader::*;
 
-pub fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
+pub(super) fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
     let mut val = 0u64;     // value accumulator
     let mut len = 0u8;      // digit count
     let mut ovf = false;    // overflow flag

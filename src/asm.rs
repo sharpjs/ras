@@ -75,16 +75,23 @@ impl Assembler {
     }
 
     /// Assembles the given `bytes`, using `path` as the pathname.
-    pub fn assemble_bytes(&mut self, path: &str, bytes: &[u8]) -> Result {
-        let mut lexer = crate::lang::lexer::Lexer::new(bytes);
+    pub fn assemble_bytes(&mut self, _path: &str, bytes: &[u8]) -> Result {
+        use crate::lang::{token::Token, lexer::Lexer};
 
-        assert_eq!( lexer.line(), 1 );
+        let mut lexer = Lexer::new(bytes);
 
-        // TODO: Everything.  For now just copy input to output.
-        self.output.extend_from_slice(path.as_bytes());
-        self.output.push(b':');
-        self.output.push(b'\n');
-        self.output.extend_from_slice(bytes);
+        loop {
+            let token = lexer.next();
+
+            println!("{:?}", token);
+
+            match token {
+                Token::Eof   => break,
+                Token::Error => break,
+                _            => continue,
+            }
+        }
+
         self.result()
     }
 

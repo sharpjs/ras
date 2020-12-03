@@ -71,7 +71,7 @@ enum Char {
     Quest   = char(30), // ?
     Dollar  = char(31), // $
     At      = char(32), // @    unsure if this will be used
-    Escape  = char(33), // \
+    BSlash  = char(33), // \
     // rare
     Eof     = char(34), // end of file
     Other   = char(35), // everything else
@@ -96,10 +96,10 @@ static CHARS: [Char; 128] = {
 [
 //  x0      x1      x2      x3      x4      x5      x6      x7
 //  x8      x9      xA      xB      xC      xD      xE      xF
-    __,     __,     __,     __,     __,     __,     __,     __,     // 0x │········│
-    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 0x │·tn··r··│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 0x │░░░░░░░░│
+    __,     Space,  Lf,     __,     __,     Cr,     __,     __,     // 0x │░tn░░r░░│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │░░░░░░░░│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 1x │░░░░░░░░│
     Space,  Bang,   DQuote, Hash,   Dollar, Pct,    Amp,    SQuote, // 2x │ !"#$%&'│
     LParen, RParen, Star,   Plus,   Comma,  Minus,  Ident,  Slash,  // 2x │()*+,-./│
     Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  Digit,  // 3x │01234567│
@@ -107,11 +107,11 @@ static CHARS: [Char; 128] = {
     At,     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 4x │@ABCDEFG│
     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 4x │HIJKLMNO│
     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 5x │PQRSTUVW│
-    Ident,  Ident,  Ident,  LSquare,Escape, RSquare,Caret,  Ident,  // 5x │XYZ[\]^_│
+    Ident,  Ident,  Ident,  LSquare,BSlash, RSquare,Caret,  Ident,  // 5x │XYZ[\]^_│
     __,     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 6x │`abcdefg│
     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 6x │hijklmno│
     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 7x │pqrstuvw│
-    Ident,  Ident,  Ident,  LCurly, Pipe,   RCurly, Tilde,  __,     // 7x │xyz{|}~·│
+    Ident,  Ident,  Ident,  LCurly, Pipe,   RCurly, Tilde,  __,     // 7x │xyz{|}~░│
 ]};
 
 // ----------------------------------------------------------------------------
@@ -127,17 +127,17 @@ enum TransitionId {
     /// Transition to `Bol` state and continue scanning.
     Bol,
 
-    /// Transition to `Bol` state and emit an `Eos` token.
-    BolEos,
-
     /// Transition to `AfterCr` state and continue scanning.
     Cr,
 
     /// Transition to `AfterCr` state and emit an `Eos` token.
     CrEos,
 
-    /// Transition to `Bol` state and continue scanning. [Do not increment line]
-    CrLf,
+    /// Transition to `Bol` state, increment line, and continue scanning.
+    Eol,
+
+    /// Transition to `Bol` state, increment line, and emit an `Eos` token.
+    EolEos,
 
     /// Transition to `Comment` state and continue scanning.
     Comment,
@@ -167,48 +167,48 @@ impl TransitionId {
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
     use TransitionId::*;
 [
-//          Normal    Bol       AfterCr   Comment
+//          Normal      Bol         AfterCr     Comment
 //          ------------------------------------------------------------------------
-/* Space */ Normal,   Bol,      Bol,      Comment,
-/* Cr    */ CrEos,    Cr,       Cr,       Cr,
-/* Lf    */ BolEos,   Bol,      CrLf,     Bol,
+/* Space */ Normal,     Bol,        Error,      Comment,
+/* Cr    */ CrEos,      Cr,         Error,      Cr,
+/* Lf    */ EolEos,     Eol,        Eol,        Eol,
 
-/* Ident */ Error,    Error,    Error,    Comment,
-/* Digit */ Error,    Error,    Error,    Comment,
+/* Ident */ Error,      Error,      Error,      Comment,
+/* Digit */ Error,      Error,      Error,      Comment,
 
-/*   (   */ LParen,   LParen,   LParen,   Comment,
-/*   )   */ RParen,   RParen,   RParen,   Comment,
-/*   [   */ Error,    Error,    Error,    Comment,
-/*   ]   */ Error,    Error,    Error,    Comment,
-/*   {   */ Error,    Error,    Error,    Comment,
-/*   }   */ Error,    Error,    Error,    Comment,
-/*   "   */ Error,    Error,    Error,    Comment,
-/*   '   */ Error,    Error,    Error,    Comment,
+/*   (   */ LParen,     LParen,     Error,      Comment,
+/*   )   */ RParen,     RParen,     Error,      Comment,
+/*   [   */ Error,      Error,      Error,      Comment,
+/*   ]   */ Error,      Error,      Error,      Comment,
+/*   {   */ Error,      Error,      Error,      Comment,
+/*   }   */ Error,      Error,      Error,      Comment,
+/*   "   */ Error,      Error,      Error,      Comment,
+/*   '   */ Error,      Error,      Error,      Comment,
 
-/*   ,   */ Error,    Error,    Error,    Comment,
-/*   #   */ CommentEos,Comment, Comment,  Comment,
-/*   =   */ Error,    Error,    Error,    Comment,
-/*   +   */ Error,    Error,    Error,    Comment,
-/*   -   */ Error,    Error,    Error,    Comment,
-/*   &   */ Error,    Error,    Error,    Comment,
-/*   |   */ Error,    Error,    Error,    Comment,
-/*   ^   */ Error,    Error,    Error,    Comment,
-/*   <   */ Error,    Error,    Error,    Comment,
-/*   >   */ Error,    Error,    Error,    Comment,
-/*   ~   */ Error,    Error,    Error,    Comment,
-/*   !   */ Error,    Error,    Error,    Comment,
-/*   *   */ Error,    Error,    Error,    Comment,
-/*   /   */ Error,    Error,    Error,    Comment,
-/*   %   */ Error,    Error,    Error,    Comment,
-/*   ;   */ Error,    Error,    Error,    Comment,
-/*   :   */ Error,    Error,    Error,    Comment,
-/*   ?   */ Error,    Error,    Error,    Comment,
-/*   $   */ Error,    Error,    Error,    Comment,
-/*   @   */ Error,    Error,    Error,    Comment,
-/*   \   */ Error,    Error,    Error,    Comment,
+/*   ,   */ Error,      Error,      Error,      Comment,
+/*   #   */ CommentEos, Comment,    Error,      Comment,
+/*   =   */ Error,      Error,      Error,      Comment,
+/*   +   */ Error,      Error,      Error,      Comment,
+/*   -   */ Error,      Error,      Error,      Comment,
+/*   &   */ Error,      Error,      Error,      Comment,
+/*   |   */ Error,      Error,      Error,      Comment,
+/*   ^   */ Error,      Error,      Error,      Comment,
+/*   <   */ Error,      Error,      Error,      Comment,
+/*   >   */ Error,      Error,      Error,      Comment,
+/*   ~   */ Error,      Error,      Error,      Comment,
+/*   !   */ Error,      Error,      Error,      Comment,
+/*   *   */ Error,      Error,      Error,      Comment,
+/*   /   */ Error,      Error,      Error,      Comment,
+/*   %   */ Error,      Error,      Error,      Comment,
+/*   ;   */ Error,      Error,      Error,      Comment,
+/*   :   */ Error,      Error,      Error,      Comment,
+/*   ?   */ Error,      Error,      Error,      Comment,
+/*   $   */ Error,      Error,      Error,      Comment,
+/*   @   */ Error,      Error,      Error,      Comment,
+/*   \   */ Error,      Error,      Error,      Comment,
 
-/* Eof   */ End,      End,      End,      End,
-/* Other */ Error,    Error,    Error,    Comment,
+/* Eof   */ End,        End,        Error,      End,
+/* Other */ Error,      Error,      Error,      Comment,
 ]};
 
 // ----------------------------------------------------------------------------
@@ -245,24 +245,25 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
         Transition { state, action, flags }
     }
 [
-//                                               Token┐
-//                    ┌State   ┌Action       Newline┐ │
-// Whitespace         │        │                    │ │
-    t(Id::Normal,     Normal,  Continue,         0b_0_0),
-    t(Id::Bol,        Bol,     Continue,         0b_1_0),
-    t(Id::BolEos,     Bol,     Yield(T::Eos),    0b_1_0),
-    t(Id::Cr,         AfterCr, Continue,         0b_1_0),
-    t(Id::CrEos,      AfterCr, Yield(T::Eos),    0b_1_0),
-    t(Id::CrLf,       Bol,     Continue,         0b_0_0),
-// Comments                                         │ │
-    t(Id::Comment,    Comment, Continue,         0b_0_0),
-    t(Id::CommentEos, Comment, Yield(T::Eos),    0b_0_0),
-// Tokens                                           │ │
-    t(Id::LParen,     Normal,  Yield(T::LParen), 0b_0_1),
-    t(Id::RParen,     Normal,  Yield(T::RParen), 0b_0_1),
-// Termination                                      │ │
-    t(Id::Error,      Normal,  Fail,             0b_0_0),
-    t(Id::End,        Normal,  Succeed,          0b_0_0),
+//                      New                           Token┐
+//    TransitionId      State       Action          Newline┐ │
+// ------------------------------------------------------------
+// Whitespace                                              │ │
+    t(Id::Normal,       Normal,     Continue,           0b_0_0),
+    t(Id::Bol,          Bol,        Continue,           0b_0_0),
+    t(Id::Cr,           AfterCr,    Continue,           0b_0_0),
+    t(Id::CrEos,        AfterCr,    Yield(T::Eos),      0b_0_0),
+    t(Id::Eol,          Bol,        Continue,           0b_1_0),
+    t(Id::EolEos,       Bol,        Yield(T::Eos),      0b_1_0),
+// Comments                                                │ │
+    t(Id::Comment,      Comment,    Continue,           0b_0_0),
+    t(Id::CommentEos,   Comment,    Yield(T::Eos),      0b_0_0),
+// Tokens                                                  │ │
+    t(Id::LParen,       Normal,     Yield(T::LParen),   0b_0_1),
+    t(Id::RParen,       Normal,     Yield(T::RParen),   0b_0_1),
+// Termination                                             │ │
+    t(Id::Error,        Normal,     Fail,               0b_0_0),
+    t(Id::End,          Normal,     Succeed,            0b_0_0),
 ]};
 
 // ----------------------------------------------------------------------------
@@ -299,6 +300,7 @@ enum Action {
     YieldLabel,
 
     /// Yield a macro parameter.
+    ///
     YieldParam,
 
     /// Yield a character literal.

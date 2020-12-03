@@ -47,9 +47,9 @@ fn lexer_comment() {
 
 #[test]
 fn lexer_cr() {
-    let mut lexer = Lexer::new(b"\r\r # hello");
+    let mut lexer = Lexer::new(b"\r\r");
 
-    assert_eq!( lexer.next(), Token::Eof );
+    assert_eq!( lexer.next(), Token::Error );
 }
 
 #[test]

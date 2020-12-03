@@ -151,6 +151,24 @@ enum TransitionId {
     /// Transition to `Normal` state and emit a `RParen` token.
     RParen,
 
+    /// Transition to `Normal` state and emit a `LSquare` token.
+    LSquare,
+
+    /// Transition to `Normal` state and emit a `RSquare` token.
+    RSquare,
+
+    /// Transition to `Normal` state and emit a `LCurly` token.
+    LCurly,
+
+    /// Transition to `Normal` state and emit a `RCurly` token.
+    RCurly,
+
+    /// Transition to `Normal` state and emit a `Comma` token.
+    Comma,
+
+    /// Transition to `Normal` state and emit a `Colon` token.
+    Colon,
+
     /// Terminate with failure.
     Error,
 
@@ -178,14 +196,14 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 
 /*   (   */ LParen,     LParen,     Error,      Comment,
 /*   )   */ RParen,     RParen,     Error,      Comment,
-/*   [   */ Error,      Error,      Error,      Comment,
-/*   ]   */ Error,      Error,      Error,      Comment,
-/*   {   */ Error,      Error,      Error,      Comment,
-/*   }   */ Error,      Error,      Error,      Comment,
+/*   [   */ LSquare,    LSquare,    Error,      Comment,
+/*   ]   */ RSquare,    RSquare,    Error,      Comment,
+/*   {   */ LCurly,     LCurly,     Error,      Comment,
+/*   }   */ RCurly,     RCurly,     Error,      Comment,
 /*   "   */ Error,      Error,      Error,      Comment,
 /*   '   */ Error,      Error,      Error,      Comment,
 
-/*   ,   */ Error,      Error,      Error,      Comment,
+/*   ,   */ Comma,      Comma,      Error,      Comment,
 /*   #   */ CommentEos, Comment,    Error,      Comment,
 /*   =   */ Error,      Error,      Error,      Comment,
 /*   +   */ Error,      Error,      Error,      Comment,
@@ -201,7 +219,7 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 /*   /   */ Error,      Error,      Error,      Comment,
 /*   %   */ Error,      Error,      Error,      Comment,
 /*   ;   */ Error,      Error,      Error,      Comment,
-/*   :   */ Error,      Error,      Error,      Comment,
+/*   :   */ Colon,      Colon,      Error,      Comment,
 /*   ?   */ Error,      Error,      Error,      Comment,
 /*   $   */ Error,      Error,      Error,      Comment,
 /*   @   */ Error,      Error,      Error,      Comment,
@@ -238,32 +256,38 @@ impl Transition {
 
 /// Lexer transitions in order by transition ID.
 static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
-    use TransitionId as Id;
+    use TransitionId as X;
     use Action::*;
     use State::*;
     const fn t(_: TransitionId, state: State, action: Action, flags: u8) -> Transition {
         Transition { state, action, flags }
     }
 [
-//                      New                           Token┐
+//                      New                             Token┐
 //    TransitionId      State       Action          Newline┐ │
 // ------------------------------------------------------------
 // Whitespace                                              │ │
-    t(Id::Normal,       Normal,     Continue,           0b_0_0),
-    t(Id::Bol,          Bol,        Continue,           0b_0_0),
-    t(Id::Cr,           AfterCr,    Continue,           0b_0_0),
-    t(Id::CrEos,        AfterCr,    Yield(T::Eos),      0b_0_0),
-    t(Id::Eol,          Bol,        Continue,           0b_1_0),
-    t(Id::EolEos,       Bol,        Yield(T::Eos),      0b_1_0),
+    t(X::Normal,        Normal,     Continue,           0b_0_0),
+    t(X::Bol,           Bol,        Continue,           0b_0_0),
+    t(X::Cr,            AfterCr,    Continue,           0b_0_0),
+    t(X::CrEos,         AfterCr,    Yield(T::Eos),      0b_0_0),
+    t(X::Eol,           Bol,        Continue,           0b_1_0),
+    t(X::EolEos,        Bol,        Yield(T::Eos),      0b_1_0),
 // Comments                                                │ │
-    t(Id::Comment,      Comment,    Continue,           0b_0_0),
-    t(Id::CommentEos,   Comment,    Yield(T::Eos),      0b_0_0),
+    t(X::Comment,       Comment,    Continue,           0b_0_0),
+    t(X::CommentEos,    Comment,    Yield(T::Eos),      0b_0_0),
 // Tokens                                                  │ │
-    t(Id::LParen,       Normal,     Yield(T::LParen),   0b_0_1),
-    t(Id::RParen,       Normal,     Yield(T::RParen),   0b_0_1),
+    t(X::LParen,        Normal,     Yield(T::LParen),   0b_0_1),
+    t(X::RParen,        Normal,     Yield(T::RParen),   0b_0_1),
+    t(X::LSquare,       Normal,     Yield(T::LSquare),  0b_0_1),
+    t(X::RSquare,       Normal,     Yield(T::RSquare),  0b_0_1),
+    t(X::LCurly,        Normal,     Yield(T::LCurly),   0b_0_1),
+    t(X::RCurly,        Normal,     Yield(T::RCurly),   0b_0_1),
+    t(X::Comma,         Normal,     Yield(T::Comma),    0b_0_1),
+    t(X::Colon,         Normal,     Yield(T::Colon),    0b_0_1),
 // Termination                                             │ │
-    t(Id::Error,        Normal,     Fail,               0b_0_0),
-    t(Id::End,          Normal,     Succeed,            0b_0_0),
+    t(X::Error,         Normal,     Fail,               0b_0_0),
+    t(X::End,           Normal,     Succeed,            0b_0_0),
 ]};
 
 // ----------------------------------------------------------------------------

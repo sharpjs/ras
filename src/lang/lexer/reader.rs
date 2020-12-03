@@ -178,23 +178,24 @@ mod tests {
     static CHARS: [Char; 128] = {
         const __: Char = Etc;
     [
-    //  xx0 xx1 xx2 xx3 xx4 xx5 xx6 xx7
-        __, __, __, __, __, __, __, __, // 00x │········│
-        __, __, __, __, __, __, __, __, // 01x │·tn··r··│
-        __, __, __, __, __, __, __, __, // 02x │········│
-        __, __, __, __, __, __, __, __, // 03x │········│
-        __, __, __, __, __, __, __, __, // 04x │ !"#$%&'│
-        __, __, __, __, __, __, __, __, // 05x │()*+,-./│
-        __, __, __, __, __, __, __, __, // 06x │01234567│
-        __, __, __, __, __, __, __, __, // 07x │89:;<=>?│
-        __, Uc, Uc, Uc, Uc, Uc, Uc, Uc, // 10x │@ABCDEFG│
-        Uc, Uc, Uc, Uc, Uc, Uc, Uc, Uc, // 11x │HIJKLMNO│
-        Uc, Uc, Uc, Uc, Uc, Uc, Uc, Uc, // 12x │PQRSTUVW│
-        Uc, Uc, Uc, __, __, __, __, __, // 13x │XYZ[\]^_│
-        __, Lc, Lc, Lc, Lc, Lc, Lc, Lc, // 14x │`abcdefg│
-        Lc, Lc, Lc, Lc, Lc, Lc, Lc, Lc, // 15x │hijklmno│
-        Lc, Lc, Lc, Lc, Lc, Lc, Lc, Lc, // 16x │pqrstuvw│
-        Lc, Lc, Lc, __, __, __, __, __, // 17x │xyz{|}~·│
+    //  x0  x1  x2  x3  x4  x5  x6  x7
+    //  x8  x9  xA  xB  xC  xD  xE  xF
+        __, __, __, __, __, __, __, __, // 0x │········│
+        __, __, __, __, __, __, __, __, // 0x │·tn··r··│
+        __, __, __, __, __, __, __, __, // 1x │········│
+        __, __, __, __, __, __, __, __, // 1x │········│
+        __, __, __, __, __, __, __, __, // 2x │ !"#$%&'│
+        __, __, __, __, __, __, __, __, // 2x │()*+,-./│
+        __, __, __, __, __, __, __, __, // 3x │01234567│
+        __, __, __, __, __, __, __, __, // 3x │89:;<=>?│
+        __, Uc, Uc, Uc, Uc, Uc, Uc, Uc, // 4x │@ABCDEFG│
+        Uc, Uc, Uc, Uc, Uc, Uc, Uc, Uc, // 4x │HIJKLMNO│
+        Uc, Uc, Uc, Uc, Uc, Uc, Uc, Uc, // 5x │PQRSTUVW│
+        Uc, Uc, Uc, __, __, __, __, __, // 5x │XYZ[\]^_│
+        __, Lc, Lc, Lc, Lc, Lc, Lc, Lc, // 6x │`abcdefg│
+        Lc, Lc, Lc, Lc, Lc, Lc, Lc, Lc, // 6x │hijklmno│
+        Lc, Lc, Lc, Lc, Lc, Lc, Lc, Lc, // 7x │pqrstuvw│
+        Lc, Lc, Lc, __, __, __, __, __, // 7x │xyz{|}~░│
     ]};
 
     #[test]
@@ -336,5 +337,5 @@ Template for logical character set tables:
     __,     __,     __,     __,     __,     __,     __,     __,     // 6x │`abcdefg│
     __,     __,     __,     __,     __,     __,     __,     __,     // 6x │hijklmno│
     __,     __,     __,     __,     __,     __,     __,     __,     // 7x │pqrstuvw│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 7x │xyz{|}~·│
+    __,     __,     __,     __,     __,     __,     __,     __,     // 7x │xyz{|}~░│
 */

@@ -51,7 +51,7 @@ pub(super) fn scan_int(input: &mut Reader, base: Base) -> (u64, u8) {
     // Unread the logical character that caused loop exit
     input.unread();
 
-    return (val, if ovf { 0 } else { len })
+    (val, if ovf { 0 } else { len })
 }
 
 // ----------------------------------------------------------------------------

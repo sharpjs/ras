@@ -1,5 +1,5 @@
 // This file is part of ras, an assembler.
-// Copyright (C) 2020 Jeffrey Sharp
+// Copyright 2020 Jeffrey Sharp
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published

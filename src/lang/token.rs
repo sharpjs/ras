@@ -1,5 +1,5 @@
 // This file is part of ras, an assembler.
-// Copyright (C) 2020 Jeffrey Sharp
+// Copyright 2020 Jeffrey Sharp
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published
@@ -13,6 +13,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
+
+//! Tokens
 
 /// Lexical token type.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

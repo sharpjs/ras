@@ -78,12 +78,23 @@ impl Assembler {
     pub fn assemble_bytes(&mut self, _path: &str, bytes: &[u8]) -> Result {
         use crate::lang::{token::Token, lexer::Lexer};
 
+        println!();
+        println!("Token        | Pos | Len | Text     |  Integer");
+        println!("-------------|-----|-----|----------|---------");
+
         let mut lexer = Lexer::new(bytes);
 
         loop {
             let token = lexer.next();
 
-            println!("{:?}", token);
+            println!(
+                "{:12.12} | {:3.3} | {:3.3} | {:8.8} | {:8.8}",
+                format!("{:?}", token),
+                0,
+                0,
+                std::str::from_utf8(lexer.text()).unwrap_or(""),
+                lexer.magnitude()
+            );
 
             match token {
                 Token::Eof   => break,
@@ -91,6 +102,8 @@ impl Assembler {
                 _            => continue,
             }
         }
+
+        println!();
 
         self.result()
     }

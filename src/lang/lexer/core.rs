@@ -421,6 +421,18 @@ impl<'a> Lexer<'a> {
         self.line
     }
 
+    /// Returns the byte position (0-indexed) of the current token.
+    #[inline]
+    pub fn pos(&self) -> usize {
+        self.input.position() - self.len
+    }
+
+    /// Returns the byte length of the current token.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
     /// Returns the source text of the current token.
     #[inline]
     pub fn text(&self) -> &'a [u8] {

@@ -79,8 +79,8 @@ impl Assembler {
         use crate::lang::{token::Token, lexer::Lexer};
 
         println!();
-        println!("Token        | Pos | Len | Text     |  Integer");
-        println!("-------------|-----|-----|----------|---------");
+        println!("Token        | Pos | Len | Line | Text     |  Integer");
+        println!("-------------|-----|-----|------|----------|---------");
 
         let mut lexer = Lexer::new(bytes);
 
@@ -88,10 +88,11 @@ impl Assembler {
             let token = lexer.next();
 
             println!(
-                "{:12.12} | {:3.3} | {:3.3} | {:8.8} | {:8.8}",
+                "{:12.12} | {:3.3} | {:3.3} | {:4.4} | {:8.8} | {:8.8}",
                 format!("{:?}", token),
                 0,
                 0,
+                lexer.line(),
                 std::str::from_utf8(lexer.text()).unwrap_or(""),
                 lexer.magnitude()
             );

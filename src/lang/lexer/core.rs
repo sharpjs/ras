@@ -457,25 +457,25 @@ impl<'a> Lexer<'a> {
                 Continue => continue,
 
                 // Sublexers
-                ScanBin => { if self.scan_mag(Base::Bin).is_err() { break Token::Error; } },
-                ScanOct => { if self.scan_mag(Base::Oct).is_err() { break Token::Error; } },
-                ScanDec => { if self.scan_mag(Base::Dec).is_err() { break Token::Error; } },
-                ScanHex => { if self.scan_mag(Base::Hex).is_err() { break Token::Error; } },
+                ScanBin => { if self.scan_mag(Base::Bin).is_err() { break T::Error } },
+                ScanOct => { if self.scan_mag(Base::Oct).is_err() { break T::Error } },
+                ScanDec => { if self.scan_mag(Base::Dec).is_err() { break T::Error } },
+                ScanHex => { if self.scan_mag(Base::Hex).is_err() { break T::Error } },
                 ScanStr => continue, // self.scan_str(),
 
                 // Identifiers & Literals
-                YieldIdent   => break Token::Ident,
-                YieldLabel   => break Token::Label,
-                YieldParam   => break Token::Param,
-                YieldChar    => break Token::Char,
+                YieldIdent      => break T::Ident,
+                YieldLabel      => break T::Label,
+                YieldParam      => break T::Param,
+                YieldChar       => break T::Char,
 
                 // Simple Tokens
-                Yield(token)  => break token,
-                UYield(token) => { self.input.unread(); break token },
+                Yield(token)    => break token,
+                UYield(token)   => { self.input.unread(); break token },
 
                 // Terminators
-                Succeed      => break Token::Eof,
-                Fail         => break Token::Error,
+                Succeed         => break T::Eof,
+                Fail            => break T::Error,
             }
         };
 

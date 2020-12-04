@@ -140,6 +140,11 @@ enum State {
 impl State {
     /// Count of lexer states.
     const COUNT: usize = Self::Comment as usize + 1;
+
+    /// Amount to increment line when lexer begins in this state.
+    fn line_inc(self) -> u32 {
+        match self { Self::Bol => 1, _ => 0 }
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -283,8 +288,8 @@ impl Transition {
     }
 
     #[inline]
-    fn line_inc(&self) -> usize {
-        (self.flags >> 1) as usize
+    fn line_inc(&self) -> u32 {
+        (self.flags >> 1) as u32
     }
 }
 
@@ -306,7 +311,7 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
     t(X::Cr,            AfterCr,    Continue,           0b_0_0),
     t(X::CrEos,         AfterCr,    Yield(T::Eos),      0b_0_0),
     t(X::Eol,           Bol,        Continue,           0b_1_0),
-    t(X::EolEos,        Bol,        Yield(T::Eos),      0b_1_0),
+    t(X::EolEos,        Bol,        Yield(T::Eos),      0b_0_0),
 // Comments                                                │ │
     t(X::Comment,       Comment,    Continue,           0b_0_0),
     t(X::CommentEos,    Comment,    Yield(T::Eos),      0b_0_0),
@@ -387,11 +392,12 @@ enum Action {
 /// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
 #[derive(Debug)]
 pub struct Lexer<'a> {
+    // Saved state for next() invocation
     input: Reader<'a>,
     state: State,
 
-    // Token info
-    line:  usize,
+    // Current token info
+    line:  u32,
     len:   usize,
     mag:   u64,
 }
@@ -403,7 +409,7 @@ impl<'a> Lexer<'a> {
         Self {
             input: Reader::new(input),
             state: State::Bol,
-            line:  1,
+            line:  0,
             len:   0,
             mag:   0,
         }
@@ -411,7 +417,7 @@ impl<'a> Lexer<'a> {
 
     /// Returns the source line number (1-indexed) of the current token.
     #[inline]
-    pub fn line(&self) -> usize {
+    pub fn line(&self) -> u32 {
         self.line
     }
 
@@ -432,28 +438,28 @@ impl<'a> Lexer<'a> {
         use Action::*;
 
         // Restore saved state and prepare for loop
-        let mut state   = self.state;
-        let mut line    = self.line;
-        let mut len     = 0;
-        let mut len_inc = 0;
-        let mut action;
+        let mut state = self.state;
+        let mut line  = self.line;
+        let mut len   = 0;
+
+        // Apply any newline update from prior state
+        line += state.line_inc();
 
         // Discover next token
         let token = loop {
+
             // Get next transition
             let next = self.input.read(&CHARS).0;
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
             // Update state
-            state    = next.state;
-            action   = next.action;
-            line    += next.line_inc();
-            len_inc |= next.token_inc();
-            len     += len_inc;
+            state  = next.state;
+            line  += next.line_inc();
+            len   += next.token_inc();
 
             // Perform action
-            match action {
+            match next.action {
                 Continue => continue,
 
                 // Sublexers

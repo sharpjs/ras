@@ -14,61 +14,70 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-use super::super::token::Token;
+use crate::asm::Assembler;
+use crate::lang::token::Token;
 use super::*;
 
 #[test]
 fn lexer_empty() {
-    let mut lexer = Lexer::new(b"");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"");
 
     assert_eq!( lexer.next(), Token::Eof );
 }
 
 #[test]
 fn lexer_unrecognized() {
-    let mut lexer = Lexer::new(b"`");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"`");
 
     assert_eq!( lexer.next(), Token::Error );
 }
 
 #[test]
 fn lexer_space() {
-    let mut lexer = Lexer::new(b" \t \t");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b" \t \t");
 
     assert_eq!( lexer.next(), Token::Eof );
 }
 
 #[test]
 fn lexer_comment() {
-    let mut lexer = Lexer::new(b"# this is a comment");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"# this is a comment");
 
     assert_eq!( lexer.next(), Token::Eof );
 }
 
 #[test]
 fn lexer_cr() {
-    let mut lexer = Lexer::new(b"\r\r");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"\r\r");
 
     assert_eq!( lexer.next(), Token::Error );
 }
 
 #[test]
 fn lexer_lf() {
-    let mut lexer = Lexer::new(b"\n\n # hello");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"\n\n # hello");
 
     assert_eq!( lexer.next(), Token::Eof );
 }
 
 #[test]
 fn lexer_crlf() {
-    let mut lexer = Lexer::new(b"\r\n\r\n # hello");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"\r\n\r\n # hello");
 
     assert_eq!( lexer.next(), Token::Eof );
 }
 
 #[test]
 fn lexer_parens() {
-    let mut lexer = Lexer::new(b"()#c\n\n");
+    let mut asm   = Assembler::new();
+    let mut lexer = Lexer::new(&mut asm, "test.s", b"()#c\n\n");
 
     assert_eq!( lexer.next(), Token::LParen );
     assert_eq!( lexer.next(), Token::RParen );

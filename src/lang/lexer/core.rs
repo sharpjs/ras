@@ -16,7 +16,7 @@
 
 //! Primary lexical analyzer.
 
-use crate::asm::Result;
+use crate::asm::{Assembler, Result};
 use crate::lang::Base;
 use crate::lang::token::Token::{self, self as T};
 
@@ -400,18 +400,23 @@ pub struct Lexer<'a> {
     line:  u32,
     len:   usize,
     mag:   u64,
+
+    // Context for messages
+    asm:   &'a mut Assembler,
+    path:  &'a str,
 }
 
 impl<'a> Lexer<'a> {
     /// Creates a lexical analyzer that takes as input the contents of the
     /// given slice of bytes.
-    pub fn new(input: &'a [u8]) -> Self {
+    pub fn new(asm: &'a mut Assembler, path: &'a str, input: &'a [u8]) -> Self {
         Self {
             input: Reader::new(input),
             state: State::Bol,
             line:  0,
             len:   0,
             mag:   0,
+            asm, path
         }
     }
 

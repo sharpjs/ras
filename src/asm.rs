@@ -83,7 +83,7 @@ impl Assembler {
         println!("Token        | Pos | Len | Line | Text     |  Integer");
         println!("-------------|-----|-----|------|----------|---------");
 
-        let mut lexer = Lexer::new(bytes);
+        let mut lexer = Lexer::new(self, path, bytes);
 
         loop {
             let token = lexer.next();

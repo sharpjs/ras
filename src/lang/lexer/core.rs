@@ -316,7 +316,7 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
     t(X::Comment,       Comment,    Continue,           0b_0_0),
     t(X::CommentEos,    Comment,    Yield(T::Eos),      0b_0_0),
 // Numbers
-    t(X::IntDec,        AfterInt,   ScanDec,            0b_0_1),
+    t(X::IntDec,        AfterInt,   ScanDec,            0b_0_0),
     t(X::Int,           Normal,     UYield(T::Int),     0b_0_0),
 // Simple Tokens
     t(X::LParen,        Normal,     Yield(T::LParen),   0b_0_1),

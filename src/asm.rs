@@ -75,10 +75,11 @@ impl Assembler {
     }
 
     /// Assembles the given `bytes`, using `path` as the pathname.
-    pub fn assemble_bytes(&mut self, _path: &str, bytes: &[u8]) -> Result {
+    pub fn assemble_bytes(&mut self, path: &str, bytes: &[u8]) -> Result {
         use crate::lang::{token::Token, lexer::Lexer};
 
         println!();
+        println!("{}:", path);
         println!("Token        | Pos | Len | Line | Text     |  Integer");
         println!("-------------|-----|-----|------|----------|---------");
 
@@ -90,8 +91,8 @@ impl Assembler {
             println!(
                 "{:12.12} | {:3.3} | {:3.3} | {:4.4} | {:8.8} | {:8.8}",
                 format!("{:?}", token),
-                0,
-                0,
+                lexer.pos(),
+                lexer.len(),
                 lexer.line(),
                 std::str::from_utf8(lexer.text()).unwrap_or(""),
                 lexer.magnitude()

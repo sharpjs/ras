@@ -86,6 +86,28 @@ impl<'a> Reader<'a> {
         self.ptr as usize - self.beg as usize
     }
 
+    /// If the next byte is the given `val`, advances the reader and returns
+    /// `1`.  Otherwise, this method returns `0` and the reader's position
+    /// remains unchanged.
+    pub fn skip_if(&mut self, val: u8) -> usize {
+        // Detect EOF
+        let p = self.ptr;
+        if p == self.end {
+            return 0;
+        }
+
+        // Read byte and check it
+        let byte = unsafe { *p };
+        if byte != val {
+            return 0;
+        }
+
+        // Advance
+        self.old = p;
+        self.ptr = unsafe { p.add(1) };
+        1
+    }
+
     /// Reads the next byte, advances the reader, and returns both the byte and
     /// its corresponding logical character from the given character set `map`.
     ///
@@ -115,7 +137,7 @@ impl<'a> Reader<'a> {
         (c, byte)
     }
 
-    /// Unreads the most-recently-read logical character.
+    /// Unreads the most-recently-read byte.
     ///
     /// This method can have effect only once after each call to [`read`].  It
     /// is safe to call this method an arbitrary number of times before or

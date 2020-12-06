@@ -458,14 +458,14 @@ impl<'a> Lexer<'a> {
 
             // Perform action
             match next.action {
-                Continue => continue,
+                Continue        => continue,
 
                 // Sublexers
-                ScanBin => { if self.scan_mag(Base::Bin).is_err() { break T::Error } },
-                ScanOct => { if self.scan_mag(Base::Oct).is_err() { break T::Error } },
-                ScanDec => { if self.scan_mag(Base::Dec).is_err() { break T::Error } },
-                ScanHex => { if self.scan_mag(Base::Hex).is_err() { break T::Error } },
-                ScanStr => continue, // self.scan_str(),
+                ScanBin         => { if self.scan_mag(Base::Bin).is_err() { break T::Error } },
+                ScanOct         => { if self.scan_mag(Base::Oct).is_err() { break T::Error } },
+                ScanDec         => { if self.scan_mag(Base::Dec).is_err() { break T::Error } },
+                ScanHex         => { if self.scan_mag(Base::Hex).is_err() { break T::Error } },
+                ScanStr         => continue, // self.scan_str(),
 
                 // Identifiers & Literals
                 YieldIdent      => break T::Ident,
@@ -477,12 +477,8 @@ impl<'a> Lexer<'a> {
                 Yield(token)    => break token,
                 UYield(token)   => { self.input.unread(); break token },
 
-                CrEos => {
-                    if self.input.read(&CHARS).1 != b'\n' {
-                        self.input.unread()
-                    }
-                    break T::Eos
-                },
+                // Miscellaneous
+                CrEos           => { self.input.skip_if(b'\n'); break T::Eos },
 
                 // Terminators
                 Succeed         => break T::Eof,

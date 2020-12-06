@@ -152,20 +152,11 @@ enum TransitionId {
     /// Transition to `AfterCr` state and continue scanning.
     Cr,
 
-    /// Transition to `AfterCr` state and emit an `Eos` token.
-    CrEos,
-
-    /// Transition to `Normal` state, increment line, and continue scanning.
-    Eol,
-
     /// Transition to `Normal` state, increment line, and emit an `Eos` token.
-    EolEos,
+    Eol,
 
     /// Transition to `Comment` state and continue scanning.
     Comment,
-
-    /// Transition to `Comment` state and emit an `Eos` token.
-    CommentEos,
 
     /// Transition to `AfterInt` state, un-read a byte, and scan an integer.
     IntDec,
@@ -216,8 +207,8 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 //          Normal      AfterCr     AfterInt    Comment
 //          ------------------------------------------------------------
 /* Space */ Normal,     Error,      Int,        Comment,
-/* Cr    */ CrEos,      Error,      Int,        Cr,
-/* Lf    */ EolEos,     Eol,        Int,        Eol,
+/* Cr    */ Cr,         Error,      Int,        Cr,
+/* Lf    */ Eol,        Eol,        Int,        Eol,
 
 /* Ident */ Error,      Error,      Error,      Comment,
 /* Digit */ IntDec,     Error,      Error,      Comment,
@@ -232,7 +223,7 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 /*   '   */ Error,      Error,      Int,        Comment,
 
 /*   ,   */ Comma,      Error,      Int,        Comment,
-/*   #   */ CommentEos, Error,      Int,        Comment,
+/*   #   */ Comment,    Error,      Int,        Comment,
 /*   =   */ Error,      Error,      Int,        Comment,
 /*   +   */ Error,      Error,      Int,        Comment,
 /*   -   */ Error,      Error,      Int,        Comment,
@@ -297,12 +288,9 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
 // Whitespace                                              │ │
     t(X::Normal,        Normal,     Continue,           0b_0_0),
     t(X::Cr,            AfterCr,    Continue,           0b_0_0),
-    t(X::CrEos,         AfterCr,    Yield(T::Eos),      0b_0_0),
-    t(X::Eol,           Normal,     Continue,           0b_1_0),
-    t(X::EolEos,        Normal,     Yield(T::Eos),      0b_1_0),
+    t(X::Eol,           Normal,     Yield(T::Eos),      0b_1_0),
 // Comments                                                │ │
     t(X::Comment,       Comment,    Continue,           0b_0_0),
-    t(X::CommentEos,    Comment,    Yield(T::Eos),      0b_0_0),
 // Numbers
     t(X::IntDec,        AfterInt,   ScanDec,            0b_0_0),
     t(X::Int,           Normal,     UYield(T::Int),     0b_0_0),

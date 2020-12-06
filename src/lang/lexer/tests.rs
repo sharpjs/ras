@@ -63,6 +63,8 @@ fn lexer_lf() {
     let mut asm   = Assembler::new();
     let mut lexer = Lexer::new(&mut asm, "test.s", b"\n\n # hello");
 
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
     assert_eq!( lexer.next(), Token::Eof );
 }
 
@@ -71,6 +73,8 @@ fn lexer_crlf() {
     let mut asm   = Assembler::new();
     let mut lexer = Lexer::new(&mut asm, "test.s", b"\r\n\r\n # hello");
 
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
     assert_eq!( lexer.next(), Token::Eof );
 }
 
@@ -82,5 +86,6 @@ fn lexer_parens() {
     assert_eq!( lexer.next(), Token::LParen );
     assert_eq!( lexer.next(), Token::RParen );
     assert_eq!( lexer.next(), Token::Eos    );
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
     assert_eq!( lexer.next(), Token::Eof    );
 }

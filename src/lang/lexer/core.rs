@@ -124,9 +124,6 @@ enum State {
     /// Normal state.  Any token is possible.
     Normal,
 
-    /// At the begining of a line.  Any token is possible.
-    Bol,
-
     /// After a carriage return (0x0D).  Line feed (0x0A) is expected.
     AfterCr,
 
@@ -140,11 +137,6 @@ enum State {
 impl State {
     /// Count of lexer states.
     const COUNT: usize = Self::Comment as usize + 1;
-
-    /// Amount to increment line when lexer begins in this state.
-    fn line_inc(self) -> u32 {
-        match self { Self::Bol => 1, _ => 0 }
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -157,19 +149,16 @@ enum TransitionId {
     /// Transition to `Normal` state and continue scanning.
     Normal,
 
-    /// Transition to `Bol` state and continue scanning.
-    Bol,
-
     /// Transition to `AfterCr` state and continue scanning.
     Cr,
 
     /// Transition to `AfterCr` state and emit an `Eos` token.
     CrEos,
 
-    /// Transition to `Bol` state, increment line, and continue scanning.
+    /// Transition to `Normal` state, increment line, and continue scanning.
     Eol,
 
-    /// Transition to `Bol` state, increment line, and emit an `Eos` token.
+    /// Transition to `Normal` state, increment line, and emit an `Eos` token.
     EolEos,
 
     /// Transition to `Comment` state and continue scanning.
@@ -224,48 +213,48 @@ impl TransitionId {
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
     use TransitionId::*;
 [
-//          Normal      Bol         AfterCr     AfterInt    Comment
-//          ------------------------------------------------------------------------
-/* Space */ Normal,     Bol,        Error,      Int,        Comment,
-/* Cr    */ CrEos,      Cr,         Error,      Int,        Cr,
-/* Lf    */ EolEos,     Eol,        Eol,        Int,        Eol,
-                                                            
-/* Ident */ Error,      Error,      Error,      Error,      Comment,
-/* Digit */ IntDec,     IntDec,     Error,      Error,      Comment,
-                                                            
-/*   (   */ LParen,     LParen,     Error,      Int,        Comment,
-/*   )   */ RParen,     RParen,     Error,      Int,        Comment,
-/*   [   */ LSquare,    LSquare,    Error,      Int,        Comment,
-/*   ]   */ RSquare,    RSquare,    Error,      Int,        Comment,
-/*   {   */ LCurly,     LCurly,     Error,      Int,        Comment,
-/*   }   */ RCurly,     RCurly,     Error,      Int,        Comment,
-/*   "   */ Error,      Error,      Error,      Int,        Comment,
-/*   '   */ Error,      Error,      Error,      Int,        Comment,
+//          Normal      AfterCr     AfterInt    Comment
+//          ------------------------------------------------------------
+/* Space */ Normal,     Error,      Int,        Comment,
+/* Cr    */ CrEos,      Error,      Int,        Cr,
+/* Lf    */ EolEos,     Eol,        Int,        Eol,
 
-/*   ,   */ Comma,      Comma,      Error,      Int,        Comment,
-/*   #   */ CommentEos, Comment,    Error,      Int,        Comment,
-/*   =   */ Error,      Error,      Error,      Int,        Comment,
-/*   +   */ Error,      Error,      Error,      Int,        Comment,
-/*   -   */ Error,      Error,      Error,      Int,        Comment,
-/*   &   */ Error,      Error,      Error,      Int,        Comment,
-/*   |   */ Error,      Error,      Error,      Int,        Comment,
-/*   ^   */ Error,      Error,      Error,      Int,        Comment,
-/*   <   */ Error,      Error,      Error,      Int,        Comment,
-/*   >   */ Error,      Error,      Error,      Int,        Comment,
-/*   ~   */ Error,      Error,      Error,      Int,        Comment,
-/*   !   */ Error,      Error,      Error,      Int,        Comment,
-/*   *   */ Error,      Error,      Error,      Int,        Comment,
-/*   /   */ Error,      Error,      Error,      Int,        Comment,
-/*   %   */ Error,      Error,      Error,      Int,        Comment,
-/*   ;   */ Error,      Error,      Error,      Int,        Comment,
-/*   :   */ Colon,      Colon,      Error,      Int,        Comment,
-/*   ?   */ Error,      Error,      Error,      Int,        Comment,
-/*   $   */ Error,      Error,      Error,      Int,        Comment,
-/*   @   */ Error,      Error,      Error,      Int,        Comment,
-/*   \   */ Error,      Error,      Error,      Int,        Comment,
-                                                            
-/* Eof   */ End,        End,        Error,      Int,        End,
-/* Other */ Error,      Error,      Error,      Error,      Comment,
+/* Ident */ Error,      Error,      Error,      Comment,
+/* Digit */ IntDec,     Error,      Error,      Comment,
+
+/*   (   */ LParen,     Error,      Int,        Comment,
+/*   )   */ RParen,     Error,      Int,        Comment,
+/*   [   */ LSquare,    Error,      Int,        Comment,
+/*   ]   */ RSquare,    Error,      Int,        Comment,
+/*   {   */ LCurly,     Error,      Int,        Comment,
+/*   }   */ RCurly,     Error,      Int,        Comment,
+/*   "   */ Error,      Error,      Int,        Comment,
+/*   '   */ Error,      Error,      Int,        Comment,
+
+/*   ,   */ Comma,      Error,      Int,        Comment,
+/*   #   */ CommentEos, Error,      Int,        Comment,
+/*   =   */ Error,      Error,      Int,        Comment,
+/*   +   */ Error,      Error,      Int,        Comment,
+/*   -   */ Error,      Error,      Int,        Comment,
+/*   &   */ Error,      Error,      Int,        Comment,
+/*   |   */ Error,      Error,      Int,        Comment,
+/*   ^   */ Error,      Error,      Int,        Comment,
+/*   <   */ Error,      Error,      Int,        Comment,
+/*   >   */ Error,      Error,      Int,        Comment,
+/*   ~   */ Error,      Error,      Int,        Comment,
+/*   !   */ Error,      Error,      Int,        Comment,
+/*   *   */ Error,      Error,      Int,        Comment,
+/*   /   */ Error,      Error,      Int,        Comment,
+/*   %   */ Error,      Error,      Int,        Comment,
+/*   ;   */ Error,      Error,      Int,        Comment,
+/*   :   */ Colon,      Error,      Int,        Comment,
+/*   ?   */ Error,      Error,      Int,        Comment,
+/*   $   */ Error,      Error,      Int,        Comment,
+/*   @   */ Error,      Error,      Int,        Comment,
+/*   \   */ Error,      Error,      Int,        Comment,
+
+/* Eof   */ End,        Error,      Int,        End,
+/* Other */ Error,      Error,      Error,      Comment,
 ]};
 
 // ----------------------------------------------------------------------------
@@ -307,11 +296,10 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
 // ------------------------------------------------------------
 // Whitespace                                              │ │
     t(X::Normal,        Normal,     Continue,           0b_0_0),
-    t(X::Bol,           Bol,        Continue,           0b_0_0),
     t(X::Cr,            AfterCr,    Continue,           0b_0_0),
     t(X::CrEos,         AfterCr,    Yield(T::Eos),      0b_0_0),
-    t(X::Eol,           Bol,        Continue,           0b_1_0),
-    t(X::EolEos,        Bol,        Yield(T::Eos),      0b_0_0),
+    t(X::Eol,           Normal,     Continue,           0b_1_0),
+    t(X::EolEos,        Normal,     Yield(T::Eos),      0b_1_0),
 // Comments                                                │ │
     t(X::Comment,       Comment,    Continue,           0b_0_0),
     t(X::CommentEos,    Comment,    Yield(T::Eos),      0b_0_0),
@@ -413,7 +401,7 @@ impl<'a> Lexer<'a> {
     pub fn new(asm: &'a mut Assembler, path: &'a str, input: &'a [u8]) -> Self {
         Self {
             input: Reader::new(input),
-            state: State::Bol,
+            state: State::Normal,
             line_next: 1,
             line:  0,
             len:   0,
@@ -457,22 +445,22 @@ impl<'a> Lexer<'a> {
         use Action::*;
 
         // Restore saved state and prepare for loop
-        let mut state = self.state;
-        let mut line  = self.line_next;
-        let mut len   = 0;
+        let mut state    = self.state;
+        let     line     = self.line_next;
+        let mut line_inc;
+        let mut len      = 0;
 
         // Discover next token
         let token = loop {
-
             // Get next transition
             let next = self.input.read(&CHARS).0;
             let next = TRANSITION_MAP[state as usize + next as usize];
             let next = TRANSITION_LUT[next  as usize];
 
             // Update state
-            state  = next.state;
-            line  += next.line_inc();
-            len   += next.token_inc();
+            state     = next.state;
+            line_inc  = next.line_inc();
+            len      += next.token_inc();
 
             // Perform action
             match next.action {
@@ -504,7 +492,7 @@ impl<'a> Lexer<'a> {
         // Save state for subsequent invocation
         self.state     = state;
         self.line      = line;
-        self.line_next = line + state.line_inc();
+        self.line_next = line + line_inc;
         self.len       = len;
 
         token

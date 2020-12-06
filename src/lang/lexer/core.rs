@@ -395,6 +395,7 @@ pub struct Lexer<'a> {
     // Saved state for next() invocation
     input: Reader<'a>,
     state: State,
+    line_next: u32,
 
     // Current token info
     line:  u32,
@@ -413,6 +414,7 @@ impl<'a> Lexer<'a> {
         Self {
             input: Reader::new(input),
             state: State::Bol,
+            line_next: 1,
             line:  0,
             len:   0,
             mag:   0,
@@ -456,11 +458,8 @@ impl<'a> Lexer<'a> {
 
         // Restore saved state and prepare for loop
         let mut state = self.state;
-        let mut line  = self.line;
+        let mut line  = self.line_next;
         let mut len   = 0;
-
-        // Apply any newline update from prior state
-        line += state.line_inc();
 
         // Discover next token
         let token = loop {
@@ -503,9 +502,10 @@ impl<'a> Lexer<'a> {
         };
 
         // Save state for subsequent invocation
-        self.state = state;
-        self.line  = line;
-        self.len   = len;
+        self.state     = state;
+        self.line      = line;
+        self.line_next = line + state.line_inc();
+        self.len       = len;
 
         token
     }

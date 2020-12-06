@@ -55,7 +55,9 @@ fn lexer_cr() {
     let mut asm   = Assembler::new();
     let mut lexer = Lexer::new(&mut asm, "test.s", b"\r\r");
 
-    assert_eq!( lexer.next(), Token::Error );
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
+     assert_eq!( lexer.next(), Token::Eos );    // <------------- UNWANTED?
+    assert_eq!( lexer.next(), Token::Eof );
 }
 
 #[test]

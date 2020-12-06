@@ -152,6 +152,8 @@ enum TransitionId {
     /// Transition to `AfterCr` state and continue scanning.
     Cr,
 
+    UEol,
+
     /// Transition to `Normal` state, increment line, and emit an `Eos` token.
     Eol,
 
@@ -206,46 +208,46 @@ static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
 [
 //          Normal      AfterCr     AfterInt    Comment
 //          ------------------------------------------------------------
-/* Space */ Normal,     Error,      Int,        Comment,
-/* Cr    */ Cr,         Error,      Int,        Cr,
-/* Lf    */ Eol,        Eol,        Int,        Eol,
+/* Space */ Normal,     UEol,      Int,        Comment,
+/* Cr    */ Cr,         UEol,      Int,        Cr,
+/* Lf    */ Eol,        Eol,       Int,        Eol,
 
-/* Ident */ Error,      Error,      Error,      Comment,
-/* Digit */ IntDec,     Error,      Error,      Comment,
+/* Ident */ Error,      UEol,      Error,      Comment,
+/* Digit */ IntDec,     UEol,      Error,      Comment,
 
-/*   (   */ LParen,     Error,      Int,        Comment,
-/*   )   */ RParen,     Error,      Int,        Comment,
-/*   [   */ LSquare,    Error,      Int,        Comment,
-/*   ]   */ RSquare,    Error,      Int,        Comment,
-/*   {   */ LCurly,     Error,      Int,        Comment,
-/*   }   */ RCurly,     Error,      Int,        Comment,
-/*   "   */ Error,      Error,      Int,        Comment,
-/*   '   */ Error,      Error,      Int,        Comment,
+/*   (   */ LParen,     UEol,      Int,        Comment,
+/*   )   */ RParen,     UEol,      Int,        Comment,
+/*   [   */ LSquare,    UEol,      Int,        Comment,
+/*   ]   */ RSquare,    UEol,      Int,        Comment,
+/*   {   */ LCurly,     UEol,      Int,        Comment,
+/*   }   */ RCurly,     UEol,      Int,        Comment,
+/*   "   */ Error,      UEol,      Int,        Comment,
+/*   '   */ Error,      UEol,      Int,        Comment,
 
-/*   ,   */ Comma,      Error,      Int,        Comment,
-/*   #   */ Comment,    Error,      Int,        Comment,
-/*   =   */ Error,      Error,      Int,        Comment,
-/*   +   */ Error,      Error,      Int,        Comment,
-/*   -   */ Error,      Error,      Int,        Comment,
-/*   &   */ Error,      Error,      Int,        Comment,
-/*   |   */ Error,      Error,      Int,        Comment,
-/*   ^   */ Error,      Error,      Int,        Comment,
-/*   <   */ Error,      Error,      Int,        Comment,
-/*   >   */ Error,      Error,      Int,        Comment,
-/*   ~   */ Error,      Error,      Int,        Comment,
-/*   !   */ Error,      Error,      Int,        Comment,
-/*   *   */ Error,      Error,      Int,        Comment,
-/*   /   */ Error,      Error,      Int,        Comment,
-/*   %   */ Error,      Error,      Int,        Comment,
-/*   ;   */ Error,      Error,      Int,        Comment,
-/*   :   */ Colon,      Error,      Int,        Comment,
-/*   ?   */ Error,      Error,      Int,        Comment,
-/*   $   */ Error,      Error,      Int,        Comment,
-/*   @   */ Error,      Error,      Int,        Comment,
-/*   \   */ Error,      Error,      Int,        Comment,
+/*   ,   */ Comma,      UEol,      Int,        Comment,
+/*   #   */ Comment,    UEol,      Int,        Comment,
+/*   =   */ Error,      UEol,      Int,        Comment,
+/*   +   */ Error,      UEol,      Int,        Comment,
+/*   -   */ Error,      UEol,      Int,        Comment,
+/*   &   */ Error,      UEol,      Int,        Comment,
+/*   |   */ Error,      UEol,      Int,        Comment,
+/*   ^   */ Error,      UEol,      Int,        Comment,
+/*   <   */ Error,      UEol,      Int,        Comment,
+/*   >   */ Error,      UEol,      Int,        Comment,
+/*   ~   */ Error,      UEol,      Int,        Comment,
+/*   !   */ Error,      UEol,      Int,        Comment,
+/*   *   */ Error,      UEol,      Int,        Comment,
+/*   /   */ Error,      UEol,      Int,        Comment,
+/*   %   */ Error,      UEol,      Int,        Comment,
+/*   ;   */ Error,      UEol,      Int,        Comment,
+/*   :   */ Colon,      UEol,      Int,        Comment,
+/*   ?   */ Error,      UEol,      Int,        Comment,
+/*   $   */ Error,      UEol,      Int,        Comment,
+/*   @   */ Error,      UEol,      Int,        Comment,
+/*   \   */ Error,      UEol,      Int,        Comment,
 
-/* Eof   */ End,        Error,      Int,        End,
-/* Other */ Error,      Error,      Error,      Comment,
+/* Eof   */ End,        UEol,      Int,        End,
+/* Other */ Error,      UEol,      Error,      Comment,
 ]};
 
 // ----------------------------------------------------------------------------
@@ -282,30 +284,30 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
         Transition { state, action, flags }
     }
 [
-//                      New                              +len┐
-//    TransitionId      State       Action            +line┐ │
-// ------------------------------------------------------------
-// Whitespace                                              │ │
-    t(X::Normal,        Normal,     Continue,           0b_0_0),
-    t(X::Cr,            AfterCr,    Continue,           0b_0_0),
-    t(X::Eol,           Normal,     Yield(T::Eos),      0b_1_0),
-// Comments                                                │ │
-    t(X::Comment,       Comment,    Continue,           0b_0_0),
+//                                                                   +len┐
+//    TransitionId      NewState    Action      Args              +line┐ │
+// ----------------------------------------------------------------------------
+// Whitespace                                                          │ │
+    t(X::Normal,        Normal,     Continue,                       0b_0_0),
+    t(X::Cr,            AfterCr,    Continue,                       0b_0_0),
+    t(X::UEol,          Normal,     UYield      (T::Eos),           0b_1_0),
+    t(X::Eol,           Normal,     Yield       (T::Eos),           0b_1_0),
+    t(X::Comment,       Comment,    Continue,                       0b_0_0),
 // Numbers
-    t(X::IntDec,        AfterInt,   ScanDec,            0b_0_0),
-    t(X::Int,           Normal,     UYield(T::Int),     0b_0_0),
+    t(X::IntDec,        AfterInt,   ScanDec,                        0b_0_0),
+    t(X::Int,           Normal,     UYield      (T::Int),           0b_0_0),
 // Simple Tokens
-    t(X::LParen,        Normal,     Yield(T::LParen),   0b_0_1),
-    t(X::RParen,        Normal,     Yield(T::RParen),   0b_0_1),
-    t(X::LSquare,       Normal,     Yield(T::LSquare),  0b_0_1),
-    t(X::RSquare,       Normal,     Yield(T::RSquare),  0b_0_1),
-    t(X::LCurly,        Normal,     Yield(T::LCurly),   0b_0_1),
-    t(X::RCurly,        Normal,     Yield(T::RCurly),   0b_0_1),
-    t(X::Comma,         Normal,     Yield(T::Comma),    0b_0_1),
-    t(X::Colon,         Normal,     Yield(T::Colon),    0b_0_1),
-// Termination                                             │ │
-    t(X::Error,         Normal,     Fail,               0b_0_0),
-    t(X::End,           Normal,     Succeed,            0b_0_0),
+    t(X::LParen,        Normal,     Yield       (T::LParen),        0b_0_1),
+    t(X::RParen,        Normal,     Yield       (T::RParen),        0b_0_1),
+    t(X::LSquare,       Normal,     Yield       (T::LSquare),       0b_0_1),
+    t(X::RSquare,       Normal,     Yield       (T::RSquare),       0b_0_1),
+    t(X::LCurly,        Normal,     Yield       (T::LCurly),        0b_0_1),
+    t(X::RCurly,        Normal,     Yield       (T::RCurly),        0b_0_1),
+    t(X::Comma,         Normal,     Yield       (T::Comma),         0b_0_1),
+    t(X::Colon,         Normal,     Yield       (T::Colon),         0b_0_1),
+// Termination                                                         │ │
+    t(X::Error,         Normal,     Fail,                           0b_0_0),
+    t(X::End,           Normal,     Succeed,                        0b_0_0),
 ]};
 
 // ----------------------------------------------------------------------------
@@ -435,7 +437,7 @@ impl<'a> Lexer<'a> {
         // Restore saved state and prepare for loop
         let mut state    = self.state;
         let     line     = self.line_next;
-        let mut line_inc;
+        let mut line_inc = 0;
         let mut len      = 0;
 
         // Discover next token
@@ -447,7 +449,7 @@ impl<'a> Lexer<'a> {
 
             // Update state
             state     = next.state;
-            line_inc  = next.line_inc();
+            line_inc += next.line_inc();
             len      += next.token_inc();
 
             // Perform action

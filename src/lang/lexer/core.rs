@@ -124,9 +124,6 @@ enum State {
     /// Normal state.  Any token is possible.
     Normal,
 
-    /// After a carriage return (0x0D).  Line feed (0x0A) is expected.
-    AfterCr,
-
     /// After a integer or magnitude.
     AfterInt,
 
@@ -149,13 +146,18 @@ enum TransitionId {
     /// Transition to `Normal` state and continue scanning.
     Normal,
 
-    /// Transition to `AfterCr` state and continue scanning.
-    Cr,
+    /// Handle a CR or CR+LF newline.
+    /// - Transition to `Normal` state.
+    /// - Consume next input byte if it is a line feed.
+    /// - Increment the line number for subsequent tokens.
+    /// - Emit an `Eos` token.
+    CrEol,
 
-    UEol,
-
-    /// Transition to `Normal` state, increment line, and emit an `Eos` token.
-    Eol,
+    /// Handle a LF newline.
+    /// - Transition to `Normal` state.
+    /// - Increment the line number for subsequent tokens.
+    /// - Emit an `Eos` token.
+    LfEol,
 
     /// Transition to `Comment` state and continue scanning.
     Comment,
@@ -206,48 +208,48 @@ impl TransitionId {
 static TRANSITION_MAP: [TransitionId; State::COUNT * Char::COUNT] = {
     use TransitionId::*;
 [
-//          Normal      AfterCr     AfterInt    Comment
-//          ------------------------------------------------------------
-/* Space */ Normal,     UEol,      Int,        Comment,
-/* Cr    */ Cr,         UEol,      Int,        Cr,
-/* Lf    */ Eol,        Eol,       Int,        Eol,
+//          Normal      AfterInt    Comment
+//          -------------------------------------------------
+/* Space */ Normal,     Int,        Comment,
+/* Cr 0D */ CrEol,      Int,        CrEol,
+/* Lf 0A */ LfEol,      Int,        LfEol,
 
-/* Ident */ Error,      UEol,      Error,      Comment,
-/* Digit */ IntDec,     UEol,      Error,      Comment,
+/* Ident */ Error,      Error,      Comment,
+/* Digit */ IntDec,     Error,      Comment,
 
-/*   (   */ LParen,     UEol,      Int,        Comment,
-/*   )   */ RParen,     UEol,      Int,        Comment,
-/*   [   */ LSquare,    UEol,      Int,        Comment,
-/*   ]   */ RSquare,    UEol,      Int,        Comment,
-/*   {   */ LCurly,     UEol,      Int,        Comment,
-/*   }   */ RCurly,     UEol,      Int,        Comment,
-/*   "   */ Error,      UEol,      Int,        Comment,
-/*   '   */ Error,      UEol,      Int,        Comment,
+/*   (   */ LParen,     Int,        Comment,
+/*   )   */ RParen,     Int,        Comment,
+/*   [   */ LSquare,    Int,        Comment,
+/*   ]   */ RSquare,    Int,        Comment,
+/*   {   */ LCurly,     Int,        Comment,
+/*   }   */ RCurly,     Int,        Comment,
+/*   "   */ Error,      Int,        Comment,
+/*   '   */ Error,      Int,        Comment,
 
-/*   ,   */ Comma,      UEol,      Int,        Comment,
-/*   #   */ Comment,    UEol,      Int,        Comment,
-/*   =   */ Error,      UEol,      Int,        Comment,
-/*   +   */ Error,      UEol,      Int,        Comment,
-/*   -   */ Error,      UEol,      Int,        Comment,
-/*   &   */ Error,      UEol,      Int,        Comment,
-/*   |   */ Error,      UEol,      Int,        Comment,
-/*   ^   */ Error,      UEol,      Int,        Comment,
-/*   <   */ Error,      UEol,      Int,        Comment,
-/*   >   */ Error,      UEol,      Int,        Comment,
-/*   ~   */ Error,      UEol,      Int,        Comment,
-/*   !   */ Error,      UEol,      Int,        Comment,
-/*   *   */ Error,      UEol,      Int,        Comment,
-/*   /   */ Error,      UEol,      Int,        Comment,
-/*   %   */ Error,      UEol,      Int,        Comment,
-/*   ;   */ Error,      UEol,      Int,        Comment,
-/*   :   */ Colon,      UEol,      Int,        Comment,
-/*   ?   */ Error,      UEol,      Int,        Comment,
-/*   $   */ Error,      UEol,      Int,        Comment,
-/*   @   */ Error,      UEol,      Int,        Comment,
-/*   \   */ Error,      UEol,      Int,        Comment,
+/*   ,   */ Comma,      Int,        Comment,
+/*   #   */ Comment,    Int,        Comment,
+/*   =   */ Error,      Int,        Comment,
+/*   +   */ Error,      Int,        Comment,
+/*   -   */ Error,      Int,        Comment,
+/*   &   */ Error,      Int,        Comment,
+/*   |   */ Error,      Int,        Comment,
+/*   ^   */ Error,      Int,        Comment,
+/*   <   */ Error,      Int,        Comment,
+/*   >   */ Error,      Int,        Comment,
+/*   ~   */ Error,      Int,        Comment,
+/*   !   */ Error,      Int,        Comment,
+/*   *   */ Error,      Int,        Comment,
+/*   /   */ Error,      Int,        Comment,
+/*   %   */ Error,      Int,        Comment,
+/*   ;   */ Error,      Int,        Comment,
+/*   :   */ Colon,      Int,        Comment,
+/*   ?   */ Error,      Int,        Comment,
+/*   $   */ Error,      Int,        Comment,
+/*   @   */ Error,      Int,        Comment,
+/*   \   */ Error,      Int,        Comment,
 
-/* Eof   */ End,        UEol,      Int,        End,
-/* Other */ Error,      UEol,      Error,      Comment,
+/*  Eof  */ End,        Int,        End,
+/* Other */ Error,      Error,      Comment,
 ]};
 
 // ----------------------------------------------------------------------------
@@ -289,9 +291,8 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
 // ----------------------------------------------------------------------------
 // Whitespace                                                          │ │
     t(X::Normal,        Normal,     Continue,                       0b_0_0),
-    t(X::Cr,            AfterCr,    Continue,                       0b_0_0),
-    t(X::UEol,          Normal,     UYield      (T::Eos),           0b_1_0),
-    t(X::Eol,           Normal,     Yield       (T::Eos),           0b_1_0),
+    t(X::CrEol,         Normal,     CrEos,                          0b_1_0),
+    t(X::LfEol,         Normal,     Yield       (T::Eos),           0b_1_0),
     t(X::Comment,       Comment,    Continue,                       0b_0_0),
 // Numbers
     t(X::IntDec,        AfterInt,   ScanDec,                        0b_0_0),
@@ -355,6 +356,9 @@ enum Action {
 
     /// Unread a byte and yield a token.
     UYield(Token),
+
+    /// Consume a line feed if next, then yield an end-of-statement token.
+    CrEos,
 
     // === Terminators ===
 
@@ -472,6 +476,13 @@ impl<'a> Lexer<'a> {
                 // Simple Tokens
                 Yield(token)    => break token,
                 UYield(token)   => { self.input.unread(); break token },
+
+                CrEos => {
+                    if self.input.read(&CHARS).1 != b'\n' {
+                        self.input.unread()
+                    }
+                    break T::Eos
+                },
 
                 // Terminators
                 Succeed         => break T::Eof,

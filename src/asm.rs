@@ -94,7 +94,10 @@ impl Assembler {
                 lexer.pos(),
                 lexer.len(),
                 lexer.line(),
-                std::str::from_utf8(lexer.text()).unwrap_or(""),
+                std::str::from_utf8(lexer.text())
+                    .unwrap_or("")
+                    .escape_default()
+                    .to_string(),
                 lexer.magnitude()
             );
 

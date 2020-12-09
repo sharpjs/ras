@@ -102,9 +102,10 @@ impl Assembler {
             );
 
             match token {
+                Token::Eos   => println!("-------------|-----|-----|------|----------|---------"),
                 Token::Eof   => break,
                 Token::Error => break,
-                _            => continue,
+                _            => (),
             }
         }
 

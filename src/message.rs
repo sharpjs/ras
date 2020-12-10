@@ -21,7 +21,7 @@ use crate::util::Location;
 
 use crate::asm::Result;
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Trait for types that log assembler messages.
 pub trait Log {
@@ -48,7 +48,7 @@ pub trait Log {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Trait for types that represent assembler messages.
 pub trait Message: Display + Sized {
@@ -81,7 +81,7 @@ pub trait Message: Display + Sized {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Message severity levels.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -130,7 +130,7 @@ impl Display for Severity {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Wrapper struct that causes a [`Message`] to format (via [`Display`]) as a
 /// full assembler message appropriate for logging.
@@ -148,7 +148,7 @@ impl<M: Message> Display for Full<M> {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Represents an I/O error that occurred when reading input.
 #[derive(Debug)]
@@ -166,7 +166,7 @@ impl Display for ReadError<'_> {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Represents an I/O error that occurred when writing output.
 #[derive(Debug)]
@@ -184,7 +184,7 @@ impl Display for WriteError<'_> {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Represents a syntax error.
 #[derive(Debug)]
@@ -198,7 +198,7 @@ impl Display for SyntaxError {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Wrapper struct that adds source path and textual location metadata to an
 /// assembler message.
@@ -238,7 +238,7 @@ impl<M: Message> Display for Located<'_, M> {
     }
 }
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

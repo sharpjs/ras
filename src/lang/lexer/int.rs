@@ -63,11 +63,15 @@ pub(super) fn scan_int(input: &mut Reader, base: Base) -> (Option<u64>, usize) {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Char {
-    Dig0, Dig1, Dig2, Dig3, Dig4, Dig5, Dig6, Dig7,
-    Dig8, Dig9, DigA, DigB, DigC, DigD, DigE, DigF,
-    Etc,
-    Eof,
-    Sep = 0b_1000_0000
+    Dig0, Dig1, Dig2, Dig3, Dig4, Dig5, Dig6, Dig7, // 0-7
+    Dig8, Dig9, DigA, DigB, DigC, DigD, DigE, DigF, // 8-9a-fA-F
+    Pos, // positive sign                           // +
+    Neg, // negative sign                           // -
+    Rad, // radix point                             // .
+    Exp, // exponent                                // Pp
+    Etc,                                            // everything else
+    Eof,                                            // end of file
+    Sep = 0b_1000_0000 // separator                 // _
 }
 
 impl LogicalChar for Char {
@@ -99,16 +103,16 @@ static CHARS: [Char; 128] = {
     __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
     __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
     __,     __,     __,     __,     __,     __,     __,     __,     // 2x │ !"#$%&'│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 2x │()*+,-./│
+    __,     __,     __,     Pos,    __,     Neg,    Rad,    __,     // 2x │()*+,-./│
     Dig0,   Dig1,   Dig2,   Dig3,   Dig4,   Dig5,   Dig6,   Dig7,   // 3x │01234567│
     Dig8,   Dig9,   __,     __,     __,     __,     __,     __,     // 3x │89:;<=>?│
     __,     DigA,   DigB,   DigC,   DigD,   DigE,   DigF,   __,     // 4x │@ABCDEFG│
     __,     __,     __,     __,     __,     __,     __,     __,     // 4x │HIJKLMNO│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 5x │PQRSTUVW│
+    Exp,    __,     __,     __,     __,     __,     __,     __,     // 5x │PQRSTUVW│
     __,     __,     __,     __,     __,     __,     __,     Sep,    // 5x │XYZ[\]^_│
     __,     DigA,   DigB,   DigC,   DigD,   DigE,   DigF,   __,     // 6x │`abcdefg│
     __,     __,     __,     __,     __,     __,     __,     __,     // 6x │hijklmno│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 7x │pqrstuvw│
+    Exp,    __,     __,     __,     __,     __,     __,     __,     // 7x │pqrstuvw│
     __,     __,     __,     __,     __,     __,     __,     __,     // 7x │xyz{|}~░│
 ]};
 

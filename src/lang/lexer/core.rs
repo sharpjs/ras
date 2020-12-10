@@ -291,8 +291,8 @@ static TRANSITION_LUT: [Transition; TransitionId::COUNT] = {
 // ----------------------------------------------------------------------------
 // Whitespace                                                          │ │
     t(X::Normal,        Normal,     Continue,                       0b_0_0),
-    t(X::CrEol,         Normal,     CrEos,                          0b_1_0),
-    t(X::LfEol,         Normal,     Yield       (T::Eos),           0b_1_0),
+    t(X::CrEol,         Normal,     CrEos,                          0b_1_1),
+    t(X::LfEol,         Normal,     Yield       (T::Eos),           0b_1_1),
     t(X::Comment,       Comment,    Continue,                       0b_0_0),
 // Numbers
     t(X::IntDec,        AfterInt,   ScanDec,                        0b_0_0),
@@ -478,7 +478,7 @@ impl<'a> Lexer<'a> {
                 UYield(token)   => { self.input.unread(); break token },
 
                 // Miscellaneous
-                CrEos           => { self.input.skip_if(b'\n'); break T::Eos },
+                CrEos           => { len += self.input.skip_if(b'\n'); break T::Eos },
 
                 // Terminators
                 Succeed         => break T::Eof,

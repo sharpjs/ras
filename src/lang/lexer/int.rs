@@ -135,8 +135,6 @@ mod tests {
         assert_eq!(reader.remaining(), b"");
     }
 
-    /*
-
     #[test]
     fn scan_int_junk() {
         for &base in &BASES { scan_int_junk_(base) }
@@ -147,7 +145,7 @@ mod tests {
 
         let (val, len) = scan_int(&mut reader, base);
 
-        assert_eq!(val, 0);
+        assert_eq!(val, None);
         assert_eq!(len, 0);
         assert_eq!(reader.remaining(), b"?");
     }
@@ -162,7 +160,7 @@ mod tests {
 
         let (val, len) = scan_int(&mut reader, base);
 
-        assert_eq!(val, 0);
+        assert_eq!(val, Some(0));
         assert_eq!(len, 1);
         assert_eq!(reader.remaining(), b"+");
     }
@@ -177,44 +175,44 @@ mod tests {
 
         let (val, len) = scan_int(&mut reader, base);
 
-        assert_eq!(val, 0);
+        assert_eq!(val, Some(0));
         assert_eq!(len, 1);
         assert_eq!(reader.remaining(), b"");
     }
 
     #[test]
     fn scan_int_all_digits() {
-        scan_int_typical_(Bin, b"01_234567_89_ABCDEFG", 0b01,                2, b"234567_89_ABCDEFG");
-        scan_int_typical_(Oct, b"01_234567_89_ABCDEFG", 0o01_234567,         8,        b"89_ABCDEFG");
-        scan_int_typical_(Dec, b"01_234567_89_ABCDEFG", 0_0123456789,       10,           b"ABCDEFG");
-        scan_int_typical_(Hex, b"01_234567_89_ABCDEFG", 0x0123456789ABCDEF, 16,                 b"G");
-        scan_int_typical_(Hex, b"01_234567_89_abcdefg", 0x0123456789abcdef, 16,                 b"g");
+        scan_int_typical_(Bin, b"01_234567_89_ABCDEFG", 0b01,                3, b"234567_89_ABCDEFG");
+        scan_int_typical_(Oct, b"01_234567_89_ABCDEFG", 0o01_234567,        10,        b"89_ABCDEFG");
+        scan_int_typical_(Dec, b"01_234567_89_ABCDEFG", 0_0123456789,       13,           b"ABCDEFG");
+        scan_int_typical_(Hex, b"01_234567_89_ABCDEFG", 0x0123456789ABCDEF, 19,                 b"G");
+        scan_int_typical_(Hex, b"01_234567_89_abcdefg", 0x0123456789abcdef, 19,                 b"g");
     }
 
-    fn scan_int_typical_(base: Base, bytes: &[u8], v: u64, l: u8, r: &[u8]) {
+    fn scan_int_typical_(base: Base, bytes: &[u8], v: u64, l: usize, r: &[u8]) {
         let mut reader = Reader::new(bytes);
 
         let (val, len) = scan_int(&mut reader, base);
 
-        assert_eq!(val, v);
+        assert_eq!(val, Some(v));
         assert_eq!(len, l);
         assert_eq!(reader.remaining(), r);
     }
 
     #[test]
     fn scan_int_max() {
-        scan_int_max_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+", 64);
-        scan_int_max_(Oct, b"1_777_777_777_777_777_777_777+", 22);
-        scan_int_max_(Dec, b"18_446_744_073_709_551_615+",    20);
-        scan_int_max_(Hex, b"FFFF_FFFF_FFFF_FFFF+",           16);
+        scan_int_max_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+", 71);
+        scan_int_max_(Oct, b"1_777_777_777_777_777_777_777+", 29);
+        scan_int_max_(Dec, b"18_446_744_073_709_551_615+",    26);
+        scan_int_max_(Hex, b"FFFF_FFFF_FFFF_FFFF+",           19);
 
     }
-    fn scan_int_max_(base: Base, bytes: &[u8], exp_len: u8) {
+    fn scan_int_max_(base: Base, bytes: &[u8], exp_len: usize) {
         let mut reader = Reader::new(bytes);
 
         let (val, len) = scan_int(&mut reader, base);
 
-        assert_eq!(val, 18_446_744_073_709_551_615);
+        assert_eq!(val, Some(18_446_744_073_709_551_615));
         assert_eq!(len, exp_len);
         assert_eq!(reader.remaining(), b"+");
     }
@@ -222,25 +220,25 @@ mod tests {
     #[test]
     fn scan_int_overflow() {
         // max + 1
-        scan_int_overflow_(Bin, b"1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000+");
-        scan_int_overflow_(Oct, b"2_000_000_000_000_000_000_000+");
-        scan_int_overflow_(Dec, b"18_446_744_073_709_551_616+");
-        scan_int_overflow_(Hex, b"1_0000_0000_0000_0000+");
+        scan_int_overflow_(Bin, b"1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000+", 73);
+        scan_int_overflow_(Oct, b"2_000_000_000_000_000_000_000+", 29);
+        scan_int_overflow_(Dec, b"18_446_744_073_709_551_616+",    26);
+        scan_int_overflow_(Hex, b"1_0000_0000_0000_0000+",         21);
 
         // huge
-        scan_int_overflow_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+");
-        scan_int_overflow_(Oct, b"777_777_777_777_777_777_777_777_777_777_777_777_777_777+");
-        scan_int_overflow_(Dec, b"999_999_999_999_999_999_999_999_999_999_999_999_999_999+");
-        scan_int_overflow_(Hex, b"FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF+");
+        scan_int_overflow_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+", 80);
+        scan_int_overflow_(Oct, b"777_777_777_777_777_777_777_777_777_777_777_777_777_777+", 55);
+        scan_int_overflow_(Dec, b"999_999_999_999_999_999_999_999_999_999_999_999_999_999+", 55);
+        scan_int_overflow_(Hex, b"FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF+",  54);
     }
 
-    fn scan_int_overflow_(base: Base, bytes: &[u8]) {
+    fn scan_int_overflow_(base: Base, bytes: &[u8], exp_len: usize) {
         let mut reader = Reader::new(bytes);
 
-        let (_, len) = scan_int(&mut reader, base);
+        let (val, len) = scan_int(&mut reader, base);
 
-        assert_eq!(len, 0);
+        assert_eq!(val, None);
+        assert_eq!(len, exp_len);
         assert_eq!(reader.remaining(), b"+");
     }
-    */
 }

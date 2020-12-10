@@ -499,19 +499,11 @@ impl<'a> Lexer<'a> {
         // Un-read first digit so that sublexer sees it
         self.input.unread();
 
-        match scan_int(&mut self.input, base) {
-            (_, 0) => {
-                // overflow
-                self.mag = 0;
-                self.len = 0;
-                Err(())
-            },
-            (v, l) => {
-                // success
-                self.mag  = v;
-                self.len += l as usize;
-                Ok(())
-            }
-        }
+        let (value, len) = scan_int(&mut self.input, base);
+
+        self.mag  = value.unwrap_or(0);
+        self.len += len;
+
+        match value { Some(_) => Ok(()), None => Err(()) }
     }
 }

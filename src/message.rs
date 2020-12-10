@@ -186,6 +186,23 @@ impl Display for WriteError<'_> {
 
 // ----------------------------------------------------------------------------
 
+/// Represents an 'invalid character sequence' error.
+#[derive(Debug)]
+pub struct InvalidCharsError<'a>(pub &'a str);
+
+impl Message for InvalidCharsError<'_> { }
+
+impl Display for InvalidCharsError<'_> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f,
+            "invalid character sequence '{}'",
+            self.0.escape_default().to_string()
+        )
+    }
+}
+
+// ----------------------------------------------------------------------------
+
 /// Represents a syntax error.
 #[derive(Debug)]
 pub struct SyntaxError;

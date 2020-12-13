@@ -16,45 +16,148 @@
 
 //! Integer sublexer.
 
+// Number format:
+//
+// [base] significand [exponent]
+//
+// where:
+//   base  sig  exp
+//    b'   1    p1
+//    o'   1.   p+1
+//    d'    .1  p-1
+//    x'   1.1
+
 use crate::lang::Base;
 use super::reader::*;
 
-pub(super) fn scan_int(input: &mut Reader, base: Base) -> (Option<u64>, usize) {
-    let mut val = 0u64;     // value accumulator
-    let mut len = 0;        // byte count
-    let mut ovf = false;    // overflow flag
+#[derive(Debug)]
+struct NumData {
+    parts:  [(u64, usize); 3],  // integer, fraction, exponent * (value, size)
+    invert: bool,               // whether exponent is negative
+    base:   Base,               // base
+}
 
+impl NumData {
+    fn new(base: Base) -> Self {
+        Self {
+            parts:  [(0, 0), (0, 0), (0, 0)],
+            invert: false,
+            base
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct State(u8);
+
+static STATES: [State; 4] = [
+    State(0b_011_000_00), // 0: significand integral part
+    State(0b_010_001_01), // 1: significand fractional part
+    State(0b_100_010_10), // 2: exponent or sign
+    State(0b_000_100_10), // 3: exponent
+    //      :---:---:--:
+    //      |   |   |xx|  // part index: 0=integer, 1=fraction, 2=exponent
+    //      |   |   | x|  // digits count toward: 0=nothing, 1=fraction scale
+    //      |   |   |x |  // digits count toward: 0=significand, 1=exponent
+    //      :---:---:--:
+    //      |   |  x|  |  // is_state_1
+    //      |   | x |  |  // is_state_2
+    //      |   |x  |  |  // is_state_3 / has_exponent_sign
+    //      :---:---:--:
+    //      |  x|   |  |  // can_goto_state_1
+    //      | x |   |  |  // can_goto_state_2
+    //      |x  |   |  |  // can_goto_state_3
+];
+
+impl State {
+    #[inline]
+    const fn part_index(self) -> usize {
+        (self.0 & 0b11) as usize
+    }
+
+    #[inline]
+    const fn scale_mask(self) -> usize {
+        self.mask_from_bit(0)
+    }
+
+    #[inline]
+    const fn sig_digit_mask(self) -> usize {
+        !self.exp_digit_mask()
+    }
+
+    #[inline]
+    const fn exp_digit_mask(self) -> usize {
+        self.mask_from_bit(1)
+    }
+
+    #[inline]
+    const fn has_exp_sign(self) -> bool {
+        self.0 & 0b100_00 != 0
+    }
+
+    #[inline]
+    const fn can_transition_to(self, next: State) -> bool {
+        (self.0 >> 5) & (next.0 >> 2) != 0
+    }
+
+    #[inline]
+    const fn mask_from_bit(self, n: usize) -> usize {
+        const USIZE_BITS: usize = std::mem::size_of::<usize>() * 8;
+
+        ( (self.0 as isize) << (USIZE_BITS - 1 - n) >> (USIZE_BITS - 1) ) as usize
+    }
+}
+
+// TODO: WIP converting this into a general number scanner
+pub fn scan_int(input: &mut Reader, base: Base) -> (Option<u64>, usize) {
+    let start = input.position();
     let radix = base.radix();
 
-    // Read until a non-digit is found
+    let mut data  = NumData::new(base);
+    let mut state = STATES[0];
+    let mut ovf   = false;      // overflow flag
+
     loop {
-        // Read next logical character
-        let (ch, _) = input.read(&CHARS);
+        let mut val = 0u64;     // value accumulator
+        let mut len = 0;        // digit count
 
-        // Get digit value, or 0 for separator
-        // Stop when digit is greater than the radix
-        let digit = ch.digit();
-        if digit >= radix { break }
+        // Read until a non-digit is found
+        let ch = loop {
+            // Read next logical character
+            let (ch, _) = input.read(&CHARS);
 
-        // Accumulate count
-        len += 1;
+            // Get digit value, or 0 for separator
+            // Stop when digit is greater than the radix
+            let digit = ch.digit();
+            if digit >= radix { break ch }
 
-        // Get digit mask: 00 for separator, FF for digit
-        let mask = ch.mask();
+            // Get digit mask: 00 for separator, FF for digit
+            let mask = ch.digit_mask();
 
-        // Accumulate digit
-        let scale  = (radix ^ 1) & mask ^ 1; // 1 for separator, radix for digit
-        let (v, o) = val.overflowing_mul(scale as u64); val = v; ovf |= o;
-        let (v, o) = val.overflowing_add(digit as u64); val = v; ovf |= o;
-    };
+            // Accumulate digit
+            let scale  = (radix ^ 1) & mask ^ 1; // 1 for separator, radix for digit
+            let (v, o) = val.overflowing_mul(scale as u64); val = v; ovf |= o;
+            let (v, o) = val.overflowing_add(digit as u64); val = v; ovf |= o;
+
+            // Accumulate count of digits, needed for fraction scale
+            len += (1 & mask) as usize;
+        };
+
+        data.parts[state.part_index()] = (val, len);
+
+        let next = STATES[ch.next_state() as usize];
+        if !state.can_transition_to(next) { break }
+        state = next;
+
+        data.invert |= ch.invert();
+    }
 
     // Unread the logical character that caused loop exit
     input.unread();
 
-    // Fake an overflow if nothing was scanned, so that no value is returned
-    ovf |= len == 0;
+    ovf |= data.parts[0].1 == 0;
 
-    (if ovf { None } else { Some(val) }, len)
+    (if ovf { None } else { Some(data.parts[0].0) }, input.position() - start)
 }
 
 // ----------------------------------------------------------------------------
@@ -63,31 +166,49 @@ pub(super) fn scan_int(input: &mut Reader, base: Base) -> (Option<u64>, usize) {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Char {
-    Dig0, Dig1, Dig2, Dig3, Dig4, Dig5, Dig6, Dig7, // 0-7
-    Dig8, Dig9, DigA, DigB, DigC, DigD, DigE, DigF, // 8-9a-fA-F
-    Pos, // positive sign                           // +
-    Neg, // negative sign                           // -
-    Rad, // radix point                             // .
-    Exp, // exponent                                // Pp
-    Etc,                                            // everything else
-    Eof,                                            // end of file
-    Sep = 0b_1000_0000 // separator                 // _
+    // Digits
+    Dig0, Dig1, Dig2, Dig3, Dig4, Dig5, Dig6, Dig7,
+    Dig8, Dig9, DigA, DigB, DigC, DigD, DigE, DigF,
+    // Non-digits
+    //            x-- OR into sign bit
+    //            | xx new state (if > current state)
+    Sep = 0b_1000_0000, // separator        [_]
+    Etc = 0b_1001_0000, // everything else  .|\z
+    Rad = 0b_1001_0001, // radix point      [.]
+    Exp = 0b_1001_0010, // exponent         [Pp]
+    Pos = 0b_1001_0011, // positive sign    [+]
+    Neg = 0b_1001_1011, // negative sign    [-]
 }
 
 impl LogicalChar for Char {
     const NON_ASCII: Self = Self::Etc;
-    const EOF:       Self = Self::Eof;
+    const EOF:       Self = Self::Etc;
 }
 
 impl Char {
     #[inline]
-    fn digit(self) -> u8 {
-        self as u8 & 0x1F
+    const fn digit(self) -> u8 {
+        self as u8 & 0b_1_1111
     }
 
     #[inline]
-    fn mask(self) -> u8 {
-        !((self as i8 >> 7) as u8)
+    const fn digit_mask(self) -> u8 {
+        !self.state_mask()
+    }
+
+    #[inline]
+    const fn state_mask(self) -> u8 {
+        (self as i8 >> 7) as u8
+    }
+
+    #[inline]
+    const fn next_state(self) -> u8 {
+        self as u8 & self.state_mask() & 0b11
+    }
+
+    #[inline]
+    const fn invert(self) -> bool {
+        self as u8 & 0b1000 != 0
     }
 }
 

@@ -15,7 +15,9 @@
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 mod error;
+mod integer;
 mod value;
 
 pub use self::error::*;
+pub use self::integer::*;
 pub use self::value::*;

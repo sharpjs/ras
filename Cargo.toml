@@ -18,6 +18,7 @@
 name    = "ras"
 version = "0.0.1"
 authors = ["Jeff Sharp <jeff.sharp@git>"]
+license = "GPL-3.0-or-later"
 edition = "2018"
 
 [dependencies.rug]

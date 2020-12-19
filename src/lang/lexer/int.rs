@@ -239,7 +239,7 @@ static CHARS: [Char; 128] = {
 
 #[cfg(test)]
 mod tests {
-    use crate::lang::Base::{self, *};
+    use crate::num::Base::{self, *};
     use super::super::reader::Reader;
     use super::scan_int;
 

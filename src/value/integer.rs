@@ -16,6 +16,7 @@
 
 //! Integer values.
 
+use rug::ops::*;
 use crate::num::Base;
 use super::Value;
 
@@ -51,5 +52,16 @@ impl Value for Integer {
 
     fn clone(&self) -> Box<dyn Value> {
         Box::new(Clone::clone(self))
+    }
+
+    #[inline]
+    fn op_pos(self: Box<Self>) -> Box<dyn Value> {
+        self
+    }
+
+    #[inline]
+    fn op_neg(mut self: Box<Self>) -> Box<dyn Value> {
+        self.val.neg_assign();
+        self
     }
 }

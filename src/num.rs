@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod int;
+//! Number support.
 
 /// Numeric bases.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -32,14 +32,18 @@ pub enum Base {
     Hex,
 }
 
+/// Returns the count of digits used to represent numbers in the base.
 impl Base {
     /// Returns the radix number, such as 8 for octal.
-    pub fn radix(self) -> usize {
+    #[inline(always)]
+    pub const fn radix(self) -> u8 {
+        use Base::*;
+
         match self {
-            Base::Bin =>  2,
-            Base::Oct =>  8,
-            Base::Dec => 10,
-            Base::Hex => 16,
+            Bin =>  2,
+            Oct =>  8,
+            Dec => 10,
+            Hex => 16,
         }
     }
 }
@@ -50,4 +54,3 @@ impl Default for Base {
         Base::Dec
     }
 }
-

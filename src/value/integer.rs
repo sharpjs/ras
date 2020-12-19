@@ -18,6 +18,7 @@
 
 use std::any::Any;
 
+use crate::impl_value_cast;
 use crate::num::Base;
 use super::Value;
 
@@ -31,29 +32,17 @@ impl Integer {
     pub fn new(base: Base) -> Box<Self> {
         Box::new(Self { val: rug::Integer::new(), base })
     }
-}
 
-impl dyn Value {
-    pub fn as_integer_ref(&self) -> Option<&Integer> {
-        self.downcast_ref::<Integer>()
-    }
-
-    pub fn as_integer_mut(&mut self) -> Option<&mut Integer> {
-        self.downcast_mut::<Integer>()
+    pub fn accumulate_digit(&mut self, _dig: u8) {
     }
 }
+
+impl_value_cast!(Integer: as_integer_ref, as_integer_mut);
 
 impl Value for Integer {
+    #[inline]
     fn type_name(&self) -> &str {
         "integer"
-    }
-
-    fn as_any_ref(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 
     fn eq(&self, other: &dyn Value) -> bool {

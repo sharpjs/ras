@@ -15,6 +15,8 @@
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::any::Any;
+
+use crate::impl_value_cast;
 use super::Value;
 
 #[derive(Clone, PartialEq, Eq, Hash, Default, Debug)]
@@ -26,27 +28,11 @@ impl Error {
     }
 }
 
-impl dyn Value {
-    pub fn as_error_ref(&self) -> Option<&Error> {
-        self.downcast_ref::<Error>()
-    }
-
-    pub fn as_error_mut(&mut self) -> Option<&mut Error> {
-        self.downcast_mut::<Error>()
-    }
-}
+impl_value_cast!(Error: as_error_ref, as_error_mut);
 
 impl Value for Error {
     fn type_name(&self) -> &str {
         "error"
-    }
-
-    fn as_any_ref(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 
     fn eq(&self, other: &dyn Value) -> bool {

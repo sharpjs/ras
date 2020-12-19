@@ -14,15 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Values.
+
 use std::any::Any;
 use std::fmt::Debug;
 use super::Error;
 
-/// Trait for literal values.
-pub trait Value: Any + Debug {
-    fn as_any_ref (&     self) -> &     dyn Any;
-    fn as_any_mut (& mut self) -> & mut dyn Any;
-
+/// Trait for values.
+pub trait Value: Any + Debug + AsRef<dyn Any> + AsMut<dyn Any> {
+    /// Returns the name of the value's type.
     fn type_name(&self) -> &str;
 
     fn eq(&self, other: &dyn Value) -> bool;
@@ -74,51 +74,83 @@ pub trait Value: Any + Debug {
     fn op_mem (self: Box<Self>, _name: &str) -> Box<dyn Value> { Error::new() }
 }
 
-impl dyn Value {
-    pub fn downcast_ref<T: Value>(&self) -> Option<&T> {
-        self.as_any_ref().downcast_ref::<T>()
-    }
+#[macro_export]
+macro_rules! impl_value_cast {
+    ($type:ty: $as_type_ref:ident, $as_type_mut:ident) => {
+        impl AsRef<dyn Any> for $type {
+            #[inline(always)]
+            fn as_ref(&self) -> &dyn Any { self }
+        }
 
-    pub fn downcast_mut<T: Value>(&mut self) -> Option<&mut T> {
-        self.as_any_mut().downcast_mut::<T>()
+        impl AsMut<dyn Any> for $type {
+            #[inline(always)]
+            fn as_mut(&mut self) -> &mut dyn Any { self }
+        }
+
+        impl dyn Value {
+            #[inline]
+            pub fn $as_type_ref(&self) -> Option<&$type> {
+                self.as_ref().downcast_ref::<$type>()
+            }
+
+            #[inline]
+            pub fn $as_type_mut(&mut self) -> Option<&mut $type> {
+                self.as_mut().downcast_mut::<$type>()
+            }
+        }
     }
 }
 
+/*
+// These are not needed currently, but might be handy later on.
+#[cfg(maybe_later)]
+impl dyn Value {
+    #[inline]
+    pub fn downcast_ref<T: Value>(&self) -> Option<&T> {
+        self.as_ref().downcast_ref::<T>()
+    }
+
+    #[inline]
+    pub fn downcast_mut<T: Value>(&mut self) -> Option<&mut T> {
+        self.as_mut().downcast_mut::<T>()
+    }
+}
+*/
+
 #[cfg(test)]
 mod tests {
+    use crate::impl_value_cast;
     use super::*;
+    
+    #[derive(Clone, Copy, Debug)]
+    pub struct Unit;
+    // pub required because impl_value_cast! implements public methods
 
-    impl Value for () {
+    impl_value_cast!(Unit: as_unit_ref, as_unit_mut);
+
+    impl Value for Unit {
         fn type_name(&self) -> &str {
             "unit"
         }
 
-        fn as_any_ref(&self) -> &dyn Any {
-            self
-        }
-
-        fn as_any_mut(&mut self) -> &mut dyn Any {
-            self
-        }
-
         fn eq(&self, other: &dyn Value) -> bool {
-            other.downcast_ref::<Self>().is_some()
+            other.as_unit_ref().is_some()
         }
 
         fn clone(&self) -> Box<dyn Value> {
-            Box::new(())
+            Box::new(Unit)
         }
     }
 
     #[test]
     fn type_name() {
-        assert_eq!( Box::new(()).type_name(), "unit" );
+        assert_eq!( Box::new(Unit).type_name(), "unit" );
     }
 
     #[test]
     fn op_neg() {
         assert_eq!(
-            Box::new(()).op_neg().downcast_ref::<Error>(),
+            Box::new(Unit).op_neg().as_error_ref(),
             Some(&Error())
         );
     }

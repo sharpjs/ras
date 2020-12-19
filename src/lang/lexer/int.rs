@@ -27,7 +27,7 @@
 //    d'    .1  p-1
 //    x'   1.1
 
-use crate::lang::Base;
+use crate::num::Base;
 use super::reader::*;
 
 #[derive(Debug)]

@@ -36,33 +36,3 @@ pub enum Visibility {
     /// Equivalent to ELF binding STB_WEAK with an undefined symbol.
     Extern,
 }
-
-/// Numeric bases.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Base {
-    /// Binary.
-    Bin,
-
-    /// Octal.
-    Oct,
-
-    /// Decimal.
-    Dec,
-
-    /// Hexadecimal.
-    Hex,
-}
-
-impl Base {
-    /// Returns the count of digits used to represent numbers in the base.
-    pub fn radix(self) -> u8 {
-        use Base::*;
-
-        match self {
-            Bin =>  2,
-            Oct =>  8,
-            Dec => 10,
-            Hex => 16,
-        }
-    }
-}

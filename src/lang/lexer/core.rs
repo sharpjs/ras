@@ -17,8 +17,8 @@
 //! Primary lexical analyzer.
 
 use crate::asm::{Assembler, Result};
-use crate::lang::Base;
 use crate::lang::token::Token::{self, self as T};
+use crate::num::Base;
 
 use super::reader::{LogicalChar, Reader};
 use super::int::scan_int;

@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Values.
+//! Assembly language values.
 
 #[macro_use]
-mod value;
-mod error;
+mod trait;
 mod integer;
+mod error;
 
-pub use self::value::*;
-pub use self::error::*;
+pub use self::trait::*;
 pub use self::integer::*;
+pub use self::error::*;

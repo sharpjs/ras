@@ -76,14 +76,14 @@ pub trait Value: Any + Debug + AsRef<dyn Any> + AsMut<dyn Any> {
 
 macro_rules! impl_value_cast {
     ($type:ty: $as_type_ref:ident, $as_type_mut:ident) => {
-        impl AsRef<dyn std::any::Any> for $type {
+        impl AsRef<dyn ::std::any::Any> for $type {
             #[inline(always)]
-            fn as_ref(&self) -> &dyn std::any::Any { self }
+            fn as_ref(&self) -> &dyn ::std::any::Any { self }
         }
 
-        impl AsMut<dyn std::any::Any> for $type {
+        impl AsMut<dyn ::std::any::Any> for $type {
             #[inline(always)]
-            fn as_mut(&mut self) -> &mut dyn std::any::Any { self }
+            fn as_mut(&mut self) -> &mut dyn ::std::any::Any { self }
         }
 
         impl dyn $crate::value::Value {

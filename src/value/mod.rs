@@ -17,10 +17,10 @@
 //! Assembly language values.
 
 #[macro_use]
-mod trait;
+mod traits;
 mod integer;
 mod error;
 
-pub use self::trait::*;
+pub use self::traits::*;
 pub use self::integer::*;
 pub use self::error::*;

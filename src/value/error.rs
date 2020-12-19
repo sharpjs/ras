@@ -20,6 +20,7 @@ use super::Value;
 pub struct Error();
 
 impl Error {
+    #[inline]
     pub fn new() -> Box<Self> {
         Box::new(Self())
     }
@@ -28,6 +29,7 @@ impl Error {
 impl_value_cast!(Error: as_error_ref, as_error_mut);
 
 impl Value for Error {
+    #[inline]
     fn type_name(&self) -> &str {
         "error"
     }
@@ -36,6 +38,7 @@ impl Value for Error {
         other.as_error_ref().is_some()
     }
 
+    #[inline]
     fn clone(&self) -> Box<dyn Value> {
         Error::new()
     }

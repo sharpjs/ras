@@ -16,9 +16,6 @@
 
 //! Integer values.
 
-use std::any::Any;
-
-use crate::impl_value_cast;
 use crate::num::Base;
 use super::Value;
 

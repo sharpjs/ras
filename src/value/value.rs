@@ -74,20 +74,19 @@ pub trait Value: Any + Debug + AsRef<dyn Any> + AsMut<dyn Any> {
     fn op_mem (self: Box<Self>, _name: &str) -> Box<dyn Value> { Error::new() }
 }
 
-#[macro_export]
 macro_rules! impl_value_cast {
     ($type:ty: $as_type_ref:ident, $as_type_mut:ident) => {
-        impl AsRef<dyn Any> for $type {
+        impl AsRef<dyn std::any::Any> for $type {
             #[inline(always)]
-            fn as_ref(&self) -> &dyn Any { self }
+            fn as_ref(&self) -> &dyn std::any::Any { self }
         }
 
-        impl AsMut<dyn Any> for $type {
+        impl AsMut<dyn std::any::Any> for $type {
             #[inline(always)]
-            fn as_mut(&mut self) -> &mut dyn Any { self }
+            fn as_mut(&mut self) -> &mut dyn std::any::Any { self }
         }
 
-        impl dyn Value {
+        impl dyn $crate::value::Value {
             #[inline]
             pub fn $as_type_ref(&self) -> Option<&$type> {
                 self.as_ref().downcast_ref::<$type>()
@@ -119,7 +118,6 @@ impl dyn Value {
 
 #[cfg(test)]
 mod tests {
-    use crate::impl_value_cast;
     use super::*;
     
     #[derive(Clone, Copy, Debug)]

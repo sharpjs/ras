@@ -14,10 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Values.
+
+#[macro_use]
+mod value;
 mod error;
 mod integer;
-mod value;
 
+pub use self::value::*;
 pub use self::error::*;
 pub use self::integer::*;
-pub use self::value::*;

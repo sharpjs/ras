@@ -26,6 +26,7 @@ mod message;
 mod num;
 mod util;
 mod value;
+mod value2;
 
 use std::env::args;
 use std::process::exit;

@@ -16,12 +16,11 @@
 
 //! Integer values.
 
-//use std::cmp::Ordering::*;
-//use rug::{Assign};
+use std::ops::*;
 use rug::ops::*;
 
 use crate::num::Base;
-use super::Value;
+use super::{Error, Value};
 
 #[derive(Clone, PartialEq, Eq, Hash, Default, Debug)]
 pub struct Integer {
@@ -79,5 +78,16 @@ impl Value for Integer {
         self.val.signum_mut();
         self.val.abs_mut();
         self
+    }
+
+    fn op_add(mut self: Box<Self>, rhs: &dyn Value) -> Box<dyn Value> {
+        if let Some(i) = rhs.as_integer_ref() {
+            self.val.add_assign(&i.val);
+            self
+        } else if rhs.as_error_ref().is_some() {
+            self
+        } else {
+            Error::new()
+        }
     }
 }

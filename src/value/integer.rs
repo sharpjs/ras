@@ -16,7 +16,10 @@
 
 //! Integer values.
 
+//use std::cmp::Ordering::*;
+//use rug::{Assign};
 use rug::ops::*;
+
 use crate::num::Base;
 use super::Value;
 
@@ -62,6 +65,19 @@ impl Value for Integer {
     #[inline]
     fn op_neg(mut self: Box<Self>) -> Box<dyn Value> {
         self.val.neg_assign();
+        self
+    }
+
+    #[inline]
+    fn op_cpl(mut self: Box<Self>) -> Box<dyn Value> {
+        self.val.not_assign();
+        self
+    }
+
+    #[inline]
+    fn op_not(mut self: Box<Self>) -> Box<dyn Value> {
+        self.val.signum_mut();
+        self.val.abs_mut();
         self
     }
 }

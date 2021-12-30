@@ -22,3 +22,4 @@
 //! byte-order marker `EF` `BB` `BF`.
 
 pub mod input;
+pub mod lexer;

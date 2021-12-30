@@ -1,0 +1,11 @@
+# Reference: https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name    = "ras"
+version = "0.0.0"
+authors = ["Jeff Sharp <public@sharpjs.net>"]
+license = "GPL-3.0-or-later"
+edition = "2021"
+#rust = "1.53"
+
+[dependencies]

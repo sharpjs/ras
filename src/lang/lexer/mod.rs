@@ -1,5 +1,5 @@
 // This file is part of ras, an assembler.
-// Copyright 2021 Jeffrey Sharp
+// Copyright 2022 Jeffrey Sharp
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published
@@ -15,6 +15,12 @@
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 //! Lexical analyzer.
+
+use std::ops::Range;
+
+use super::input::Cursor;
+
+mod main;
 
 // ----------------------------------------------------------------------------
 
@@ -218,4 +224,27 @@ pub enum Token {
 
     /// End of file.
     Eof
+}
+
+// ----------------------------------------------------------------------------
+
+/// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
+#[derive(Clone, Debug)]
+pub struct Lexer<I: Iterator<Item = u8>> {
+    input: Cursor<I>,
+    loc:   Range<usize>,
+}
+
+impl<I: Iterator<Item = u8>> Lexer<I> {
+    pub fn new(iter: I) -> Self {
+        let mut input = Cursor::new(iter);
+        input.advance();
+        Self { input, loc: 0..0, }
+    }
+
+    /// Advances to the next token and returns its type.
+    #[inline]
+    pub fn next(&mut self) -> Token {
+        self.scan_main()
+    }
 }

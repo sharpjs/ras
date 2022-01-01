@@ -1,5 +1,5 @@
 // This file is part of ras, an assembler.
-// Copyright 2021 Jeffrey Sharp
+// Copyright 2022 Jeffrey Sharp
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published
@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Input cursor and logical character sets.
+//! Input cursor and logical character set trait.
+
+use std::fmt::Debug;
 
 // ----------------------------------------------------------------------------
 
@@ -41,39 +43,53 @@ pub trait LogicalChar: Copy + Eq {
 /// A `Cursor` takes a sequence of bytes as input and provides a forward-only
 /// cursor over a sequence of logical characters.
 ///
-#[derive(Clone, Copy)]
-pub struct Cursor<I: IntoIterator<Item = u8>> {
+#[derive(Clone, Copy, Debug)]
+pub struct Cursor<I: Iterator<Item = u8>> {
     cur:  Option<u8>,
     pos:  usize,
-    iter: I::IntoIter,
+    iter: I,
 }
 
-impl<I: IntoIterator<Item = u8>> Cursor<I> {
-    /// Creates a new [`Cursor`] over the given source.
+impl<I: Iterator<Item = u8>> Cursor<I> {
+    /// Creates a new [`Cursor`] over the given iterator.
     #[inline(always)]
-    pub fn new(src: I) -> Self {
-        Self { cur: None, pos: 0, iter: src.into_iter() }
+    pub fn new(iter: I) -> Self {
+        Self { cur: None, pos: 0, iter }
     }
 
     /// Advances the cursor to the next byte.
     ///
-    /// This method increments the [`Self::position()`] of the reader unless
-    /// the reader is positioned at the end of input, in which case this method
-    /// does nothing.
+    /// If the cursor is positioned before the end of input, this method
+    /// increments the [`Self::position()`] of the cursor.  Otherwise, this
+    /// method does nothing.
     #[inline(always)]
     pub fn advance(&mut self) {
         self.pos += self.cur.is_some() as usize;
         self.cur  = self.iter.next();
     }
 
-    /// Returns the current byte position of the cursor.
+    /// Advances the cursor to the next byte if the current byte has the given
+    /// value.
+    ///
+    /// If the cursor is positioned before the end of input and the byte at the
+    /// current position equals the given `byte`, this method increments the
+    /// [`Self::position()`] of the cursor.  Otherwise, this method does
+    /// nothing.
+    #[inline(always)]
+    pub fn advance_if(&mut self, byte: u8) {
+        if self.cur == Some(byte) {
+            self.advance();
+        }
+    }
+
+    /// Returns the current position of the cursor.
     #[inline(always)]
     pub fn position(&self) -> usize {
         self.pos
     }
 
-    /// Classifies the byte at the current position of the cursor according to
-    /// the logical character set formed by the type `C` and `map`.
+    /// Classifies the byte at the current position of the cursor as some
+    /// logical character of type `C` using the given character `map`.
     #[inline(always)]
     pub fn classify<C: LogicalChar>(&self, map: &[C; 128]) -> (C, u8) {
         match self.cur {
@@ -122,7 +138,7 @@ pub mod tests {
     ]};
 
     #[test]
-    fn cursor_read() {
+    fn cursor_use() {
         let mut cursor = super::Cursor::new("Hi!\u{ED}".bytes());
 
         assert_eq!( cursor.position(),       0          );

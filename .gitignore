@@ -1,3 +1,18 @@
+# Local
 /local/
+
+# Rust
 /target/
 /macros/target/
+
+# Temporary
+*.log
+*.old
+*.tmp
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini

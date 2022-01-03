@@ -1,5 +1,7 @@
 // This file is part of ras, an assembler.
-// Copyright 2021 Jeffrey Sharp
+// Copyright 2022 Jeffrey Sharp
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
 //
 // ras is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published

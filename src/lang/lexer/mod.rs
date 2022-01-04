@@ -239,7 +239,7 @@ impl Display for Token {
             Int          => "int",
             Float        => "float",
             Str          => "str",
-            Char         => "shar",
+            Char         => "char",
             LogNot       => "!",
             BitNot       => "~",
             Mul          => "*",

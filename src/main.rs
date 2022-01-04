@@ -46,13 +46,17 @@ fn main() {
             continue;
         }
 
+        println!("[{}]", path);
+        println!("╭──────┬────────┬────────┬─────────╮");
+        println!("│ LINE │ OFFSET │ LENGTH │ TYPE    │");
+        println!("╞══════╪════════╪════════╪═════════╡");
+
         let mut lexer = Lexer::new(content.bytes());
 
         loop {
             let token = lexer.next();
             println!(
-                "[{}:{}] @{} +{} {:?}",
-                path,
+                "│ {:4} │ {:6} │ {:6} │ {:7} │",
                 lexer.line(),
                 lexer.offset(),
                 lexer.len(),
@@ -60,5 +64,6 @@ fn main() {
             );
             if token == Token::Eof { break; }
         }
+        println!("╰──────┴────────┴────────┴─────────╯");
     }
 }

@@ -18,6 +18,8 @@
 
 //! Lexical analyzer.
 
+use std::fmt::{self, Display, Formatter};
+
 use super::input::Cursor;
 
 mod main;
@@ -224,6 +226,79 @@ pub enum Token {
 
     /// End of file.
     Eof
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        use Token::*;
+
+        let s = match *self {
+            Ident        => "ident",
+            Label        => "label",
+            Param        => "param",
+            Int          => "int",
+            Float        => "float",
+            Str          => "str",
+            Char         => "shar",
+            LogNot       => "!",
+            BitNot       => "~",
+            Mul          => "*",
+            Div          => "/",
+            Mod          => "%",
+            UMul         => "+*",
+            UDiv         => "+/",
+            UMod         => "+%",
+            Add          => "+",
+            Sub          => "-",
+            Shl          => "<<",
+            Shr          => ">>",
+            UShr         => "+>>",
+            BitAnd       => "&",
+            BitXor       => "^",
+            BitOr        => "|",
+            Eq           => "==",
+            NotEq        => "!=",
+            Less         => "<",
+            More         => ">",
+            LessEq       => "<=",
+            MoreEq       => ">=",
+            ULess        => "+<",
+            UMore        => "+>",
+            ULessEq      => "+<=",
+            UMoreEq      => "+>=",
+            Unknown      => "?",
+            LogAnd       => "&&",
+            LogOr        => "||",
+            Assign       => "=",
+            MulAssign    => "*=",
+            DivAssign    => "/=",
+            ModAssign    => "%=",
+            UMulAssign   => "+*=",
+            UDivAssign   => "+/=",
+            UModAssign   => "+%=",
+            AddAssign    => "+=",
+            SubAssign    => "-=",
+            ShlAssign    => "<<=",
+            ShrAssign    => ">>=",
+            UShrAssign   => "+>>=",
+            BitAndAssign => "&=",
+            BitXorAssign => "^=",
+            BitOrAssign  => "|=",
+            LogAndAssign => "&&=",
+            LogOrAssign  => "||=",
+            LCurly       => "{",
+            RCurly       => "}",
+            LParen       => "(",
+            RParen       => ")",
+            LSquare      => "[",
+            RSquare      => "]",
+            Colon        => ":",
+            Comma        => ",",
+            Eos          => "EOS",
+            Eof          => "EOF",
+        };
+        s.fmt(f)
+    }
 }
 
 // ----------------------------------------------------------------------------

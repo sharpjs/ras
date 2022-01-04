@@ -128,12 +128,15 @@ enum State {
     Equal,
 
     /// After `+`.
-    Plus, // <- COUNT references this
+    Plus,
+
+    /// After `-`.
+    Minus, // <- COUNT references this
 }
 
 impl State {
     /// Count of main lexer states.
-    const COUNT: usize = Self::Plus as usize + 1;
+    const COUNT: usize = Self::Minus as usize + 1;
 }
 
 // ----------------------------------------------------------------------------
@@ -210,6 +213,8 @@ enum Transition {
     /// Consume the current input byte and emit a `Colon` token.
     Colon,
 
+    // = ...
+
     /// Consume the current input byte and continue scanning in `Equal`
     /// state.
     Equal_,
@@ -219,6 +224,8 @@ enum Transition {
 
     /// Consume the current input byte and emit an `Eq` token.
     Eq,
+
+    // + ...
 
     /// Consume the current input byte and continue scanning in `Plus`
     /// state.
@@ -232,6 +239,23 @@ enum Transition {
 
     /// Consume the current input byte and emit an `Inc` token.
     Inc,
+
+    // - ...
+
+    /// Consume the current input byte and continue scanning in `Minus`
+    /// state.
+    Minus_,
+
+    /// Emit a `Sub` token.
+    Sub,
+
+    /// Consume the current input byte and emit a `SubAssign` token.
+    SubAssign,
+
+    /// Consume the current input byte and emit a `Dec` token.
+    Dec,
+
+    // Other
 
     /// Emit an `Eof` token.
     End,
@@ -276,14 +300,20 @@ impl Transition {
             X::RCurly         => ( Produce   (T::RCurly),       1 ),
             X::Comma          => ( Produce   (T::Comma),        1 ),
             X::Colon          => ( Produce   (T::Colon),        1 ),
-            // Complex Tokens    ----------------------------------
+            // = ...             ----------------------------------
             X::Equal_         => ( Continue  (S::Equal),        1 ),
             X::Assign         => ( Yield     (T::Assign),       0 ),
             X::Eq             => ( Produce   (T::Eq),           1 ),
+            // + ...             ----------------------------------
             X::Plus_          => ( Continue  (S::Plus),         1 ),
             X::Add            => ( Yield     (T::Add),          0 ),
             X::AddAssign      => ( Produce   (T::AddAssign),    1 ),
             X::Inc            => ( Produce   (T::Inc),          1 ),
+            // - ...             ----------------------------------
+            X::Minus_         => ( Continue  (S::Minus),        1 ),
+            X::Sub            => ( Yield     (T::Sub),          0 ),
+            X::SubAssign      => ( Produce   (T::SubAssign),    1 ),
+            X::Dec            => ( Produce   (T::Dec),          1 ),
             // Other             ----------------------------------
             X::End            => ( Yield     (T::Eof),          0 ), // will position be correct?
             X::Error          => ( Error     ,                  0 ),
@@ -353,48 +383,48 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
     use Transition::*;
     const __: Transition = Error;
 [
-//          Normal      Comment     Equal      Plus
-//          ------------------------------------------------
-/* Space */ Normal,     Comment,    Assign,    Add,
-/*   Cr  */ CrEol,      CrEol,      Assign,    Add,
-/*   Lf  */ LfEol,      LfEol,      Assign,    Add,
+//          Normal      Comment     Equal       Plus        Minus
+//          -------------------------------------------------------------- ---
+/* Space */ Normal,     Comment,    Assign,     Add,        Sub,
+/*   Cr  */ CrEol,      CrEol,      Assign,     Add,        Sub,
+/*   Lf  */ LfEol,      LfEol,      Assign,     Add,        Sub,
 
-/* Ident */ Ident,      Comment,    Assign,    Add,
-/* Digit */ IntDec,     Comment,    Assign,    Add,
+/* Ident */ Ident,      Comment,    Assign,     Add,        Sub,
+/* Digit */ IntDec,     Comment,    Assign,     Add,        Sub,
 
-/*   (   */ LParen,     Comment,    Assign,    Add,
-/*   )   */ RParen,     Comment,    Assign,    Add,
-/*   [   */ LSquare,    Comment,    Assign,    Add,
-/*   ]   */ RSquare,    Comment,    Assign,    Add,
-/*   {   */ LCurly,     Comment,    Assign,    Add,
-/*   }   */ RCurly,     Comment,    Assign,    Add,
-/*   "   */ Str,        Comment,    Assign,    Add,
-/*   '   */ Char,       Comment,    Assign,    Add,
+/*   (   */ LParen,     Comment,    Assign,     Add,        Sub,
+/*   )   */ RParen,     Comment,    Assign,     Add,        Sub,
+/*   [   */ LSquare,    Comment,    Assign,     Add,        Sub,
+/*   ]   */ RSquare,    Comment,    Assign,     Add,        Sub,
+/*   {   */ LCurly,     Comment,    Assign,     Add,        Sub,
+/*   }   */ RCurly,     Comment,    Assign,     Add,        Sub,
+/*   "   */ Str,        Comment,    Assign,     Add,        Sub,
+/*   '   */ Char,       Comment,    Assign,     Add,        Sub,
 
-/*   ,   */ Comma,      Comment,    Assign,    Add,
-/*   #   */ Comment,    Comment,    Assign,    Add,
-/*   =   */ Equal_,     Comment,    Eq,        AddAssign,
-/*   +   */ Plus_,      Comment,    Assign,    Inc,
-/*   -   */ __,         Comment,    Assign,    Add,
-/*   &   */ __,         Comment,    Assign,    Add,
-/*   |   */ __,         Comment,    Assign,    Add,
-/*   ^   */ __,         Comment,    Assign,    Add,
-/*   <   */ __,         Comment,    Assign,    __, // PlusLt_
-/*   >   */ __,         Comment,    Assign,    __, // PlusGt_
-/*   ~   */ BitNot,     Comment,    Assign,    Add,
-/*   !   */ LogNot,     Comment,    Assign,    Add,
-/*   *   */ __,         Comment,    Assign,    __, // PlusStar_
-/*   /   */ __,         Comment,    Assign,    __, // PlusSlash_
-/*   %   */ __,         Comment,    Assign,    __, // PlusPercent_
-/*   ;   */ __,         Comment,    Assign,    Add,
-/*   :   */ Colon,      Comment,    Assign,    Add,
-/*   ?   */ Unknown,    Comment,    Assign,    Add,
-/*   $   */ Param,      Comment,    Assign,    Add,
-/*   @   */ __,         Comment,    Assign,    Add,
-/*   \   */ __,         Comment,    Assign,    Add,
+/*   ,   */ Comma,      Comment,    Assign,     Add,        Sub,
+/*   #   */ Comment,    Comment,    Assign,     Add,        Sub,
+/*   =   */ Equal_,     Comment,    Eq,         AddAssign,  SubAssign,
+/*   +   */ Plus_,      Comment,    Assign,     Inc,        Sub,
+/*   -   */ Minus_,     Comment,    Assign,     Add,        Dec,
+/*   &   */ __,         Comment,    Assign,     Add,        Sub,
+/*   |   */ __,         Comment,    Assign,     Add,        Sub,
+/*   ^   */ __,         Comment,    Assign,     Add,        Sub,
+/*   <   */ __,         Comment,    Assign,     __,         Sub,
+/*   >   */ __,         Comment,    Assign,     __,         Sub,
+/*   ~   */ BitNot,     Comment,    Assign,     Add,        Sub,
+/*   !   */ LogNot,     Comment,    Assign,     Add,        Sub,
+/*   *   */ __,         Comment,    Assign,     __,         Sub,
+/*   /   */ __,         Comment,    Assign,     __,         Sub,
+/*   %   */ __,         Comment,    Assign,     __,         Sub,
+/*   ;   */ __,         Comment,    Assign,     Add,        Sub,
+/*   :   */ Colon,      Comment,    Assign,     Add,        Sub,
+/*   ?   */ Unknown,    Comment,    Assign,     Add,        Sub,
+/*   $   */ Param,      Comment,    Assign,     Add,        Sub,
+/*   @   */ __,         Comment,    Assign,     Add,        Sub,
+/*   \   */ __,         Comment,    Assign,     Add,        Sub,
 
-/*  Eof  */ End,        End,        Assign,    Add,
-/* Other */ Error,      Comment,    Assign,    Add,
+/*  Eof  */ End,        End,        Assign,     Add,        Sub,
+/* Other */ Error,      Comment,    Assign,     Add,        Sub,
 ]};
 
 // ----------------------------------------------------------------------------

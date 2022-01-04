@@ -58,8 +58,8 @@ fn main() {
             println!(
                 "│ {:4} │ {:6} │ {:6} │ {:7} │",
                 lexer.line(),
-                lexer.offset(),
-                lexer.len(),
+                lexer.range().start,
+                lexer.range().len(),
                 token
             );
             if token == Token::Eof { break; }

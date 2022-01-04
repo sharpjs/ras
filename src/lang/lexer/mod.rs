@@ -19,6 +19,7 @@
 //! Lexical analyzer.
 
 use std::fmt::{self, Display, Formatter};
+use std::ops::Range;
 
 use super::input::Cursor;
 
@@ -317,8 +318,7 @@ pub struct Lexer<I: Iterator<Item = u8>> {
     input:     Cursor<I>,
     line:      usize,
     line_next: usize,
-    offset:    usize,
-    len:       usize,
+    range:     Range<usize>,
 }
 
 impl<I: Iterator<Item = u8>> Lexer<I> {
@@ -326,7 +326,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     pub fn new(iter: I) -> Self {
         let mut input = Cursor::new(iter);
         input.advance();
-        Self { input, line: 0, line_next: 1, offset: 0, len: 0 }
+        Self { input, line: 0, line_next: 1, range: 0..0 }
     }
 
     /// Advances to the next token and returns its type.
@@ -341,16 +341,10 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         self.line
     }
 
-    /// Returns the byte offset within the input stream at which the current
-    /// token begins.
+    /// Returns the byte position range of the current token within the input
+    /// stream.
     #[inline]
-    pub fn offset(&self) -> usize {
-        self.offset
-    }
-
-    /// Returns the length in bytes of the current token.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.len
+    pub fn range(&self) -> &Range<usize> {
+        &self.range
     }
 }

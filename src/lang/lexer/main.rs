@@ -268,15 +268,15 @@ enum Transition {
 }
 
 impl Transition {
-    /// Returns the action and token length increment for the transition.
-    fn decode(self) -> (Action, usize) {
+    /// Returns the action and token start flag for the transition.
+    fn decode(self) -> (Action, u8) {
         use Action::*;
         use State      as S;
         use Token      as T;
         use Transition as X;
 
         match self {
-            //                     Action    Arguments    +Length
+            //                     Action    Arguments     Token?
             // Whitespace        ----------------------------------
             X::Normal         => ( Continue  (S::Normal),       0 ),
             X::CrEol          => ( ScanCrLf  ,                  1 ),
@@ -303,19 +303,19 @@ impl Transition {
             // = ...             ----------------------------------
             X::Equal_         => ( Continue  (S::Equal),        1 ),
             X::Assign         => ( Yield     (T::Assign),       0 ),
-            X::Eq             => ( Produce   (T::Eq),           1 ),
+            X::Eq             => ( Produce   (T::Eq),           0 ),
             // + ...             ----------------------------------
             X::Plus_          => ( Continue  (S::Plus),         1 ),
             X::Add            => ( Yield     (T::Add),          0 ),
-            X::AddAssign      => ( Produce   (T::AddAssign),    1 ),
-            X::Inc            => ( Produce   (T::Inc),          1 ),
+            X::AddAssign      => ( Produce   (T::AddAssign),    0 ),
+            X::Inc            => ( Produce   (T::Inc),          0 ),
             // - ...             ----------------------------------
             X::Minus_         => ( Continue  (S::Minus),        1 ),
             X::Sub            => ( Yield     (T::Sub),          0 ),
-            X::SubAssign      => ( Produce   (T::SubAssign),    1 ),
-            X::Dec            => ( Produce   (T::Dec),          1 ),
+            X::SubAssign      => ( Produce   (T::SubAssign),    0 ),
+            X::Dec            => ( Produce   (T::Dec),          0 ),
             // Other             ----------------------------------
-            X::End            => ( Yield     (T::Eof),          0 ), // will position be correct?
+            X::End            => ( Yield     (T::Eof),          1 ),
             X::Error          => ( Error     ,                  0 ),
         }
     }
@@ -438,29 +438,18 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         self.line = self.line_next;
 
         // Every call begins in `Normal` state with no token found
-        let mut state   = State::Normal;
-        let mut started = 0;
-        let mut offset  = 0;
-        let mut len     = 0;
+        let mut state = State::Normal;
+        let mut start = 0;
 
         // Scan until a token is found
         let token = loop {
             // Translate input into action
-            let (input, _)    = self.input.classify(&CHARS);
-            let transition    = TRANSITION_MAP[state as usize + input as usize];
-            let (action, inc) = transition.decode(); // inc = 0 or 1
+            let input          = self.input.classify(&CHARS).0;
+            let transition     = TRANSITION_MAP[state as usize + input as usize];
+            let (action, flag) = transition.decode(); // flag = 0 or 1
 
-            // Accumulate token length
-            len += inc;
-
-            // Detect token start
-            //           <- Before Token | At Token Start | After Token Start ->
-            // inc:               0      |        1       |       0 or 1
-            // starting:       all 0s    |     all 1s     |       all 0s
-            // started:        all 0s    |     all 1s     |       all 1s
-            let starting = (inc & !started).wrapping_neg();
-            started |= starting;
-            offset  |= starting & self.input.position();
+            // Record token start position
+            start |= (flag as usize).wrapping_neg() & self.input.position();
 
             // Perform action
             match action {
@@ -482,8 +471,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         };
 
         // Yield token
-        self.offset = offset;
-        self.len    = len;
+        self.range = start..self.input.position();
         token
     }
 

@@ -159,8 +159,29 @@ enum Transition {
     /// state.
     Comment,
 
+    /// Scan an identifier or a label.
+    Ident,
+
+    /// Scan a macro parameter.
+    Param,
+
     /// Scan a decimal numeric literal.
     IntDec,
+
+    /// Scan a string literal.
+    Str,
+
+    /// Scan a character literal.
+    Char,
+
+    /// Consume the current input byte and emit a `LogNot` token.
+    LogNot,
+
+    /// Consume the current input byte and emit a `BitNot` token.
+    BitNot,
+
+    /// Consume the current input byte and emit an `Unknown` token.
+    Unknown,
 
     /// Consume the current input byte and emit a `LParen` token.
     LParen,
@@ -222,8 +243,15 @@ impl Transition {
             X::LfEol          => ( ScanLf    ,                  1 ),
             X::Comment        => ( Continue  (S::Comment),      0 ),
             // Numbers           ----------------------------------
-            X::IntDec         => ( ScanDec   ,                  0 ),
+            X::Ident          => ( ScanIdent ,                  1 ),
+            X::Param          => ( ScanParam ,                  1 ),
+            X::IntDec         => ( ScanDec   ,                  1 ),
+            X::Str            => ( ScanStr   ,                  1 ),
+            X::Char           => ( ScanChar  ,                  1 ),
             // Simple Tokens     ----------------------------------
+            X::LogNot         => ( Produce   (T::LogNot),       1 ),
+            X::BitNot         => ( Produce   (T::BitNot),       1 ),
+            X::Unknown        => ( Produce   (T::Unknown),      1 ),
             X::LParen         => ( Produce   (T::LParen),       1 ),
             X::RParen         => ( Produce   (T::RParen),       1 ),
             X::LSquare        => ( Produce   (T::LSquare),      1 ),
@@ -311,7 +339,7 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
 /*   Cr  */ CrEol,      CrEol,      Assign,
 /*   Lf  */ LfEol,      LfEol,      Assign,
 
-/* Ident */ Error,      Comment,    Assign,
+/* Ident */ Ident,      Comment,    Assign,
 /* Digit */ IntDec,     Comment,    Assign,
 
 /*   (   */ LParen,     Comment,    Assign,
@@ -320,8 +348,8 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
 /*   ]   */ RSquare,    Comment,    Assign,
 /*   {   */ LCurly,     Comment,    Assign,
 /*   }   */ RCurly,     Comment,    Assign,
-/*   "   */ __,         Comment,    Assign,
-/*   '   */ __,         Comment,    Assign,
+/*   "   */ Str,        Comment,    Assign,
+/*   '   */ Char,       Comment,    Assign,
 
 /*   ,   */ Comma,      Comment,    Assign,
 /*   #   */ Comment,    Comment,    Assign,
@@ -333,15 +361,15 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
 /*   ^   */ __,         Comment,    Assign,
 /*   <   */ __,         Comment,    Assign,
 /*   >   */ __,         Comment,    Assign,
-/*   ~   */ __,         Comment,    Assign,
-/*   !   */ __,         Comment,    Assign,
+/*   ~   */ BitNot,     Comment,    Assign,
+/*   !   */ LogNot,     Comment,    Assign,
 /*   *   */ __,         Comment,    Assign,
 /*   /   */ __,         Comment,    Assign,
 /*   %   */ __,         Comment,    Assign,
 /*   ;   */ __,         Comment,    Assign,
 /*   :   */ Colon,      Comment,    Assign,
-/*   ?   */ __,         Comment,    Assign,
-/*   $   */ __,         Comment,    Assign,
+/*   ?   */ Unknown,    Comment,    Assign,
+/*   $   */ Param,      Comment,    Assign,
 /*   @   */ __,         Comment,    Assign,
 /*   \   */ __,         Comment,    Assign,
 

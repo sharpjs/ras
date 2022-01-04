@@ -208,7 +208,7 @@ enum Transition {
 
 impl Transition {
     /// Returns the action and token length increment for the transition.
-    fn decode(self) -> (Action, u8) {
+    fn decode(self) -> (Action, usize) {
         use Action::*;
         use State      as S;
         use Token      as T;
@@ -356,13 +356,35 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     pub(super) fn scan_main(&mut self) -> Token {
         use Action::*;
 
-        let mut state = State::Normal;
+        // Apply deferred info from previous call
+        self.line = self.line_next;
 
-        loop {
-            let next = self.input.classify(&CHARS).0;
-            let next = TRANSITION_MAP[state as usize + next as usize];
-            let (action, _flags) = next.decode();
+        // Every call begins in `Normal` state with no token found
+        let mut state   = State::Normal;
+        let mut started = 0;
+        let mut offset  = 0;
+        let mut len     = 0;
 
+        // Scan until a token is found
+        let token = loop {
+            // Translate input into action
+            let (input, _)    = self.input.classify(&CHARS);
+            let transition    = TRANSITION_MAP[state as usize + input as usize];
+            let (action, inc) = transition.decode(); // inc = 0 or 1
+
+            // Accumulate token length
+            len += inc;
+
+            // Detect token start
+            //           <- Before Token | At Token Start | After Token Start ->
+            // inc:               0      |        1       |       0 or 1
+            // starting:       all 0s    |     all 1s     |       all 0s
+            // started:        all 0s    |     all 1s     |       all 1s
+            let starting = (inc & !started).wrapping_neg();
+            started |= starting;
+            offset  |= starting & self.input.position();
+
+            // Perform action
             match action {
                 Continue (s) => state = self.transition(s),
                 Error        => state = self.add_error(),
@@ -379,7 +401,12 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                 ScanIdent    => break self.scan_ident(),
                 ScanParam    => break self.scan_param(),
             }
-        }
+        };
+
+        // Yield token
+        self.offset = offset;
+        self.len    = len;
+        token
     }
 
     #[inline]
@@ -398,14 +425,14 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     fn scan_crlf(&mut self) -> Token {
         self.input.advance();
         self.input.advance_if(b'\n');
-        // self.line_next = self.line + 1;
+        self.line_next += 1;
         Token::Eos
     }
 
     #[inline]
     fn scan_lf(&mut self) -> Token {
         self.input.advance();
-        // self.line_next = self.line + 1;
+        self.line_next += 1;
         Token::Eos
     }
 

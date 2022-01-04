@@ -18,8 +18,6 @@
 
 //! Lexical analyzer.
 
-use std::ops::Range;
-
 use super::input::Cursor;
 
 mod main;
@@ -233,20 +231,43 @@ pub enum Token {
 /// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
 #[derive(Clone, Debug)]
 pub struct Lexer<I: Iterator<Item = u8>> {
-    input: Cursor<I>,
-    loc:   Range<usize>,
+    input:     Cursor<I>,
+    line:      usize,
+    line_next: usize,
+    offset:    usize,
+    len:       usize,
 }
 
 impl<I: Iterator<Item = u8>> Lexer<I> {
+    /// Creates a new lexical analyzer for the given input iterator.
     pub fn new(iter: I) -> Self {
         let mut input = Cursor::new(iter);
         input.advance();
-        Self { input, loc: 0..0, }
+        Self { input, line: 0, line_next: 1, offset: 0, len: 0 }
     }
 
     /// Advances to the next token and returns its type.
     #[inline]
     pub fn next(&mut self) -> Token {
         self.scan_main()
+    }
+
+    /// Returns the line number at which the current token begins.
+    #[inline]
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    /// Returns the byte offset within the input stream at which the current
+    /// token begins.
+    #[inline]
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    /// Returns the length in bytes of the current token.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len
     }
 }

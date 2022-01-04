@@ -50,7 +50,14 @@ fn main() {
 
         loop {
             let token = lexer.next();
-            println!("{:?}", token);
+            println!(
+                "[{}:{}] @{} +{} {:?}",
+                path,
+                lexer.line(),
+                lexer.offset(),
+                lexer.len(),
+                token
+            );
             if token == Token::Eof { break; }
         }
     }

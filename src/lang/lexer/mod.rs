@@ -61,6 +61,12 @@ pub enum Token {
     /// `~` - bitwise NOT operator.
     BitNot,
 
+    /// `++` increment operator.
+    Inc,
+
+    /// `--` decrement operator.
+    Dec,
+
     /// `*` - signed multiplication operator.
     Mul,
 
@@ -242,6 +248,8 @@ impl Display for Token {
             Char         => "char",
             LogNot       => "!",
             BitNot       => "~",
+            Inc          => "++",
+            Dec          => "--",
             Mul          => "*",
             Div          => "/",
             Mod          => "%",

@@ -360,8 +360,12 @@ enum Transition {
     // < ...
 
     /// Consume the current input byte and continue scanning in `Lt`
-    /// state.
+    /// state.  Sets signedness to signed.
     Lt_,
+
+    /// Consume the current input byte and continue scanning in `Lt`
+    /// state.  Sets signedness to unsigned.
+    ULt_,
 
     /// Emit a `Less` token.
     Less,
@@ -384,8 +388,12 @@ enum Transition {
     // > ...
 
     /// Consume the current input byte and continue scanning in `Gt`
-    /// state.
+    /// state.  Sets signedness to signed.
     Gt_,
+
+    /// Consume the current input byte and continue scanning in `Gt`
+    /// state.  Sets signedness to unsigned.
+    UGt_,
 
     /// Emit a `More` token.
     More,
@@ -418,95 +426,98 @@ enum Transition {
 }
 
 impl Transition {
-    /// Returns the action and token start flag for the transition.
-    fn decode(self) -> (Action, u8) {
+    /// Returns a tuple consisting of the action, token start flag, and token
+    /// variant index for the transition.
+    fn decode(self) -> (Action, u8, u8) {
         use Action::*;
         use State      as S;
         use Token      as T;
         use Transition as X;
 
         match self {
-            //                     Action    Arguments     Token?
-            // Whitespace        ----------------------------------
-            X::Normal         => ( Continue  (S::Normal),       0 ),
-            X::CrEol          => ( ScanCrLf  ,                  1 ),
-            X::LfEol          => ( ScanLf    ,                  1 ),
-            X::Comment        => ( Continue  (S::Comment),      0 ),
-            // Numbers           ----------------------------------
-            X::Ident          => ( ScanIdent ,                  1 ),
-            X::Param          => ( ScanParam ,                  1 ),
-            X::IntDec         => ( ScanDec   ,                  1 ),
-            X::Str            => ( ScanStr   ,                  1 ),
-            X::Char           => ( ScanChar  ,                  1 ),
-            // Simple Tokens     ----------------------------------
-            X::LogNot         => ( Produce   (T::LogNot),       1 ),
-            X::BitNot         => ( Produce   (T::BitNot),       1 ),
-            X::Unknown        => ( Produce   (T::Unknown),      1 ),
-            X::LParen         => ( Produce   (T::LParen),       1 ),
-            X::RParen         => ( Produce   (T::RParen),       1 ),
-            X::LSquare        => ( Produce   (T::LSquare),      1 ),
-            X::RSquare        => ( Produce   (T::RSquare),      1 ),
-            X::LCurly         => ( Produce   (T::LCurly),       1 ),
-            X::RCurly         => ( Produce   (T::RCurly),       1 ),
-            X::Comma          => ( Produce   (T::Comma),        1 ),
-            X::Colon          => ( Produce   (T::Colon),        1 ),
-            // = ...             ----------------------------------
-            X::Equal_         => ( Continue  (S::Equal),        1 ),
-            X::Assign         => ( Yield     (T::Assign),       0 ),
-            X::Eq             => ( Produce   (T::Eq),           0 ),
-            // + ...             ----------------------------------
-            X::Plus_          => ( Continue  (S::Plus),         1 ),
-            X::Add            => ( Yield     (T::Add),          0 ),
-            X::AddAssign      => ( Produce   (T::AddAssign),    0 ),
-            X::Inc            => ( Produce   (T::Inc),          0 ),
-            // - ...             ----------------------------------
-            X::Minus_         => ( Continue  (S::Minus),        1 ),
-            X::Sub            => ( Yield     (T::Sub),          0 ),
-            X::SubAssign      => ( Produce   (T::SubAssign),    0 ),
-            X::Dec            => ( Produce   (T::Dec),          0 ),
-            // & ...             ----------------------------------
-            X::Amp_           => ( Continue  (S::Amp),          1 ),
-            X::BitAnd         => ( Yield     (T::BitAnd),       0 ),
-            X::BitAndAssign   => ( Produce   (T::BitAndAssign), 0 ),
-            // && ...            ----------------------------------
-            X::AmpAmp_        => ( Continue  (S::AmpAmp),       0 ),
-            X::LogAnd         => ( Yield     (T::LogAnd),       0 ),
-            X::LogAndAssign   => ( Produce   (T::LogAndAssign), 0 ),
-            // ^ ...             ----------------------------------
-            X::Caret_         => ( Continue  (S::Caret),        1 ),
-            X::BitXor         => ( Yield     (T::BitXor),       0 ),
-            X::BitXorAssign   => ( Produce   (T::BitXorAssign), 0 ),
-            // ^^ ...            ----------------------------------
-            X::CaretCaret_    => ( Continue  (S::CaretCaret),   0 ),
-            X::LogXor         => ( Yield     (T::LogXor),       0 ),
-            X::LogXorAssign   => ( Produce   (T::LogXorAssign), 0 ),
-            // | ...             ----------------------------------
-            X::Pipe_          => ( Continue  (S::Pipe),         1 ),
-            X::BitOr          => ( Yield     (T::BitOr),        0 ),
-            X::BitOrAssign    => ( Produce   (T::BitOrAssign),  0 ),
-            // || ...            ----------------------------------
-            X::PipePipe_      => ( Continue  (S::PipePipe),     0 ),
-            X::LogOr          => ( Yield     (T::LogOr),        0 ),
-            X::LogOrAssign    => ( Produce   (T::LogOrAssign),  0 ),
-            // < ...             ----------------------------------
-            X::Lt_            => ( Continue  (S::Lt),           1 ),
-            X::Less           => ( Yield     (T::Less),         0 ),
-            X::LessEq         => ( Produce   (T::LessEq),       0 ),
-            // << ...            ----------------------------------
-            X::LtLt_          => ( Continue   (S::LtLt),        0 ),
-            X::Shl            => ( Yield      (T::Shl),         0 ),
-            X::ShlAssign      => ( Produce    (T::ShlAssign),   0 ),
-            // > ...             ----------------------------------
-            X::Gt_            => ( Continue  (S::Gt),           1 ),
-            X::More           => ( Yield     (T::More),         0 ),
-            X::MoreEq         => ( Produce   (T::MoreEq),       0 ),
-            // >> ...            ----------------------------------
-            X::GtGt_          => ( Continue   (S::GtGt),        0 ),
-            X::Shr            => ( Yield      (T::Shr),         0 ),
-            X::ShrAssign      => ( Produce    (T::ShrAssign),   0 ),
-            // Other             ----------------------------------
-            X::End            => ( Yield     (T::Eof),          1 ),
-            X::Error          => ( Error     ,                  0 ),
+            //                     Action    Arguments          S  V
+            // Whitespace        -------------------------------------
+            X::Normal         => ( Continue  (S::Normal),       0, 0 ),
+            X::CrEol          => ( ScanCrLf  ,                  1, 0 ),
+            X::LfEol          => ( ScanLf    ,                  1, 0 ),
+            X::Comment        => ( Continue  (S::Comment),      0, 0 ),
+            // Numbers           -------------------------------------
+            X::Ident          => ( ScanIdent ,                  1, 0 ),
+            X::Param          => ( ScanParam ,                  1, 1 ),
+            X::IntDec         => ( ScanDec   ,                  1, 0 ),
+            X::Str            => ( ScanStr   ,                  1, 0 ),
+            X::Char           => ( ScanChar  ,                  1, 0 ),
+            // Simple Tokens     -------------------------------------
+            X::LogNot         => ( Produce   (T::LogNot),       1, 0 ),
+            X::BitNot         => ( Produce   (T::BitNot),       1, 0 ),
+            X::Unknown        => ( Produce   (T::Unknown),      1, 0 ),
+            X::LParen         => ( Produce   (T::LParen),       1, 0 ),
+            X::RParen         => ( Produce   (T::RParen),       1, 0 ),
+            X::LSquare        => ( Produce   (T::LSquare),      1, 0 ),
+            X::RSquare        => ( Produce   (T::RSquare),      1, 0 ),
+            X::LCurly         => ( Produce   (T::LCurly),       1, 0 ),
+            X::RCurly         => ( Produce   (T::RCurly),       1, 0 ),
+            X::Comma          => ( Produce   (T::Comma),        1, 0 ),
+            X::Colon          => ( Produce   (T::Colon),        1, 0 ),
+            // = ...             -------------------------------------
+            X::Equal_         => ( Continue  (S::Equal),        1, 0 ),
+            X::Assign         => ( Yield     (T::Assign),       0, 0 ),
+            X::Eq             => ( Produce   (T::Eq),           0, 0 ),
+            // + ...             -------------------------------------
+            X::Plus_          => ( Continue  (S::Plus),         1, 0 ),
+            X::Add            => ( Yield     (T::Add),          0, 0 ),
+            X::AddAssign      => ( Produce   (T::AddAssign),    0, 0 ),
+            X::Inc            => ( Produce   (T::Inc),          0, 0 ),
+            // - ...             -------------------------------------
+            X::Minus_         => ( Continue  (S::Minus),        1, 0 ),
+            X::Sub            => ( Yield     (T::Sub),          0, 0 ),
+            X::SubAssign      => ( Produce   (T::SubAssign),    0, 0 ),
+            X::Dec            => ( Produce   (T::Dec),          0, 0 ),
+            // & ...             -------------------------------------
+            X::Amp_           => ( Continue  (S::Amp),          1, 0 ),
+            X::BitAnd         => ( Yield     (T::BitAnd),       0, 0 ),
+            X::BitAndAssign   => ( Produce   (T::BitAndAssign), 0, 0 ),
+            // && ...            -------------------------------------
+            X::AmpAmp_        => ( Continue  (S::AmpAmp),       0, 0 ),
+            X::LogAnd         => ( Yield     (T::LogAnd),       0, 0 ),
+            X::LogAndAssign   => ( Produce   (T::LogAndAssign), 0, 0 ),
+            // ^ ...             -------------------------------------
+            X::Caret_         => ( Continue  (S::Caret),        1, 0 ),
+            X::BitXor         => ( Yield     (T::BitXor),       0, 0 ),
+            X::BitXorAssign   => ( Produce   (T::BitXorAssign), 0, 0 ),
+            // ^^ ...            -------------------------------------
+            X::CaretCaret_    => ( Continue  (S::CaretCaret),   0, 0 ),
+            X::LogXor         => ( Yield     (T::LogXor),       0, 0 ),
+            X::LogXorAssign   => ( Produce   (T::LogXorAssign), 0, 0 ),
+            // | ...             -------------------------------------
+            X::Pipe_          => ( Continue  (S::Pipe),         1, 0 ),
+            X::BitOr          => ( Yield     (T::BitOr),        0, 0 ),
+            X::BitOrAssign    => ( Produce   (T::BitOrAssign),  0, 0 ),
+            // || ...            -------------------------------------
+            X::PipePipe_      => ( Continue  (S::PipePipe),     0, 0 ),
+            X::LogOr          => ( Yield     (T::LogOr),        0, 0 ),
+            X::LogOrAssign    => ( Produce   (T::LogOrAssign),  0, 0 ),
+            // < ...             -------------------------------------
+            X::Lt_            => ( Continue  (S::Lt),           1, 0 ),
+            X::ULt_           => ( Continue  (S::Lt),           0, 1 ),
+            X::Less           => ( Yield     (T::Less),         0, 0 ),
+            X::LessEq         => ( Produce   (T::LessEq),       0, 0 ),
+            // << ...            -------------------------------------
+            X::LtLt_          => ( Continue   (S::LtLt),        0, 0 ),
+            X::Shl            => ( Yield      (T::Shl),         0, 0 ),
+            X::ShlAssign      => ( Produce    (T::ShlAssign),   0, 0 ),
+            // > ...             -------------------------------------
+            X::Gt_            => ( Continue  (S::Gt),           1, 0 ),
+            X::UGt_           => ( Continue  (S::Gt),           0, 1 ),
+            X::More           => ( Yield     (T::More),         0, 0 ),
+            X::MoreEq         => ( Produce   (T::MoreEq),       0, 0 ),
+            // >> ...            -------------------------------------
+            X::GtGt_          => ( Continue  (S::GtGt),         0, 0 ),
+            X::Shr            => ( Yield     (T::Shr),          0, 0 ),
+            X::ShrAssign      => ( Produce   (T::ShrAssign),    0, 0 ),
+            // Other             -------------------------------------
+            X::End            => ( Yield     (T::Eof),          1, 0 ),
+            X::Error          => ( Error     ,                  0, 0 ),
         }
     }
 }
@@ -599,8 +610,8 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
 /*   &   */ Amp_,       Comment,  Assign,  Add,       Sub,       AmpAmp_,     LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
 /*   ^   */ Caret_,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      CaretCaret_, LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
 /*   |   */ Pipe_,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      PipePipe_,  LogOr,      Less,     Shl,      More,     Shr,
-/*   <   */ Lt_,        Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      LtLt_,    Shl,      More,     Shr,
-/*   >   */ Gt_,        Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      GtGt_,    Shr,
+/*   <   */ Lt_,        Comment,  Assign,  ULt_,      Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      LtLt_,    Shl,      More,     Shr,
+/*   >   */ Gt_,        Comment,  Assign,  UGt_,      Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      GtGt_,    Shr,
 /*   ~   */ BitNot,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
 /*   !   */ LogNot,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
 /*   *   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
@@ -628,25 +639,30 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         self.line = self.line_next;
 
         // Every call begins in `Normal` state with no token found
-        let mut state = State::Normal;
-        let mut start = 0;
+        let mut state   = State::Normal;
+        let mut start   = 0;
+        let mut variant = 0;
 
         // Scan until a token is found
         let token = loop {
             // Translate input into action
-            let input          = self.input.classify(&CHARS).0;
-            let transition     = TRANSITION_MAP[state as usize + input as usize];
-            let (action, flag) = transition.decode(); // flag = 0 or 1
+            // // flag = 0 or 1
+            let (action, start_flag, variant_flag) = {
+                let input      = self.input.classify(&CHARS).0;
+                let transition = TRANSITION_MAP[state as usize + input as usize];
+                transition.decode()
+            };
 
             // Record token start position
-            start |= (flag as usize).wrapping_neg() & self.input.position();
+            start   |= (start_flag as usize).wrapping_neg() & self.input.position();
+            variant |= variant_flag;
 
             // Perform action
             match action {
                 Continue (s) => state = self.transition(s),
                 Error        => state = self.add_error(),
-                Yield    (t) => break t,
-                Produce  (t) => break self.produce(t),
+                Yield    (t) => break              t.variant(variant),
+                Produce  (t) => break self.produce(t.variant(variant)),
                 ScanCrLf     => break self.scan_crlf(),
                 ScanLf       => break self.scan_lf(),
                 ScanBin      => break self.scan_bin(),

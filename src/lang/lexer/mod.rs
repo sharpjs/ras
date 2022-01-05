@@ -241,6 +241,30 @@ pub enum Token {
     Eof
 }
 
+impl Token {
+    /// Returns the specified variant of the token.
+    fn variant(self, n: u8) -> Token {
+        use Token::*;
+        let n = n as usize & 1;
+        match self  {
+            Ident     => [Ident,     Param     ][n],
+            Mul       => [Mul,       UMul      ][n],
+            Div       => [Div,       UDiv      ][n],
+            Mod       => [Mod,       UMod      ][n],
+            Shr       => [Shr,       UShr      ][n],
+            Less      => [Less,      ULess     ][n],
+            More      => [More,      UMore     ][n],
+            LessEq    => [LessEq,    ULessEq   ][n],
+            MoreEq    => [MoreEq,    UMoreEq   ][n],
+            MulAssign => [MulAssign, UMulAssign][n],
+            DivAssign => [DivAssign, UDivAssign][n],
+            ModAssign => [ModAssign, UModAssign][n],
+            ShrAssign => [ShrAssign, UShrAssign][n],
+            _         => self
+        }
+    }
+}
+
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Token::*;

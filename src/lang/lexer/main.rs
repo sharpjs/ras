@@ -52,8 +52,8 @@ enum Char {
     Plus    = char(16), // +
     Minus   = char(17), // -
     Amp     = char(18), // &
-    Pipe    = char(19), // |
-    Caret   = char(20), // ^
+    Caret   = char(19), // ^
+    Pipe    = char(20), // |
     Lt      = char(21), // <
     Gt      = char(22), // >
     Tilde   = char(23), // ~
@@ -131,12 +131,30 @@ enum State {
     Plus,
 
     /// After `-`.
-    Minus, // <- COUNT references this
+    Minus,
+
+    /// After `&`.
+    Amp,
+
+    /// After `&&`.
+    AmpAmp,
+
+    /// After `^`.
+    Caret,
+
+    /// After `^^`.
+    CaretCaret,
+
+    /// After `|`.
+    Pipe,
+
+    /// After `||`.
+    PipePipe, // <- COUNT references this
 }
 
 impl State {
     /// Count of main lexer states.
-    const COUNT: usize = Self::Minus as usize + 1;
+    const COUNT: usize = Self::PipePipe as usize + 1;
 }
 
 // ----------------------------------------------------------------------------
@@ -255,6 +273,78 @@ enum Transition {
     /// Consume the current input byte and emit a `Dec` token.
     Dec,
 
+    // & ...
+
+    /// Consume the current input byte and continue scanning in `Amp`
+    /// state.
+    Amp_,
+
+    /// Emit a `BitAnd` token.
+    BitAnd,
+
+    /// Consume the current input byte and emit a `BitAndAssign` token.
+    BitAndAssign,
+
+    // && ...
+
+    /// Consume the current input byte and continue scanning in `AmpAmp`
+    /// state.
+    AmpAmp_,
+
+    /// Emit a `LogAnd` token.
+    LogAnd,
+
+    /// Consume the current input byte and emit a `LogAndAssign` token.
+    LogAndAssign,
+
+    // ^ ...
+
+    /// Consume the current input byte and continue scanning in `Caret`
+    /// state.
+    Caret_,
+
+    /// Emit a `BitXor` token.
+    BitXor,
+
+    /// Consume the current input byte and emit a `BitXorAssign` token.
+    BitXorAssign,
+
+    // ^^ ...
+
+    /// Consume the current input byte and continue scanning in `CaretCaret`
+    /// state.
+    CaretCaret_,
+
+    /// Emit a `LogXor` token.
+    LogXor,
+
+    /// Consume the current input byte and emit a `LogXorAssign` token.
+    LogXorAssign,
+
+    // | ...
+
+    /// Consume the current input byte and continue scanning in `Pipe`
+    /// state.
+    Pipe_,
+
+    /// Emit a `BitOr` token.
+    BitOr,
+
+    /// Consume the current input byte and emit a `BitOrAssign` token.
+    BitOrAssign,
+
+    // || ...
+
+    /// Consume the current input byte and continue scanning in `PipePipe`
+    /// state.
+    PipePipe_,
+
+    /// Emit a `LogOr` token.
+    LogOr,
+
+    /// Consume the current input byte and emit a `LogOrAssign` token.
+    LogOrAssign,
+
     // Other
 
     /// Emit an `Eof` token.
@@ -314,6 +404,30 @@ impl Transition {
             X::Sub            => ( Yield     (T::Sub),          0 ),
             X::SubAssign      => ( Produce   (T::SubAssign),    0 ),
             X::Dec            => ( Produce   (T::Dec),          0 ),
+            // & ...             ----------------------------------
+            X::Amp_           => ( Continue  (S::Amp),          1 ),
+            X::BitAnd         => ( Yield     (T::BitAnd),       0 ),
+            X::BitAndAssign   => ( Produce   (T::BitAndAssign), 0 ),
+            // && ...            ----------------------------------
+            X::AmpAmp_        => ( Continue  (S::AmpAmp),       0 ),
+            X::LogAnd         => ( Yield     (T::LogAnd),       0 ),
+            X::LogAndAssign   => ( Produce   (T::LogAndAssign), 0 ),
+            // ^ ...             ----------------------------------
+            X::Caret_         => ( Continue  (S::Caret),        1 ),
+            X::BitXor         => ( Yield     (T::BitXor),       0 ),
+            X::BitXorAssign   => ( Produce   (T::BitXorAssign), 0 ),
+            // ^^ ...            ----------------------------------
+            X::CaretCaret_    => ( Continue  (S::CaretCaret),   0 ),
+            X::LogXor         => ( Yield     (T::LogXor),       0 ),
+            X::LogXorAssign   => ( Produce   (T::LogXorAssign), 0 ),
+            // | ...             ----------------------------------
+            X::Pipe_          => ( Continue  (S::Pipe),         1 ),
+            X::BitOr          => ( Yield     (T::BitOr),        0 ),
+            X::BitOrAssign    => ( Produce   (T::BitOrAssign),  0 ),
+            // || ...            ----------------------------------
+            X::PipePipe_      => ( Continue  (S::PipePipe),     0 ),
+            X::LogOr          => ( Yield     (T::LogOr),        0 ),
+            X::LogOrAssign    => ( Produce   (T::LogOrAssign),  0 ),
             // Other             ----------------------------------
             X::End            => ( Yield     (T::Eof),          1 ),
             X::Error          => ( Error     ,                  0 ),
@@ -383,48 +497,48 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
     use Transition::*;
     const __: Transition = Error;
 [
-//          Normal      Comment     Equal       Plus        Minus
-//          -------------------------------------------------------------- ---
-/* Space */ Normal,     Comment,    Assign,     Add,        Sub,
-/*   Cr  */ CrEol,      CrEol,      Assign,     Add,        Sub,
-/*   Lf  */ LfEol,      LfEol,      Assign,     Add,        Sub,
+//          Normal      Comment   Equal    Plus       Minus      Amp          AmpAmp       Caret        CaretCaret   Pipe        PipePipe
+//          ---------------------------------------------------------------------------------------------------------------------------------
+/* Space */ Normal,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   Cr  */ CrEol,      CrEol,    Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   Lf  */ LfEol,      LfEol,    Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
 
-/* Ident */ Ident,      Comment,    Assign,     Add,        Sub,
-/* Digit */ IntDec,     Comment,    Assign,     Add,        Sub,
+/* Ident */ Ident,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/* Digit */ IntDec,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
 
-/*   (   */ LParen,     Comment,    Assign,     Add,        Sub,
-/*   )   */ RParen,     Comment,    Assign,     Add,        Sub,
-/*   [   */ LSquare,    Comment,    Assign,     Add,        Sub,
-/*   ]   */ RSquare,    Comment,    Assign,     Add,        Sub,
-/*   {   */ LCurly,     Comment,    Assign,     Add,        Sub,
-/*   }   */ RCurly,     Comment,    Assign,     Add,        Sub,
-/*   "   */ Str,        Comment,    Assign,     Add,        Sub,
-/*   '   */ Char,       Comment,    Assign,     Add,        Sub,
+/*   (   */ LParen,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   )   */ RParen,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   [   */ LSquare,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   ]   */ RSquare,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   {   */ LCurly,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   }   */ RCurly,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   "   */ Str,        Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   '   */ Char,       Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
 
-/*   ,   */ Comma,      Comment,    Assign,     Add,        Sub,
-/*   #   */ Comment,    Comment,    Assign,     Add,        Sub,
-/*   =   */ Equal_,     Comment,    Eq,         AddAssign,  SubAssign,
-/*   +   */ Plus_,      Comment,    Assign,     Inc,        Sub,
-/*   -   */ Minus_,     Comment,    Assign,     Add,        Dec,
-/*   &   */ __,         Comment,    Assign,     Add,        Sub,
-/*   |   */ __,         Comment,    Assign,     Add,        Sub,
-/*   ^   */ __,         Comment,    Assign,     Add,        Sub,
-/*   <   */ __,         Comment,    Assign,     __,         Sub,
-/*   >   */ __,         Comment,    Assign,     __,         Sub,
-/*   ~   */ BitNot,     Comment,    Assign,     Add,        Sub,
-/*   !   */ LogNot,     Comment,    Assign,     Add,        Sub,
-/*   *   */ __,         Comment,    Assign,     __,         Sub,
-/*   /   */ __,         Comment,    Assign,     __,         Sub,
-/*   %   */ __,         Comment,    Assign,     __,         Sub,
-/*   ;   */ __,         Comment,    Assign,     Add,        Sub,
-/*   :   */ Colon,      Comment,    Assign,     Add,        Sub,
-/*   ?   */ Unknown,    Comment,    Assign,     Add,        Sub,
-/*   $   */ Param,      Comment,    Assign,     Add,        Sub,
-/*   @   */ __,         Comment,    Assign,     Add,        Sub,
-/*   \   */ __,         Comment,    Assign,     Add,        Sub,
+/*   ,   */ Comma,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   #   */ Comment,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   =   */ Equal_,     Comment,  Eq,      AddAssign, SubAssign, BitAndAssign,LogAndAssign,BitXorAssign,LogXorAssign,BitOrAssign,LogOrAssign,
+/*   +   */ Plus_,      Comment,  Assign,  Inc,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   -   */ Minus_,     Comment,  Assign,  Add,       Dec,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   &   */ Amp_,       Comment,  Assign,  Add,       Sub,       AmpAmp_,     LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   ^   */ Caret_,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      CaretCaret_, LogXor,      BitOr,      LogOr,
+/*   |   */ Pipe_,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      PipePipe_,  LogOr,
+/*   <   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   >   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   ~   */ BitNot,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   !   */ LogNot,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   *   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   /   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   %   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   ;   */ __,         Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   :   */ Colon,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   ?   */ Unknown,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   $   */ Param,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   @   */ __,         Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
+/*   \   */ __,         Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,
 
-/*  Eof  */ End,        End,        Assign,     Add,        Sub,
-/* Other */ Error,      Comment,    Assign,     Add,        Sub,
+/*  Eof  */ End,        End,      Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      BitXor,      BitOr,      LogOr,
+/* Other */ Error,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      BitXor,      BitOr,      LogOr,
 ]};
 
 // ----------------------------------------------------------------------------

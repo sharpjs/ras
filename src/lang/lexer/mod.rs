@@ -146,6 +146,9 @@ pub enum Token {
     /// `&&` - logical AND operator.
     LogAnd,
 
+    /// `^^` - logical XOR operator.
+    LogXor,
+
     /// `||` - logical OR operator.
     LogOr,
 
@@ -196,6 +199,9 @@ pub enum Token {
 
     /// `&&=` - logical AND-assignment operator.
     LogAndAssign,
+
+    /// `^^=` - logical XOR-assignment operator.
+    LogXorAssign,
 
     /// `||=` - logical OR-assignment operator.
     LogOrAssign,
@@ -277,6 +283,7 @@ impl Display for Token {
             UMoreEq      => "+>=",
             Unknown      => "?",
             LogAnd       => "&&",
+            LogXor       => "^^",
             LogOr        => "||",
             Assign       => "=",
             MulAssign    => "*=",
@@ -294,6 +301,7 @@ impl Display for Token {
             BitXorAssign => "^=",
             BitOrAssign  => "|=",
             LogAndAssign => "&&=",
+            LogXorAssign => "^^=",
             LogOrAssign  => "||=",
             LCurly       => "{",
             RCurly       => "}",

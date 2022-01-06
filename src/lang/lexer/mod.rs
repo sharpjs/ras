@@ -23,6 +23,7 @@ use std::ops::Range;
 
 use super::input::Cursor;
 
+mod ident;
 mod main;
 
 // ----------------------------------------------------------------------------
@@ -351,6 +352,7 @@ pub struct Lexer<I: Iterator<Item = u8>> {
     line:      usize,
     line_next: usize,
     range:     Range<usize>,
+    str_buf:   Vec<u8>,
 }
 
 impl<I: Iterator<Item = u8>> Lexer<I> {
@@ -358,7 +360,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     pub fn new(iter: I) -> Self {
         let mut input = Cursor::new(iter);
         input.advance();
-        Self { input, line: 0, line_next: 1, range: 0..0 }
+        Self { input, line: 0, line_next: 1, range: 0..0, str_buf: vec![] }
     }
 
     /// Advances to the next token and returns its type.
@@ -378,5 +380,11 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     #[inline]
     pub fn range(&self) -> &Range<usize> {
         &self.range
+    }
+
+    /// Returns the value of the most recent string-like token.
+    pub fn str_value(&self) -> &str {
+        // SAFETY: UTF-8 validation performed in an earlier phase.
+        unsafe { std::str::from_utf8_unchecked(&self.str_buf[..]) }
     }
 }

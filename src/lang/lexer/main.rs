@@ -16,10 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::lang::input::LogicalChar;
-
 ///! Main lexer.
 
+use crate::lang::input::LogicalChar;
 use super::*;
 
 // ----------------------------------------------------------------------------
@@ -671,7 +670,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                 ScanHex      => break self.scan_hex(),
                 ScanStr      => break self.scan_str(),
                 ScanChar     => break self.scan_char(),
-                ScanIdent    => break self.scan_ident(),
+                ScanIdent    => break self.scan_ident(variant),
                 ScanParam    => break self.scan_param(),
             }
         };
@@ -742,12 +741,6 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     fn scan_char(&mut self) -> Token {
         self.input.advance(); // TODO: invoke sublexer here
         Token::Char
-    }
-
-    #[inline]
-    fn scan_ident(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Ident
     }
 
     #[inline]

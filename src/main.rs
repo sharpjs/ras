@@ -47,23 +47,29 @@ fn main() {
         }
 
         println!("[{}]", path);
-        println!("╭──────┬────────┬────────┬─────────╮");
-        println!("│ LINE │ OFFSET │ LENGTH │ TYPE    │");
-        println!("╞══════╪════════╪════════╪═════════╡");
+        //        0         1         2         3         4         5         6         7         8
+        //        0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0
+        println!("╭──────┬────────┬────────┬───────┬──────────────────────╮");
+        println!("│ LINE │ OFFSET │ LENGTH │ TYPE  │ VALUE                │");
+        println!("╞══════╪════════╪════════╪═══════╪══════════════════════╡");
 
         let mut lexer = Lexer::new(content.bytes());
 
         loop {
             let token = lexer.next();
             println!(
-                "│ {:4} │ {:6} │ {:6} │ {:7} │",
+                "│ {:4} │ {:6} │ {:6} │ {:5} │ {:<20.20} │",
                 lexer.line(),
                 lexer.range().start,
                 lexer.range().len(),
-                token
+                token,
+                match token {
+                    Token::Ident | Token::Param | Token::Str => lexer.str_value(),
+                    _                                        => "",
+                }
             );
             if token == Token::Eof { break; }
         }
-        println!("╰──────┴────────┴────────┴─────────╯");
+        println!("╰──────┴────────┴────────┴───────┴──────────────────────╯");
     }
 }

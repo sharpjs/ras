@@ -22,6 +22,7 @@
 #![allow(unused_macros)]
 
 mod lang;
+mod num;
 
 use std::env::args;
 use std::fs::File;
@@ -63,10 +64,7 @@ fn main() {
                 lexer.range().start,
                 lexer.range().len(),
                 token,
-                match token {
-                    Token::Ident | Token::Param | Token::Str => lexer.str_value(),
-                    _                                        => "",
-                }
+                lexer.value(token)
             );
             if token == Token::Eof { break; }
         }

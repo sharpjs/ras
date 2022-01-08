@@ -19,6 +19,7 @@
 ///! Main lexer.
 
 use crate::lang::input::LogicalChar;
+use crate::num::Base::*;
 use super::*;
 
 // ----------------------------------------------------------------------------
@@ -664,10 +665,10 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                 Produce  (t) => break self.produce(t.variant(variant)),
                 ScanCrLf     => break self.scan_crlf(),
                 ScanLf       => break self.scan_lf(),
-                ScanBin      => break self.scan_bin(),
-                ScanOct      => break self.scan_oct(),
-                ScanDec      => break self.scan_dec(),
-                ScanHex      => break self.scan_hex(),
+                ScanBin      => if let Some(t) = self.scan_num(Bin) { break t },
+                ScanOct      => if let Some(t) = self.scan_num(Oct) { break t },
+                ScanDec      => if let Some(t) = self.scan_num(Dec) { break t },
+                ScanHex      => if let Some(t) = self.scan_num(Hex) { break t },
                 ScanStr      => break self.scan_str(),
                 ScanChar     => break self.scan_char(),
                 ScanIdent    => break self.scan_ident(variant),
@@ -705,30 +706,6 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         self.input.advance();
         self.line_next += 1;
         Token::Eos
-    }
-
-    #[inline]
-    fn scan_bin(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Int
-    }
-
-    #[inline]
-    fn scan_oct(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Int
-    }
-
-    #[inline]
-    fn scan_dec(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Int
-    }
-
-    #[inline]
-    fn scan_hex(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Int
     }
 
     #[inline]

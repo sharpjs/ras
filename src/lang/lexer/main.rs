@@ -161,12 +161,24 @@ enum State {
     Gt,
 
     /// After `>>`.
-    GtGt, // <- COUNT references this
+    GtGt,
+
+    /// After `!`
+    Bang,
+
+    /// After `*`
+    Star,
+
+    /// After `/`
+    Slash,
+
+    /// After `%`
+    Percent, // <- COUNT references this
 }
 
 impl State {
     /// Count of main lexer states.
-    const COUNT: usize = Self::GtGt as usize + 1;
+    const COUNT: usize = Self::Percent as usize + 1;
 }
 
 // ----------------------------------------------------------------------------
@@ -210,9 +222,6 @@ enum Transition {
     /// Scan a character literal.
     Char,
 
-    /// Consume the current input byte and emit a `LogNot` token.
-    LogNot,
-
     /// Consume the current input byte and emit a `BitNot` token.
     BitNot,
 
@@ -236,6 +245,9 @@ enum Transition {
 
     /// Consume the current input byte and emit a `RCurly` token.
     RCurly,
+
+    /// Consume the current input byte and emit an `Eos` token.
+    Eos,
 
     /// Consume the current input byte and emit a `Comma` token.
     Comma,
@@ -413,6 +425,65 @@ enum Transition {
     /// Consume the current input byte and emit a `ShrAssign` token.
     ShrAssign,
 
+    // >> ...
+
+    /// Consume input and continue scanning in `Bang` state.
+    Bang_,
+
+    /// Yield a `LogNot` token.
+    LogNot,
+
+    /// Consume input and yield a `NotEq` token.
+    NotEq,
+
+    // * ...
+
+    /// Consume input and continue scanning in `Star` state.
+    /// Set signedness to signed.
+    Star_,
+
+    /// Consume input and continue scanning in `Star` state.
+    /// Set signedness to unsigned.
+    UStar_,
+
+    /// Yield a `Mul` token.
+    Mul,
+
+    /// Consume input and yield a `MulAssign` token.
+    MulAssign,
+
+    // / ...
+
+    /// Consume input and continue scanning in `Slash` state.
+    /// Set signedness to signed.
+    Slash_,
+
+    /// Consume input and continue scanning in `Slash` state.
+    /// Set signedness to unsigned.
+    USlash_,
+
+    /// Yield a `Div` token.
+    Div,
+
+    /// Consume input and yield a `DivAssign` token.
+    DivAssign,
+
+    // % ...
+
+    /// Consume input and continue scanning in `Percent` state.
+    /// Set signedness to signed.
+    Percent_,
+
+    /// Consume input and continue scanning in `Percent` state.
+    /// Set signedness to unsigned.
+    UPercent_,
+
+    /// Yield a `Mod` token.
+    Mod,
+
+    /// Consume input and yield a `ModAssign` token.
+    ModAssign,
+
     // Other
 
     /// Emit an `Eof` token.
@@ -448,7 +519,6 @@ impl Transition {
             X::Str            => ( ScanStr   ,                  1, 0 ),
             X::Char           => ( ScanChar  ,                  1, 0 ),
             // Simple Tokens     -------------------------------------
-            X::LogNot         => ( Produce   (T::LogNot),       1, 0 ),
             X::BitNot         => ( Produce   (T::BitNot),       1, 0 ),
             X::Unknown        => ( Produce   (T::Unknown),      1, 0 ),
             X::LParen         => ( Produce   (T::LParen),       1, 0 ),
@@ -457,6 +527,7 @@ impl Transition {
             X::RSquare        => ( Produce   (T::RSquare),      1, 0 ),
             X::LCurly         => ( Produce   (T::LCurly),       1, 0 ),
             X::RCurly         => ( Produce   (T::RCurly),       1, 0 ),
+            X::Eos            => ( Produce   (T::Eos),          1, 0 ),
             X::Comma          => ( Produce   (T::Comma),        1, 0 ),
             X::Colon          => ( Produce   (T::Colon),        1, 0 ),
             // = ...             -------------------------------------
@@ -503,9 +574,9 @@ impl Transition {
             X::Less           => ( Yield     (T::Less),         0, 0 ),
             X::LessEq         => ( Produce   (T::LessEq),       0, 0 ),
             // << ...            -------------------------------------
-            X::LtLt_          => ( Continue   (S::LtLt),        0, 0 ),
-            X::Shl            => ( Yield      (T::Shl),         0, 0 ),
-            X::ShlAssign      => ( Produce    (T::ShlAssign),   0, 0 ),
+            X::LtLt_          => ( Continue  (S::LtLt),         0, 0 ),
+            X::Shl            => ( Yield     (T::Shl),          0, 0 ),
+            X::ShlAssign      => ( Produce   (T::ShlAssign),    0, 0 ),
             // > ...             -------------------------------------
             X::Gt_            => ( Continue  (S::Gt),           1, 0 ),
             X::UGt_           => ( Continue  (S::Gt),           0, 1 ),
@@ -515,6 +586,25 @@ impl Transition {
             X::GtGt_          => ( Continue  (S::GtGt),         0, 0 ),
             X::Shr            => ( Yield     (T::Shr),          0, 0 ),
             X::ShrAssign      => ( Produce   (T::ShrAssign),    0, 0 ),
+            // ! ...             -------------------------------------
+            X::Bang_          => ( Continue  (S::Bang),         1, 0 ),
+            X::LogNot         => ( Yield     (T::LogNot),       0, 0 ),
+            X::NotEq          => ( Produce   (T::NotEq),        0, 0 ),
+            // * ...             -------------------------------------
+            X::Star_          => ( Continue  (S::Star),         1, 0 ),
+            X::UStar_         => ( Continue  (S::Star),         0, 1 ),
+            X::Mul            => ( Yield     (T::Mul),          0, 0 ),
+            X::MulAssign      => ( Produce   (T::MulAssign),    0, 0 ),
+            // / ...             -------------------------------------
+            X::Slash_         => ( Continue  (S::Slash),        1, 0 ),
+            X::USlash_        => ( Continue  (S::Slash),        0, 1 ),
+            X::Div            => ( Yield     (T::Div),          0, 0 ),
+            X::DivAssign      => ( Produce   (T::DivAssign),    0, 0 ),
+            // / ...             -------------------------------------
+            X::Percent_       => ( Continue  (S::Percent),      1, 0 ),
+            X::UPercent_      => ( Continue  (S::Percent),      0, 1 ),
+            X::Mod            => ( Yield     (T::Mod),          0, 0 ),
+            X::ModAssign      => ( Produce   (T::ModAssign),    0, 0 ),
             // Other             -------------------------------------
             X::End            => ( Yield     (T::Eof),          1, 0 ),
             X::Error          => ( Error     ,                  0, 0 ),
@@ -584,48 +674,48 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
     use Transition::*;
     const __: Transition = Error;
 [
-//          Normal      Comment   Equal    Plus       Minus      Amp          AmpAmp       Caret        CaretCaret   Pipe        PipePipe    Lt        LtLt      Gt        GtGt
-//          -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-/* Space */ Normal,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   Cr  */ CrEol,      CrEol,    Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   Lf  */ LfEol,      LfEol,    Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
+//          Normal    Comment   Equal    Plus       Minus      Amp           AmpAmp        Caret         CaretCaret    Pipe         PipePipe     Lt      LtLt       Gt      GtGt       Bang    Star       Slash      Percent
+//          --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+/* Space */ Normal,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   Cr  */ CrEol,    CrEol,    Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   Lf  */ LfEol,    LfEol,    Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 
-/* Ident */ Ident,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/* Digit */ IntDec,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
+/* Ident */ Ident,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/* Digit */ IntDec,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 
-/*   (   */ LParen,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   )   */ RParen,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   [   */ LSquare,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   ]   */ RSquare,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   {   */ LCurly,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   }   */ RCurly,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   "   */ Str,        Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   '   */ Char,       Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
+/*   (   */ LParen,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   )   */ RParen,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   [   */ LSquare,  Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   ]   */ RSquare,  Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   {   */ LCurly,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   }   */ RCurly,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   "   */ Str,      Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   '   */ Char,     Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 
-/*   ,   */ Comma,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   #   */ Comment,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   =   */ Equal_,     Comment,  Eq,      AddAssign, SubAssign, BitAndAssign,LogAndAssign,BitXorAssign,LogXorAssign,BitOrAssign,LogOrAssign,LessEq,   ShlAssign,MoreEq,   ShrAssign,
-/*   +   */ Plus_,      Comment,  Assign,  Inc,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   -   */ Minus_,     Comment,  Assign,  Add,       Dec,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   &   */ Amp_,       Comment,  Assign,  Add,       Sub,       AmpAmp_,     LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   ^   */ Caret_,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      CaretCaret_, LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   |   */ Pipe_,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      PipePipe_,  LogOr,      Less,     Shl,      More,     Shr,
-/*   <   */ Lt_,        Comment,  Assign,  ULt_,      Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      LtLt_,    Shl,      More,     Shr,
-/*   >   */ Gt_,        Comment,  Assign,  UGt_,      Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      GtGt_,    Shr,
-/*   ~   */ BitNot,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   !   */ LogNot,     Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   *   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   /   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   %   */ __,         Comment,  Assign,  __,        Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   ;   */ __,         Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   :   */ Colon,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   ?   */ Unknown,    Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   $   */ Param,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   @   */ __,         Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/*   \   */ __,         Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      LogXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
+/*   ,   */ Comma,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   #   */ Comment,  Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   =   */ Equal_,   Comment,  Eq,      AddAssign, SubAssign, BitAndAssign, LogAndAssign, BitXorAssign, LogXorAssign, BitOrAssign, LogOrAssign, LessEq, ShlAssign, MoreEq, ShrAssign, NotEq,  MulAssign, DivAssign, ModAssign,
+/*   +   */ Plus_,    Comment,  Assign,  Inc,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   -   */ Minus_,   Comment,  Assign,  Add,       Dec,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   &   */ Amp_,     Comment,  Assign,  Add,       Sub,       AmpAmp_,      LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   ^   */ Caret_,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       CaretCaret_,  LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   |   */ Pipe_,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       PipePipe_,   LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   <   */ Lt_,      Comment,  Assign,  ULt_,      Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       LtLt_,  Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   >   */ Gt_,      Comment,  Assign,  UGt_,      Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       GtGt_,  Shr,       LogNot, Mul,       Div,       Mod,
+/*   ~   */ BitNot,   Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   !   */ Bang_,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   *   */ Star_,    Comment,  Assign,  UStar_,    Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   /   */ Slash_,   Comment,  Assign,  USlash_,   Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   %   */ Percent_, Comment,  Assign,  UPercent_, Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   ;   */ Eos,      Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   :   */ Colon,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   ?   */ Unknown,  Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   $   */ Param,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   @   */ __,       Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   \   */ __,       Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 
-/*  Eof  */ End,        End,      Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      BitXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
-/* Other */ Error,      Comment,  Assign,  Add,       Sub,       BitAnd,      LogAnd,      BitXor,      BitXor,      BitOr,      LogOr,      Less,     Shl,      More,     Shr,
+/*  Eof  */ End,      End,      Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       BitXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/* Other */ Error,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       BitXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 ]};
 
 // ----------------------------------------------------------------------------
@@ -722,8 +812,8 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
     #[inline]
     fn scan_param(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Param
+        self.input.advance();
+        self.scan_ident(1)
     }
 
     fn add_error(&mut self) -> State {

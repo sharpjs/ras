@@ -460,3 +460,112 @@ fn convert_exp(exp: u64, inv: bool, prec: u8) -> Option<i64> {
 
     exp.checked_sub(prec as i64)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::num::Base::{self, *};
+    use super::super::*;
+
+    static BASES: [Base; 4] = [Bin, Oct, Dec, Hex];
+
+    #[test]
+    fn scan_num_junk() {
+        for text in ["+", "-", "?", ""] {
+            for &base in &BASES { scan_num_junk_(text, base) }
+        }
+    }
+
+    fn scan_num_junk_(text: &str, base: Base) {
+        let mut lexer = Lexer::new(text.bytes());
+
+        let result = lexer.scan_num(base);
+
+        assert_eq!(result, None);
+        assert_eq!(lexer.input.position(), 0);
+    }
+
+    #[test]
+    fn scan_num_zero() {
+        for text in ["0+", "0-", "0?", "0"] {
+            for &base in &BASES { scan_num_zero_(text, base) }
+        }
+    }
+
+    fn scan_num_zero_(text: &str, base: Base) {
+        let mut lexer = Lexer::new(text.bytes());
+
+        let result = lexer.scan_num(base);
+
+        assert_eq!(result,                 Some(Token::Int));
+        assert_eq!(lexer.input.position(), 1);
+        assert_eq!(lexer.num.significand,  0);
+        assert_eq!(lexer.num.exponent,     0);
+        assert_eq!(lexer.num.radix,        base.radix());
+    }
+
+    /*
+    // TODO: Convert and expand these tests.
+
+    #[test]
+    fn scan_num_all_digits() {
+        scan_num_typical_(Bin, b"01_234567_89_ABCDEFG", 0b01,                3, b"234567_89_ABCDEFG");
+        scan_num_typical_(Oct, b"01_234567_89_ABCDEFG", 0o01_234567,        10,        b"89_ABCDEFG");
+        scan_num_typical_(Dec, b"01_234567_89_ABCDEFG", 0_0123456789,       13,           b"ABCDEFG");
+        scan_num_typical_(Hex, b"01_234567_89_ABCDEFG", 0x0123456789ABCDEF, 19,                 b"G");
+        scan_num_typical_(Hex, b"01_234567_89_abcdefg", 0x0123456789abcdef, 19,                 b"g");
+    }
+
+    fn scan_num_typical_(base: Base, bytes: &[u8], v: u64, l: usize, r: &[u8]) {
+        let mut reader = Reader::new(bytes);
+
+        let (val, len) = scan_num(&mut reader, base);
+
+        assert_eq!(val, Some(v));
+        assert_eq!(len, l);
+        assert_eq!(reader.remaining(), r);
+    }
+
+    #[test]
+    fn scan_num_max() {
+        scan_num_max_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+", 71);
+        scan_num_max_(Oct, b"1_777_777_777_777_777_777_777+", 29);
+        scan_num_max_(Dec, b"18_446_744_073_709_551_615+",    26);
+        scan_num_max_(Hex, b"FFFF_FFFF_FFFF_FFFF+",           19);
+
+    }
+    fn scan_num_max_(base: Base, bytes: &[u8], exp_len: usize) {
+        let mut reader = Reader::new(bytes);
+
+        let (val, len) = scan_num(&mut reader, base);
+
+        assert_eq!(val, Some(18_446_744_073_709_551_615));
+        assert_eq!(len, exp_len);
+        assert_eq!(reader.remaining(), b"+");
+    }
+
+    #[test]
+    fn scan_num_overflow() {
+        // max + 1
+        scan_num_overflow_(Bin, b"1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000+", 73);
+        scan_num_overflow_(Oct, b"2_000_000_000_000_000_000_000+", 29);
+        scan_num_overflow_(Dec, b"18_446_744_073_709_551_616+",    26);
+        scan_num_overflow_(Hex, b"1_0000_0000_0000_0000+",         21);
+
+        // huge
+        scan_num_overflow_(Bin, b"11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111+", 80);
+        scan_num_overflow_(Oct, b"777_777_777_777_777_777_777_777_777_777_777_777_777_777+", 55);
+        scan_num_overflow_(Dec, b"999_999_999_999_999_999_999_999_999_999_999_999_999_999+", 55);
+        scan_num_overflow_(Hex, b"FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF+",  54);
+    }
+
+    fn scan_num_overflow_(base: Base, bytes: &[u8], exp_len: usize) {
+        let mut reader = Reader::new(bytes);
+
+        let (val, len) = scan_num(&mut reader, base);
+
+        assert_eq!(val, None);
+        assert_eq!(len, exp_len);
+        assert_eq!(reader.remaining(), b"+");
+    }
+    */
+}

@@ -69,10 +69,10 @@ pub enum Token {
     /// `~` - bitwise NOT operator.
     BitNot,
 
-    /// `++` increment operator.
+    /// `++` - increment operator.
     Inc,
 
-    /// `--` decrement operator.
+    /// `--` - decrement operator.
     Dec,
 
     /// `*` - signed multiplication operator.

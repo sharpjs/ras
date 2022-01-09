@@ -196,18 +196,17 @@ enum Transition {
     /// Handle a CR or CR+LF newline.
     /// - Consume the current input byte.
     /// - Consume the next input byte if it is a line feed.
-    /// - Emit an `Eos` token.
+    /// - Yield an `Eos` token.
     /// - Increment the line number for subsequent tokens.
     CrEos,
 
     /// Handle a LF newline.
     /// - Consume the current input byte.
-    /// - Emit an `Eos` token.
+    /// - Yield an `Eos` token.
     /// - Increment the line number for subsequent tokens.
     LfEos,
 
-    /// Consume the current input byte and continue scanning in `Comment`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Comment` state.
     Comment,
 
     /// Scan an identifier or a label.
@@ -225,274 +224,263 @@ enum Transition {
     /// Scan a character literal.
     Char,
 
-    /// Consume the current input byte and emit a `BitNot` token.
+    /// Consume the current input byte and yield a `BitNot` token.
     BitNot,
 
-    /// Consume the current input byte and emit an `Unknown` token.
+    /// Consume the current input byte and yield an `Unknown` token.
     Unknown,
 
-    /// Consume the current input byte and emit a `LParen` token.
+    /// Consume the current input byte and yield a `LParen` token.
     LParen,
 
-    /// Consume the current input byte and emit a `RParen` token.
+    /// Consume the current input byte and yield a `RParen` token.
     RParen,
 
-    /// Consume the current input byte and emit a `LSquare` token.
+    /// Consume the current input byte and yield a `LSquare` token.
     LSquare,
 
-    /// Consume the current input byte and emit a `RSquare` token.
+    /// Consume the current input byte and yield a `RSquare` token.
     RSquare,
 
-    /// Consume the current input byte and emit a `LCurly` token.
+    /// Consume the current input byte and yield a `LCurly` token.
     LCurly,
 
-    /// Consume the current input byte and emit a `RCurly` token.
+    /// Consume the current input byte and yield a `RCurly` token.
     RCurly,
 
-    /// Consume the current input byte and emit an `Eos` token.
+    /// Consume the current input byte and yield an `Eos` token.
     Eos,
 
-    /// Consume the current input byte and emit a `Comma` token.
+    /// Consume the current input byte and yield a `Comma` token.
     Comma,
 
-    /// Consume the current input byte and emit a `Colon` token.
+    /// Consume the current input byte and yield a `Colon` token.
     Colon,
 
-    /// Consume input and yield a `Alias` token.
+    /// Consume the current input byte and yield a `Alias` token.
     Alias,
 
     // = ...
 
-    /// Consume the current input byte and continue scanning in `Equal`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Equal` state.
     Equal_,
 
-    /// Emit an `Assign` token.
+    /// Yield an `Assign` token.
     Assign,
 
-    /// Consume the current input byte and emit an `Eq` token.
+    /// Consume the current input byte and yield an `Eq` token.
     Eq,
 
     // + ...
 
-    /// Consume the current input byte and continue scanning in `Plus`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Plus` state.
     Plus_,
 
-    /// Emit an `Add` token.
+    /// Yield an `Add` token.
     Add,
 
-    /// Consume the current input byte and emit an `AddAssign` token.
+    /// Consume the current input byte and yield an `AddAssign` token.
     AddAssign,
 
-    /// Consume the current input byte and emit an `Inc` token.
+    /// Consume the current input byte and yield an `Inc` token.
     Inc,
 
     // - ...
 
-    /// Consume the current input byte and continue scanning in `Minus`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Minus` state.
     Minus_,
 
-    /// Emit a `Sub` token.
+    /// Yield a `Sub` token.
     Sub,
 
-    /// Consume the current input byte and emit a `SubAssign` token.
+    /// Consume the current input byte and yield a `SubAssign` token.
     SubAssign,
 
-    /// Consume the current input byte and emit a `Dec` token.
+    /// Consume the current input byte and yield a `Dec` token.
     Dec,
 
     // & ...
 
-    /// Consume the current input byte and continue scanning in `Amp`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Amp` state.
     Amp_,
 
-    /// Emit a `BitAnd` token.
+    /// Yield a `BitAnd` token.
     BitAnd,
 
-    /// Consume the current input byte and emit a `BitAndAssign` token.
+    /// Consume the current input byte and yield a `BitAndAssign` token.
     BitAndAssign,
 
     // && ...
 
-    /// Consume the current input byte and continue scanning in `AmpAmp`
-    /// state.
+    /// Consume the current input byte and continue scanning in `AmpAmp` state.
     AmpAmp_,
 
-    /// Emit a `LogAnd` token.
+    /// Yield a `LogAnd` token.
     LogAnd,
 
-    /// Consume the current input byte and emit a `LogAndAssign` token.
+    /// Consume the current input byte and yield a `LogAndAssign` token.
     LogAndAssign,
 
     // ^ ...
 
-    /// Consume the current input byte and continue scanning in `Caret`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Caret` state.
     Caret_,
 
-    /// Emit a `BitXor` token.
+    /// Yield a `BitXor` token.
     BitXor,
 
-    /// Consume the current input byte and emit a `BitXorAssign` token.
+    /// Consume the current input byte and yield a `BitXorAssign` token.
     BitXorAssign,
 
     // ^^ ...
 
-    /// Consume the current input byte and continue scanning in `CaretCaret`
-    /// state.
+    /// Consume the current input byte and continue scanning in `CaretCaret` state.
     CaretCaret_,
 
-    /// Emit a `LogXor` token.
+    /// Yield a `LogXor` token.
     LogXor,
 
-    /// Consume the current input byte and emit a `LogXorAssign` token.
+    /// Consume the current input byte and yield a `LogXorAssign` token.
     LogXorAssign,
 
     // | ...
 
-    /// Consume the current input byte and continue scanning in `Pipe`
-    /// state.
+    /// Consume the current input byte and continue scanning in `Pipe` state.
     Pipe_,
 
-    /// Emit a `BitOr` token.
+    /// Yield a `BitOr` token.
     BitOr,
 
-    /// Consume the current input byte and emit a `BitOrAssign` token.
+    /// Consume the current input byte and yield a `BitOrAssign` token.
     BitOrAssign,
 
     // || ...
 
-    /// Consume the current input byte and continue scanning in `PipePipe`
-    /// state.
+    /// Consume the current input byte and continue scanning in `PipePipe` state.
     PipePipe_,
 
-    /// Emit a `LogOr` token.
+    /// Yield a `LogOr` token.
     LogOr,
 
-    /// Consume the current input byte and emit a `LogOrAssign` token.
+    /// Consume the current input byte and yield a `LogOrAssign` token.
     LogOrAssign,
 
     // < ...
 
-    /// Consume the current input byte and continue scanning in `Lt`
-    /// state.  Sets signedness to signed.
+    /// Consume the current input byte and continue scanning in `Lt` state.
+    /// Set signedness to signed.
     Lt_,
 
-    /// Consume the current input byte and continue scanning in `Lt`
-    /// state.  Sets signedness to unsigned.
+    /// Consume the current input byte and continue scanning in `Lt` state.
+    /// Set signedness to unsigned.
     ULt_,
 
-    /// Emit a `Less` token.
+    /// Yield a `Less` token.
     Less,
 
-    /// Consume the current input byte and emit a `LessEq` token.
+    /// Consume the current input byte and yield a `LessEq` token.
     LessEq,
 
     // << ...
 
-    /// Consume the current input byte and continue scanning in `LtLt`
-    /// state.
+    /// Consume the current input byte and continue scanning in `LtLt` state.
     LtLt_,
 
-    /// Emit a `Shl` token.
+    /// Yield a `Shl` token.
     Shl,
 
-    /// Consume the current input byte and emit a `ShlAssign` token.
+    /// Consume the current input byte and yield a `ShlAssign` token.
     ShlAssign,
 
     // > ...
 
-    /// Consume the current input byte and continue scanning in `Gt`
-    /// state.  Sets signedness to signed.
+    /// Consume the current input byte and continue scanning in `Gt` state.
+    /// Set signedness to signed.
     Gt_,
 
-    /// Consume the current input byte and continue scanning in `Gt`
-    /// state.  Sets signedness to unsigned.
+    /// Consume the current input byte and continue scanning in `Gt` state.
+    /// Set signedness to unsigned.
     UGt_,
 
-    /// Emit a `More` token.
+    /// Yield a `More` token.
     More,
 
-    /// Consume the current input byte and emit a `MoreEq` token.
+    /// Consume the current input byte and yield a `MoreEq` token.
     MoreEq,
 
     // >> ...
 
-    /// Consume the current input byte and continue scanning in `GtGt`
-    /// state.
+    /// Consume the current input byte and continue scanning in `GtGt` state.
     GtGt_,
 
-    /// Emit a `Shr` token.
+    /// Yield a `Shr` token.
     Shr,
 
-    /// Consume the current input byte and emit a `ShrAssign` token.
+    /// Consume the current input byte and yield a `ShrAssign` token.
     ShrAssign,
 
     // >> ...
 
-    /// Consume input and continue scanning in `Bang` state.
+    /// Consume the current input byte and continue scanning in `Bang` state.
     Bang_,
 
     /// Yield a `LogNot` token.
     LogNot,
 
-    /// Consume input and yield a `NotEq` token.
+    /// Consume the current input byte and yield a `NotEq` token.
     NotEq,
 
     // * ...
 
-    /// Consume input and continue scanning in `Star` state.
+    /// Consume the current input byte and continue scanning in `Star` state.
     /// Set signedness to signed.
     Star_,
 
-    /// Consume input and continue scanning in `Star` state.
+    /// Consume the current input byte and continue scanning in `Star` state.
     /// Set signedness to unsigned.
     UStar_,
 
     /// Yield a `Mul` token.
     Mul,
 
-    /// Consume input and yield a `MulAssign` token.
+    /// Consume the current input byte and yield a `MulAssign` token.
     MulAssign,
 
     // / ...
 
-    /// Consume input and continue scanning in `Slash` state.
+    /// Consume the current input byte and continue scanning in `Slash` state.
     /// Set signedness to signed.
     Slash_,
 
-    /// Consume input and continue scanning in `Slash` state.
+    /// Consume the current input byte and continue scanning in `Slash` state.
     /// Set signedness to unsigned.
     USlash_,
 
     /// Yield a `Div` token.
     Div,
 
-    /// Consume input and yield a `DivAssign` token.
+    /// Consume the current input byte and yield a `DivAssign` token.
     DivAssign,
 
     // % ...
 
-    /// Consume input and continue scanning in `Percent` state.
+    /// Consume the current input byte and continue scanning in `Percent` state.
     /// Set signedness to signed.
     Percent_,
 
-    /// Consume input and continue scanning in `Percent` state.
+    /// Consume the current input byte and continue scanning in `Percent` state.
     /// Set signedness to unsigned.
     UPercent_,
 
     /// Yield a `Mod` token.
     Mod,
 
-    /// Consume input and yield a `ModAssign` token.
+    /// Consume the current input byte and yield a `ModAssign` token.
     ModAssign,
 
     // \ ...
 
-    /// Consume input and continue scanning in `BSlash` state.
+    /// Consume the current input byte and continue scanning in `BSlash` state.
     BSlash_,
 
     /// Handle an escaped CR or CR+LF newline.
@@ -508,10 +496,10 @@ enum Transition {
 
     // Other
 
-    /// Emit an `Eof` token.
+    /// Yield an `Eof` token.
     End,
 
-    /// Handle a lexical error.
+    /// Handle an unexpected character.
     /// - Record a lexical error at the current input position.
     /// - Consume the current input byte.
     /// - Continue scanning in `Normal` state.
@@ -649,10 +637,10 @@ enum Action {
 
     // === Tokens ===
 
-    /// Consume the current input byte and emit a token.
+    /// Consume the current input byte and yield a token.
     Produce(Token),
 
-    /// Emit a token.
+    /// Yield a token.
     Yield(Token),
 
     // === Newlines ===
@@ -697,8 +685,10 @@ enum Action {
 
     // === Miscellaneous ===
 
-    /// Record a lexical error, consume the current input byte, and continue
-    /// scanning in `Normal` state.
+    /// Handle an unexpected character.
+    /// - Record a lexical error at the current input position.
+    /// - Consume the current input byte.
+    /// - Continue scanning in `Normal` state.
     Error,
 }
 

@@ -255,6 +255,9 @@ enum Transition {
     /// Consume the current input byte and emit a `Colon` token.
     Colon,
 
+    /// Consume input and yield a `Alias` token.
+    Alias,
+
     // = ...
 
     /// Consume the current input byte and continue scanning in `Equal`
@@ -530,6 +533,7 @@ impl Transition {
             X::Eos            => ( Produce   (T::Eos),          1, 0 ),
             X::Comma          => ( Produce   (T::Comma),        1, 0 ),
             X::Colon          => ( Produce   (T::Colon),        1, 0 ),
+            X::Alias          => ( Produce   (T::Alias),        1, 0 ),
             // = ...             -------------------------------------
             X::Equal_         => ( Continue  (S::Equal),        1, 0 ),
             X::Assign         => ( Yield     (T::Assign),       0, 0 ),
@@ -711,7 +715,7 @@ static TRANSITION_MAP: [Transition; State::COUNT * Char::COUNT] = {
 /*   :   */ Colon,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 /*   ?   */ Unknown,  Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 /*   $   */ Param,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
-/*   @   */ __,       Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
+/*   @   */ Alias,    Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 /*   \   */ __,       Comment,  Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       LogXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,
 
 /*  Eof  */ End,      End,      Assign,  Add,       Sub,       BitAnd,       LogAnd,       BitXor,       BitXor,       BitOr,       LogOr,       Less,   Shl,       More,   Shr,       LogNot, Mul,       Div,       Mod,

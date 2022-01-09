@@ -60,6 +60,9 @@ pub enum Token {
 
     // === Operators ===
 
+    /// `@` - alias operator.
+    Alias,
+
     /// `!` - logical NOT operator, side-effect indicator.
     LogNot,
 
@@ -281,6 +284,7 @@ impl Display for Token {
             Float        => "float",
             Str          => "str",
             Char         => "char",
+            Alias        => "@",
             LogNot       => "!",
             BitNot       => "~",
             Inc          => "++",

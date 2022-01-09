@@ -21,6 +21,8 @@
 use std::fmt::{self, Display, Formatter};
 use std::ops::Range;
 
+use self::num::NumData;
+
 use super::input::Cursor;
 
 mod ident;
@@ -354,9 +356,7 @@ pub struct Lexer<I: Iterator<Item = u8>> {
     line_next: usize,
     range:     Range<usize>,
     str_buf:   Vec<u8>,
-    num_sig:   u64,
-    num_prec:  u8,
-    num_exp:   i64,
+    num:       NumData,
 }
 
 impl<I: Iterator<Item = u8>> Lexer<I> {
@@ -365,8 +365,9 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         let mut input = Cursor::new(iter);
         input.advance();
         Self {
-            input, line: 0, line_next: 1, range: 0..0, str_buf: vec![],
-            num_sig: 0, num_prec: 0, num_exp: 0
+            input, line: 0, line_next: 1, range: 0..0,
+            str_buf: vec![],
+            num:  NumData::default(),
         }
     }
 
@@ -402,7 +403,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
     /// Returns the significand of the most numeric literal token.
     pub fn int_value(&self) -> u64 {
-        self.num_sig
+        self.num.significand
     }
 }
 
@@ -421,12 +422,8 @@ impl<'a, I: Iterator<Item = u8>> Display for Value<'a, I> {
             Str   => self.lexer.str_value().fmt(f),
             Ident => self.lexer.str_value().fmt(f),
             Param => self.lexer.str_value().fmt(f),
-            Int   => self.lexer.num_sig    .fmt(f),
-            Float => format!("{} p{} p{}",
-                self.lexer.num_sig,
-                self.lexer.num_prec,
-                self.lexer.num_exp
-            ).fmt(f),
+            Int   => self.lexer.num.significand.fmt(f),
+            Float => format!("{}", self.lexer.num).fmt(f),
             _     => "".fmt(f),
         }
     }

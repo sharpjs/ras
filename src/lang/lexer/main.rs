@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-///! Main lexer.
+//! Main lexer.
 
 use crate::lang::input::LogicalChar;
 use crate::num::Base::*;

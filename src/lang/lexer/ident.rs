@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Identifier sublexer.
+
 use crate::lang::input::LogicalChar;
 use super::*;
-
-///! Identifier sublexer.
 
 // ----------------------------------------------------------------------------
 

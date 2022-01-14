@@ -25,9 +25,11 @@ use self::num::NumData;
 
 use super::input::Cursor;
 
+mod esc;
 mod ident;
 mod main;
 mod num;
+mod quoted;
 
 // ----------------------------------------------------------------------------
 

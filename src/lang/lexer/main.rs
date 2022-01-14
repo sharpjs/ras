@@ -786,8 +786,8 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                 ScanOct      => if let Some(t) = self.scan_num(Oct) { break t },
                 ScanDec      => if let Some(t) = self.scan_num(Dec) { break t },
                 ScanHex      => if let Some(t) = self.scan_num(Hex) { break t },
-                ScanStr      => break self.scan_str(),
-                ScanChar     => break self.scan_char(),
+                ScanStr      => if let Some(t) = self.scan_str()    { break t },
+                ScanChar     => if let Some(t) = self.scan_char()   { break t },
                 ScanIdent    => break self.scan_ident(variant),
                 ScanParam    => break self.scan_param(),
             }
@@ -833,18 +833,6 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     fn scan_lf_eos(&mut self) -> Token {
         self.scan_lf();
         Token::Eos
-    }
-
-    #[inline]
-    fn scan_str(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Str
-    }
-
-    #[inline]
-    fn scan_char(&mut self) -> Token {
-        self.input.advance(); // TODO: invoke sublexer here
-        Token::Char
     }
 
     #[inline]

@@ -23,17 +23,12 @@ use super::*;
 
 // ----------------------------------------------------------------------------
 
-/// Logical characters recognized by the main lexer.
+/// Logical characters recognized by the identifier sublexer.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u16)]
+#[repr(u8)]
 enum Char {
     Ident,
     Other
-}
-
-impl Char {
-    /// Count of logical characters.
-    const COUNT: usize = Self::Other as usize; // / State::COUNT + 1;
 }
 
 impl LogicalChar for Char {

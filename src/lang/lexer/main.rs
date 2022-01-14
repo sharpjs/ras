@@ -72,7 +72,7 @@ enum Char {
     Other   = char(35), // everything else // <- COUNT references this
 }
 
-// Helper to define Char variants
+// Helper to define Char variants.
 const fn char(n: u16) -> u16 {
     n * State::COUNT as u16
 }

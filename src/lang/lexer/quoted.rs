@@ -122,7 +122,27 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     /// Attempts to scan a character literal.
     #[inline]
     pub(super) fn scan_char(&mut self) -> Option<Token> {
-        self.scan_quoted(b'\'', Token::Char)
+        let token = self.scan_quoted(b'\'', Token::Char)?;
+
+        // SAFETY: UTF-8 already validated
+        let mut chars = unsafe {
+            std::str::from_utf8_unchecked(&self.str_buf[..])
+        }.chars();
+
+        match chars.next() {
+            None => {
+                eprintln!("error: empty character literal");
+                None
+            },
+            Some(c) if chars.next().is_none() => {
+                self.num = NumData { significand: c as u64, exponent: 0, radix: 16 };
+                Some(token)
+            },
+            _ => {
+                eprintln!("error: character literal contains more than one character");
+                None
+            },
+        }
     }
 
     /// Attempts to scan a the given quoted literal `token` with the given `end_byte`.

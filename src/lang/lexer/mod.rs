@@ -426,6 +426,7 @@ impl<'a, I: Iterator<Item = u8>> Display for Value<'a, I> {
         use Token::*;
         match self.token {
             Str   => self.lexer.str_value().fmt(f),
+            Char  => self.lexer.str_value().fmt(f),
             Ident => self.lexer.str_value().fmt(f),
             Param => self.lexer.str_value().fmt(f),
             Int   => self.lexer.num.significand.fmt(f),

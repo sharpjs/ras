@@ -354,6 +354,39 @@ impl Display for Token {
 
 // ----------------------------------------------------------------------------
 
+/// Trait for types which yield a stream of lexical tokens.
+pub trait Lex {
+    /// Advances to the next token and returns its type.
+    fn next(&mut self) -> Token;
+
+    /// Returns the line number at which the current token begins.
+    fn line(&self) -> usize;
+
+    /// Returns the byte position range of the current token within the input
+    /// stream.
+    fn range(&self) -> &Range<usize>;
+
+    /// Returns the value of the current string-like token.
+    ///
+    /// If the current token is not string-like, this method is safe, but the
+    /// return value is unspecified.
+    fn str(&self) -> &str;
+
+    /// Returns the value of the current integer-like token.
+    ///
+    /// If the current token is not integer-like, this method is safe, but the
+    /// return value is unspecified.
+    fn int(&self) -> u64;
+
+    /// Returns the value of the current float-like token.
+    ///
+    /// If the current token is not float-like, this method is safe, but the
+    /// return value is unspecified.
+    fn float(&self) -> &NumData;
+}
+
+// ----------------------------------------------------------------------------
+
 /// Lexical analyzer.  Reads input and yields a stream of lexical tokens.
 #[derive(Clone, Debug)]
 pub struct Lexer<I: Iterator<Item = u8>> {
@@ -377,39 +410,42 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         }
     }
 
-    /// Advances to the next token and returns its type.
-    #[inline]
-    pub fn next(&mut self) -> Token {
-        self.scan_main()
-    }
-
-    /// Returns the line number at which the current token begins.
-    #[inline]
-    pub fn line(&self) -> usize {
-        self.line
-    }
-
-    /// Returns the byte position range of the current token within the input
-    /// stream.
-    #[inline]
-    pub fn range(&self) -> &Range<usize> {
-        &self.range
-    }
-
     /// Returns the value of the most recent token.
     pub fn value(&self, token: Token) -> Value<I> {
         Value { lexer: self, token }
     }
+}
 
-    /// Returns the value of the most recent string-like token.
-    pub fn str_value(&self) -> &str {
+impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
+    #[inline]
+    fn next(&mut self) -> Token {
+        self.scan_main()
+    }
+
+    #[inline]
+    fn line(&self) -> usize {
+        self.line
+    }
+
+    #[inline]
+    fn range(&self) -> &Range<usize> {
+        &self.range
+    }
+
+    #[inline]
+    fn str(&self) -> &str {
         // SAFETY: UTF-8 validation performed in an earlier phase.
         unsafe { std::str::from_utf8_unchecked(&self.str_buf[..]) }
     }
 
-    /// Returns the significand of the most numeric literal token.
-    pub fn int_value(&self) -> u64 {
+    #[inline]
+    fn int(&self) -> u64 {
         self.num.significand
+    }
+
+    #[inline]
+    fn float(&self) -> &NumData {
+        &self.num
     }
 }
 
@@ -425,12 +461,12 @@ impl<'a, I: Iterator<Item = u8>> Display for Value<'a, I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Token::*;
         match self.token {
-            Str   => self.lexer.str_value().fmt(f),
-            Char  => self.lexer.str_value().fmt(f),
-            Ident => self.lexer.str_value().fmt(f),
-            Param => self.lexer.str_value().fmt(f),
-            Int   => self.lexer.num.significand.fmt(f),
-            Float => format!("{}", self.lexer.num).fmt(f),
+            Str   => self.lexer.str().fmt(f),
+            Char  => self.lexer.str().fmt(f),
+            Ident => self.lexer.str().fmt(f),
+            Param => self.lexer.str().fmt(f),
+            Int   => self.lexer.int().fmt(f),
+            Float => format!("{}", self.lexer.float()).fmt(f),
             _     => "".fmt(f),
         }
     }

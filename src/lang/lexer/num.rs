@@ -324,7 +324,7 @@ static TRANSITION_MAP: [Transition; Row::COUNT * State::COUNT] = {
 
 /// Value for numeric literal tokens.
 #[derive(Clone, Copy, Default, Debug)]
-pub(super) struct NumData {
+pub struct NumData {
     pub significand: u64,
     pub exponent:    i64,
     pub radix:       u8,

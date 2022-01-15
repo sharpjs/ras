@@ -28,7 +28,7 @@ use std::env::args;
 use std::fs::File;
 use std::io::{Read, stdin};
 
-use lang::lexer::{Lexer, Token};
+use crate::lang::lexer::{Lex, Lexer, Token};
 
 fn main() {
     let mut content = String::with_capacity(4096);

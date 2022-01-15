@@ -16,14 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
-//! # The **ras** Language
-//!
-//! ## Encoding
-//!
-//! Source files must be encoded in UTF-8.  Source files may begin with the
-//! byte-order marker `EF` `BB` `BF`.
+//! Abstract syntax trees.
 
-pub mod ast;
-pub mod input;
-pub mod lexer;
-pub mod parser;
+/// Module.
+#[derive(Clone, Debug)]
+pub struct Module<T = ()> {
+    /// Additional data.
+    pub data: T,
+}

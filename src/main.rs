@@ -22,6 +22,7 @@
 #![allow(unused_macros)]
 
 mod lang;
+mod name;
 mod num;
 
 use std::env::args;

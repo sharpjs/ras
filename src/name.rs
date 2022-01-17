@@ -167,7 +167,7 @@ impl StringArena {
 macro_rules! prepopulate {
     ($($(#[$attr:meta])* $ident:ident => $value:literal,)*) => {
         #[repr(u32)]
-        enum _Names { $($ident)*, }
+        enum _Names { $($ident),* }
 
         impl Name { $(
             $(#[$attr])*
@@ -187,12 +187,64 @@ macro_rules! prepopulate {
 
 prepopulate! {
     /// `Name` representing the empty string.
-    EMPTY => "",
+    EMPTY   => "",
+    SECTION => ".section",
 }
 
 // ----------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
-    // TODO
+    use super::{Name, NameTable};
+
+    const INITIAL_LEN: usize = 2;
+
+    #[test]
+    fn empty() {
+        let t = NameTable::empty();
+
+        assert_eq!(t.len(),              0);
+        assert_eq!(t.get(Name::EMPTY),   "");
+        assert_eq!(t.get(Name::SECTION), "");
+    }
+
+    #[test]
+    fn new() {
+        let t = NameTable::new();
+
+        assert_eq!(t.len(),              INITIAL_LEN);
+        assert_eq!(t.get(Name::EMPTY),   "");
+        assert_eq!(t.get(Name::SECTION), ".section");
+    }
+
+    #[test]
+    fn add_once() {
+        let mut t = NameTable::new();
+
+        let name = t.add("foo");
+
+        assert_eq!(t.len(),              INITIAL_LEN + 1);
+        assert_eq!(t.get(Name::EMPTY),   "");
+        assert_eq!(t.get(Name::SECTION), ".section");
+        assert_eq!(t.get(name),          "foo");
+    }
+
+    #[test]
+    fn add_twice() {
+        let mut t = NameTable::new();
+
+        let name0 = t.add("foo");
+        let name1 = t.add("foo");
+
+        assert_eq!(t.len(),              INITIAL_LEN + 1);
+        assert_eq!(t.get(Name::EMPTY),   "");
+        assert_eq!(t.get(Name::SECTION), ".section");
+        assert_eq!(t.get(name1),         "foo");
+
+        assert_eq!(name0, name1);
+        assert_eq!(
+            t.get(name0).as_ptr() as usize,
+            t.get(name1).as_ptr() as usize
+        );
+    }
 }

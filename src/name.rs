@@ -57,8 +57,8 @@ pub struct NameTable {
 }
 
 impl NameTable {
-    /// Creates a new, empty [`NameTable`].
-    pub fn new() -> NameTable {
+    /// Creates an new, empty [`NameTable`].
+    pub fn empty() -> NameTable {
         Self {
             vec: Vec        ::with_capacity(INITIAL_NAME_CAPACITY),
             map: HashMap    ::with_capacity(INITIAL_NAME_CAPACITY),
@@ -159,4 +159,40 @@ impl StringArena {
         // Return reference into open buffer
         &buf[idx..]
     }
+}
+
+// ----------------------------------------------------------------------------
+
+// $($id:ident => $val:literal)*,
+macro_rules! prepopulate {
+    ($($(#[$attr:meta])* $ident:ident => $value:literal,)*) => {
+        #[repr(u32)]
+        enum _Names { $($ident)*, }
+
+        impl Name { $(
+            $(#[$attr])*
+            pub const $ident: Name = Name(_Names::$ident as u32);
+        )* }
+
+        impl NameTable {
+            /// Creates a new [`NameTable`] prepopulated with common strings.
+            pub fn new() -> NameTable {
+                let mut table = Self::empty();
+                $( table.add($value); )*
+                table
+            }
+        }
+    };
+}
+
+prepopulate! {
+    /// `Name` representing the empty string.
+    EMPTY => "",
+}
+
+// ----------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    // TODO
 }

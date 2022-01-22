@@ -42,9 +42,6 @@ pub enum Token {
     /// Identifier.
     Ident,                              // props: name
 
-    /// Label.
-    Label,                              // props: name, visibility
-
     /// Macro parameter.
     Param,                              // props: name
 
@@ -286,7 +283,6 @@ impl Display for Token {
 
         let s = match *self {
             Ident        => "ident",
-            Label        => "label",
             Param        => "param",
             Int          => "int",
             Float        => "float",

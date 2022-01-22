@@ -238,6 +238,12 @@ pub enum Token {
     /// `:` - item joiner.
     Colon,
 
+    /// `::` - public label declarator.
+    Public,
+
+    /// `:?` - weak label declarator.
+    Weak,
+
     /// `,` - item separator.
     Comma,
 
@@ -344,6 +350,8 @@ impl Display for Token {
             LSquare      => "[",
             RSquare      => "]",
             Colon        => ":",
+            Weak         => ":?",
+            Public       => "::",
             Comma        => ",",
             Eos          => "EOS",
             Eof          => "EOF",

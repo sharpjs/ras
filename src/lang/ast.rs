@@ -18,9 +18,98 @@
 
 //! Abstract syntax trees.
 
+use crate::name::Name;
+
 /// Module.
-#[derive(Clone, Debug)]
+///
+/// ```text
+/// module = EOS* stmt*
+/// ```
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Module<T = ()> {
+    /// Statements in the module.
+    pub stmts: Vec<Box<Stmt<T>>>,
+
+    /// Additional data.
+    pub data: T,
+}
+
+/// Statement.
+///
+/// ```text
+/// stmt = label | directive
+/// ```
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Stmt<T = ()> {
+    /// Label statement.
+    Label(Label<T>),
+
+    /// Directive statement.
+    Directive, // TODO
+}
+
+/// Label.
+///
+/// ```text
+/// label = IDENT (":" | ":?" | "::") EOS*
+/// ```
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Label<T = ()> {
+    /// Name.
+    pub name: Name,
+
+    /// Scope.
+    pub scope: Scope,
+
+    /// Additional data.
+    pub data: T,
+}
+
+/// Symbol scopes.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum Scope {
+    /// Valid between non-local labels in the same source file.  Not present in
+    /// the object file.
+    ///
+    /// Lexical form: `.foo:`
+    Local,
+
+    /// Valid within the entire source file.  Not present in the object file.
+    ///
+    /// Lexical form: `.foo::`
+    Hidden,
+
+    /// Valid within the entire source file.  Present in the object file but
+    /// not exported to other objects.
+    ///
+    /// Lexical form: `foo:`
+    Private,
+
+    /// Valid within all source files.  Present in the object file and exported
+    /// to other objects.  Overridable by a symbol with [`Scope::Public`]
+    /// scope.
+    ///
+    /// Lexical form: `foo:?`
+    Weak,
+
+    /// Valid within all source files.  Present in the object file and exported
+    /// to other objects.  Not overridable.
+    ///
+    /// Lexical form: `foo::`
+    Public,
+}
+
+/// Directive.
+///
+/// ```text
+/// directive = IDENT arguments?
+/// arguments = term ( "," term )*
+/// ```
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Directive<T = ()> {
+    /// Name.
+    pub name: Name,
+
     /// Additional data.
     pub data: T,
 }

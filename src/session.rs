@@ -18,6 +18,8 @@
 
 //! Assembly session.
 
+use crate::lang::lexer::{Lex, Lexer, Token};
+use crate::lang::parser::Parser;
 use crate::name::NameTable;
 
 // ----------------------------------------------------------------------------
@@ -42,5 +44,42 @@ impl Session {
 
     pub fn names_mut(&mut self) -> &mut NameTable {
         &mut self.names
+    }
+
+    pub fn print_tokens(&mut self, path: &str, content: &str) {
+        println!("[{}:tokens]", path);
+
+        //        0         1         2         3         4         5         6         7         8
+        //        0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0
+        println!("╭──────┬────────┬────────┬───────┬──────────────────────╮");
+        println!("│ LINE │ OFFSET │ LENGTH │ TYPE  │ VALUE                │");
+        println!("╞══════╪════════╪════════╪═══════╪══════════════════════╡");
+
+        let mut lexer = Lexer::new(content.bytes());
+
+        loop {
+            let token = lexer.next();
+            println!(
+                "│ {:4} │ {:6} │ {:6} │ {:5} │ {:<20.20} │",
+                lexer.line(),
+                lexer.range().start,
+                lexer.range().len(),
+                token,
+                lexer.value(token)
+            );
+            if token == Token::Eof { break; }
+        }
+        println!("╰──────┴────────┴────────┴───────┴──────────────────────╯");
+    }
+
+    pub fn print_ast(&mut self, path: &str, content: &str) {
+        println!("[{}:ast]", path);
+
+        let     lexer = Lexer::new(content.bytes());
+        let mut parser = Parser::new(lexer, self);
+
+        let ast = parser.parse();
+
+        println!("{:#?}", ast)
     }
 }

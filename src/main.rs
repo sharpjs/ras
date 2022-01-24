@@ -30,21 +30,20 @@ use std::env::args;
 use std::fs::File;
 use std::io::{Read, stdin};
 
-use lang::lexer::{Lex, Lexer, Token};
-use lang::parser::Parser;
 use session::Session;
 
 fn main() {
+    let mut session = Session::new();
+
     for_each_input(|path, content| {
-        println!("[{}]", path);
-        print_tokens(path, content);
-        print_ast(path, content);
+        session.print_tokens(path, content);
+        session.print_ast(path, content);
     });
 }
 
-fn for_each_input<F>(f: F)
+fn for_each_input<F>(mut f: F)
 where
-    F: Fn(&str, &str) -> ()
+    F: FnMut(&str, &str) -> ()
 {
     let mut content = String::with_capacity(4096);
 
@@ -64,38 +63,4 @@ where
 
         f(path.as_str(), content.as_str())
     }
-}
-
-fn print_tokens(_path: &str, content: &str) {
-    //        0         1         2         3         4         5         6         7         8
-    //        0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0 2 4 6 8 0
-    println!("╭──────┬────────┬────────┬───────┬──────────────────────╮");
-    println!("│ LINE │ OFFSET │ LENGTH │ TYPE  │ VALUE                │");
-    println!("╞══════╪════════╪════════╪═══════╪══════════════════════╡");
-
-    let mut lexer = Lexer::new(content.bytes());
-
-    loop {
-        let token = lexer.next();
-        println!(
-            "│ {:4} │ {:6} │ {:6} │ {:5} │ {:<20.20} │",
-            lexer.line(),
-            lexer.range().start,
-            lexer.range().len(),
-            token,
-            lexer.value(token)
-        );
-        if token == Token::Eof { break; }
-    }
-    println!("╰──────┴────────┴────────┴───────┴──────────────────────╯");
-}
-
-fn print_ast(_path: &str, content: &str) {
-    let     lexer = Lexer::new(content.bytes());
-    let mut session = Session::new();
-    let mut parser = Parser::new(lexer, &mut session);
-
-    let ast = parser.parse();
-
-    println!("{:#?}", ast)
 }

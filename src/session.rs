@@ -80,6 +80,6 @@ impl Session {
 
         let ast = parser.parse();
 
-        println!("{:#?}", ast)
+        println!("{}", ast.for_display(self.names()))
     }
 }

@@ -18,7 +18,8 @@
 
 //! Abstract syntax trees.
 
-use crate::name::Name;
+use std::fmt::{self, Display, Formatter};
+use crate::name::{Name, NameTable};
 
 /// Module.
 ///
@@ -45,7 +46,7 @@ pub enum Stmt<T = ()> {
     Label(Label<T>),
 
     /// Directive statement.
-    Directive, // TODO
+    Directive(Directive<T>),
 }
 
 /// Label.
@@ -112,4 +113,52 @@ pub struct Directive<T = ()> {
 
     /// Additional data.
     pub data: T,
+}
+
+// ----------------------------------------------------------------------------
+
+#[derive(Clone, Copy, Debug)]
+struct ForDisplay<'a, T> {
+    node:  &'a T,
+    names: &'a NameTable,
+}
+
+impl Module {
+    pub fn for_display<'a>(&'a self, names: &'a NameTable) -> impl Display + 'a {
+        ForDisplay { node: self, names }
+    }
+}
+
+impl<T> ForDisplay<'_, T> {
+    fn drill<'a, U>(&'a self, other: &'a U) -> ForDisplay<'a, U> {
+        ForDisplay { node: other, names: self.names }
+    }
+}
+
+impl<T> Display for ForDisplay<'_, Module<T>> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.node.stmts.iter().try_for_each(|stmt| self.drill(&**stmt).fmt(f))
+    }
+}
+
+impl<T> Display for ForDisplay<'_, Stmt<T>> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        use Stmt::*;
+        match *self.node {
+            Label     (ref l) => self.drill(l).fmt(f),
+            Directive (ref d) => self.drill(d).fmt(f),
+        }
+    }
+}
+
+impl<T> Display for ForDisplay<'_, Label<T>> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        writeln!(f, "Label {} {:?}", self.names.get(self.node.name), self.node.scope)
+    }
+}
+
+impl<T> Display for ForDisplay<'_, Directive<T>> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        writeln!(f, "Op {}", self.names.get(self.node.name))
+    }
 }

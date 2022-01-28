@@ -117,6 +117,7 @@ pub struct Directive<T = ()> {
 
 // ----------------------------------------------------------------------------
 
+/// Node wrapper to facilitate [`Display`] implementation.
 #[derive(Clone, Copy, Debug)]
 struct ForDisplay<'a, T> {
     node:  &'a T,
@@ -124,6 +125,7 @@ struct ForDisplay<'a, T> {
 }
 
 impl Module {
+    /// Returns a wrapper over the node that implements [`Display`].
     pub fn for_display<'a>(&'a self, names: &'a NameTable) -> impl Display + 'a {
         ForDisplay { node: self, names }
     }

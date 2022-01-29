@@ -43,28 +43,30 @@ Sequence | UTF-8   | Name  | Description
 
 ## Grammar
 
-### Operators
+### Operator Precedence and Associativity
 
-| Operators                        |Prec| Assoc | Arity |`+` `%`| Description
-|:---------------------------------|---:|:-----:|------:|:-----:|:-----------
-| `( )` `[ ]` `{ }`                | 15 | non   |     1 |       | group
-| `@`                              | 15 | right |     2 |       | alias
-| `:`                              | 14 | right |     2 |       | compound identifier
-| `x++` `x--` `f()` `x[]`          | 13 | left  |     1 |       | postfix
-| `~` `!` `+` `-` `%` `++x` `--x`  | 12 | right |     1 |       | prefix
-| `*` `/` `%`                      | 11 | left  |     2 |  all  | multiplicative
-| `+` `-`                          | 10 | left  |     2 |       | additive
-| `<<` `>>`                        |  9 | left  |     2 |  all  | shift
-| `&`                              |  8 | left  |     2 |       | bitwise AND
-| `^`                              |  7 | left  |     2 |       | bitwise XOR
-| `\|`                             |  6 | left  |     2 |       | bitwise OR
-| `==` `!=`  `<` `>`   `<=`  `>=`  |  5 | left  |     2 | most<sup>1</sup> | comparison
-| `&&`                             |  4 | left  |     2 |       | logical AND
-| `^^`                             |  3 | left  |     2 |       | logical XOR
-| `\|\|`                           |  2 | left  |     2 |       | logical OR
-| `=` `*=` `/=` `%=`<br>`+=` `-=` `<<=` `>>=`<br>`&=` `^=` `\|=` `&&=` `^^=` `\|\|=` | 1 | right | 2 | some<sup>2</sup> | assignment
-| `+:` `%:`                        | 0  | right |     1 |       | signedness
+| Operators                          |Prec| Assoc | Arity | Signedness        | Description
+|:-----------------------------------|---:|:-----:|------:|:-----------------:|:-----------
+| `( )` `[ ]` `{ }`                  | 15 | non   |     1 |                   | group
+| `@`                                | 15 | right |     2 |                   | alias
+| `:`                                | 14 | right |     2 |                   | composition
+| `x++` `x--` `f()` `x[]`            | 13 | left  |     1 |                   | unary postfix
+| `~` `!` `+x` `-x` `%x` `++x` `--x` | 12 | right |     1 |                   | unary prefix
+| `*` `/` `%`                        | 11 | left  |     2 | `*` `/` `%`       | multiplicative
+| `+` `-`                            | 10 | left  |     2 |                   | additive
+| `<<` `>>`                          |  9 | left  |     2 | `>>`              | shift
+| `&`                                |  8 | left  |     2 |                   | bitwise AND
+| `^`                                |  7 | left  |     2 |                   | bitwise XOR
+| `\|`                               |  6 | left  |     2 |                   | bitwise OR
+| `==` `!=` `<` `>` `<=` `>=`        |  5 | left  |     2 | `<` `>` `<=` `>=` | comparison
+| `&&`                               |  4 | left  |     2 |                   | logical AND
+| `^^`                               |  3 | left  |     2 |                   | logical XOR
+| `\|\|`                             |  2 | left  |     2 |                   | logical OR
+| `=` `*=` `/=` `%=`<br>`+=` `-=` `<<=` `>>=`<br>`&=` `^=` `\|=` `&&=` `^^=` `\|\|=` | 1 | right | 2 | some<sup>1</sup> | assignment
+| `+:` `%:`                          | 0  | right |     1 |                   | signedness
 
+<sup>1</sup> Compound assignment operator signedness behavior matches that of
+the corresponding non-assignment operator.
 
 ## Directives
 

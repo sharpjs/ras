@@ -82,6 +82,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
             }
         }
 
-        Token::Ident.variant(variant)
+        // TODO: Change variant to somethign else
+        if variant == 0 { Token::Ident } else { Token::Param }
     }
 }

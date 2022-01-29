@@ -62,11 +62,11 @@ pub enum Token {
     /// `@` - alias operator.
     Alias,
 
-    /// `!` - logical NOT operator, side-effect indicator.
-    LogNot,
-
     /// `~` - bitwise NOT operator.
     BitNot,
+
+    /// `!` - logical NOT operator, side-effect operator.
+    LogNot,
 
     /// `++` - increment operator.
     Inc,
@@ -74,28 +74,19 @@ pub enum Token {
     /// `--` - decrement operator.
     Dec,
 
-    /// `*` - signed multiplication operator.
+    /// `*` - multiplication operator.
     Mul,
 
-    /// `/` - signed division operator.
+    /// `/` - division operator.
     Div,
 
-    /// `%` - signed modulo operator.
+    /// `%` - modulo operator, treat-as-unsigned operator.
     Mod,
 
-    /// `+*` - unsigned multiplication operator.
-    UMul,
-
-    /// `+/` - unsigned division operator.
-    UDiv,
-
-    /// `+%` - unsigned modulo operator.
-    UMod,
-
-    /// `+` - addition operator, increment indicator.
+    /// `+` - addition operator, treat-as-signed operator.
     Add,
 
-    /// `-` - subtraction operator, negation operator, decrement indicator.
+    /// `-` - subtraction operator, negation operator.
     Sub,
 
     /// `<<` - left shift operator.
@@ -103,9 +94,6 @@ pub enum Token {
 
     /// `>>` - signed right shift operator.
     Shr,
-
-    /// `+>>` - unsigned right shift operator.
-    UShr,
 
     /// `&` - bitwise AND operator.
     BitAnd,
@@ -122,29 +110,17 @@ pub enum Token {
     /// `!=` - not-equal-to operator.
     NotEq,
 
-    /// `<` - signed less-than operator.
+    /// `<` - less-than operator.
     Less,
 
-    /// `>` - signed greater-than operator.
+    /// `>` - greater-than operator.
     More,
 
-    /// `<=` - signed less-than-or-equal-to operator.
+    /// `<=` - less-than-or-equal-to operator.
     LessEq,
 
-    /// `>=` - signed greater-than-or-equal-to operator.
+    /// `>=` - greater-than-or-equal-to operator.
     MoreEq,
-
-    /// `+<` - unsigned less-than operator.
-    ULess,
-
-    /// `+>` - unsigned greater-than operator.
-    UMore,
-
-    /// `+<=` - unsigned less-than-or-equal-to operator.
-    ULessEq,
-
-    /// `+>=` - unsigned greater-than-or-equal-to operator.
-    UMoreEq,
 
     /// `?` - not-known indicator.
     Unknown,
@@ -161,55 +137,43 @@ pub enum Token {
     /// `=` - assignment operator.
     Assign,
 
-    /// `*=` - signed multiplication-assignment operator.
+    /// `*=` - compound multiplication-assignment operator.
     MulAssign,
 
-    /// `/=` - signed division-assignment operator.
+    /// `/=` - compound division-assignment operator.
     DivAssign,
 
-    /// `%=` - signed modulo-assignment operator.
+    /// `%=` - compound modulo-assignment operator.
     ModAssign,
 
-    /// `+*=` - unsigned multiplication-assignment operator.
-    UMulAssign,
-
-    /// `+/=` - unsigned division-assignment operator.
-    UDivAssign,
-
-    /// `+/=` - unsigned modulo-assignment operator.
-    UModAssign,
-
-    /// `+=` - addition-assigment operator.
+    /// `+=` - compound addition-assigment operator.
     AddAssign,
 
-    /// `-=` - subtraction-assignment operator.
+    /// `-=` - compound subtraction-assignment operator.
     SubAssign,
 
-    /// `<<=` - left-shift-assignment operator.
+    /// `<<=` - compound left-shift-assignment operator.
     ShlAssign,
 
-    /// `>>=` - signed right-shift-assignment operator.
+    /// `>>=` - compound right-shift-assignment operator.
     ShrAssign,
 
-    /// `+>>=` - unsigned right-shift-assignment operator.
-    UShrAssign,
-
-    /// `&=` - bitwise AND-assignment operator.
+    /// `&=` - compound bitwise-AND-assignment operator.
     BitAndAssign,
 
-    /// `^=` - bitwise XOR-assignment operator.
+    /// `^=` - compound bitwise-XOR-assignment operator.
     BitXorAssign,
 
-    /// `|=` - bitwise OR-assignment operator.
+    /// `|=` - compound bitwise-OR-assignment operator.
     BitOrAssign,
 
-    /// `&&=` - logical AND-assignment operator.
+    /// `&&=` - compound logical-AND-assignment operator.
     LogAndAssign,
 
-    /// `^^=` - logical XOR-assignment operator.
+    /// `^^=` - compound logical-XOR-assignment operator.
     LogXorAssign,
 
-    /// `||=` - logical OR-assignment operator.
+    /// `||=` - compound logical-OR-assignment operator.
     LogOrAssign,
 
     // === Punctuation ===
@@ -232,8 +196,14 @@ pub enum Token {
     /// `]` - right square bracket.
     RSquare,
 
-    /// `:` - item joiner.
+    /// `:` - private label declarator, identifier composition operator.
     Colon,
+
+    /// `+:` - implicit-signed operator.
+    Signed,
+
+    /// `%:` - implicit-unsigned operator.
+    Unsigned,
 
     /// `::` - public label declarator.
     Public,
@@ -253,30 +223,6 @@ pub enum Token {
     Eof
 }
 
-impl Token {
-    /// Returns the specified variant of the token.
-    fn variant(self, n: u8) -> Token {
-        use Token::*;
-        let n = n as usize & 1;
-        match self  {
-            Ident     => [Ident,     Param     ][n],
-            Mul       => [Mul,       UMul      ][n],
-            Div       => [Div,       UDiv      ][n],
-            Mod       => [Mod,       UMod      ][n],
-            Shr       => [Shr,       UShr      ][n],
-            Less      => [Less,      ULess     ][n],
-            More      => [More,      UMore     ][n],
-            LessEq    => [LessEq,    ULessEq   ][n],
-            MoreEq    => [MoreEq,    UMoreEq   ][n],
-            MulAssign => [MulAssign, UMulAssign][n],
-            DivAssign => [DivAssign, UDivAssign][n],
-            ModAssign => [ModAssign, UModAssign][n],
-            ShrAssign => [ShrAssign, UShrAssign][n],
-            _         => self
-        }
-    }
-}
-
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Token::*;
@@ -289,21 +235,17 @@ impl Display for Token {
             Str          => "str",
             Char         => "char",
             Alias        => "@",
-            LogNot       => "!",
             BitNot       => "~",
+            LogNot       => "!",
             Inc          => "++",
             Dec          => "--",
             Mul          => "*",
             Div          => "/",
             Mod          => "%",
-            UMul         => "+*",
-            UDiv         => "+/",
-            UMod         => "+%",
             Add          => "+",
             Sub          => "-",
             Shl          => "<<",
             Shr          => ">>",
-            UShr         => "+>>",
             BitAnd       => "&",
             BitXor       => "^",
             BitOr        => "|",
@@ -313,10 +255,6 @@ impl Display for Token {
             More         => ">",
             LessEq       => "<=",
             MoreEq       => ">=",
-            ULess        => "+<",
-            UMore        => "+>",
-            ULessEq      => "+<=",
-            UMoreEq      => "+>=",
             Unknown      => "?",
             LogAnd       => "&&",
             LogXor       => "^^",
@@ -325,14 +263,10 @@ impl Display for Token {
             MulAssign    => "*=",
             DivAssign    => "/=",
             ModAssign    => "%=",
-            UMulAssign   => "+*=",
-            UDivAssign   => "+/=",
-            UModAssign   => "+%=",
             AddAssign    => "+=",
             SubAssign    => "-=",
             ShlAssign    => "<<=",
             ShrAssign    => ">>=",
-            UShrAssign   => "+>>=",
             BitAndAssign => "&=",
             BitXorAssign => "^=",
             BitOrAssign  => "|=",
@@ -345,6 +279,8 @@ impl Display for Token {
             RParen       => ")",
             LSquare      => "[",
             RSquare      => "]",
+            Signed       => "+:",
+            Unsigned     => "%:",
             Colon        => ":",
             Weak         => ":?",
             Public       => "::",

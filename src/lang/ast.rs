@@ -115,31 +115,285 @@ pub struct Directive<T = ()> {
     pub data: T,
 }
 
+/// Expression.
+///
+/// ```text
+/// TODO: pseudo-BNF
+/// ```
+#[derive(Clone, PartialEq, /*Eq,*/ Debug)]
+pub enum Expr<T = ()> {
+    // Atoms
+
+    /// Identifier.
+    Ident(T, Name),
+
+    /// Integer literal.
+    Int(T, u64),
+
+    /// Floating-point literal.
+    Float(T, f64),
+
+    /// String literal.
+    Str(T, String),
+
+    /// Character literal.
+    Char(T, char),
+
+    // Operators
+    // one variant per tuple type
+
+    // Statement block.
+    Block(T, Vec<Box<Stmt<T>>>),
+
+    /// Dereference expression: `[expr]` `[expr]!`
+    Deref(T, Box<Expr<T>>, bool),
+
+    /// Compound name expression: `name:name`.
+    Join(T, Name, Name),
+
+    /// Alias expression: `name@expr`.
+    Alias(T, Name, Box<Expr<T>>),
+
+    /// Unary operation on a subexpression.
+    Unary(T, UnOp, Box<Expr<T>>),
+
+    /// Binary operation on subexpressions.
+    Binary(T, BinOp, Box<Expr<T>>, Box<Expr<T>>),
+}
+
+// ----------------------------------------------------------------------------
+
+/// Unary operators on expressions.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum UnOp {
+// Suffix unary, precedence level 13
+
+    /// `x++` - post-increment operator.
+    PostInc,
+
+    /// `x--` - post-increment operator.
+    PostDec,
+
+// Prefix unary, precedence level 12
+
+    /// `~x` - bitwise NOT operator.
+    BitNot,
+
+    /// `!x` - logical NOT operator.
+    LogNot,
+
+    /// `-x` - arithmetic negation operator.
+    Neg,
+
+    /// `+x` - explicit-signed operator.
+    SignedH,
+
+    /// `%x` - explicit-unsigned operator.
+    UnsignedH,
+
+    /// `++x` - pre-increment operator.
+    PreInc,
+
+    /// `--x` - pre-decrement operator.
+    PreDec,
+
+// Prefix unary, precedence level 0
+
+    /// `+:` - implicit-signed operator.
+    SignedL,
+
+    /// `%:` - implicit-unsigned operator.
+    UnsignedL,
+}
+
+// ----------------------------------------------------------------------------
+
+/// Binary operators on expressions.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BinOp {
+// Multiplicative, precedence level 11
+
+    /// `*` - multiplication operator.
+    Mul,
+
+    /// `/` - division operator.
+    Div,
+
+    /// `%` - modulo operator.
+    Mod,
+
+// Additive, precedence level 10
+
+    /// `+` - addition operator.
+    Add,
+
+    /// `-` - subtraction operator.
+    Sub,
+
+// Shift, precedence level 9
+
+    /// `<<` - left shift operator.
+    Shl,
+
+    /// `>>` - right shift operator.
+    Shr,
+
+// Bitwise AND/XOR/OR, precedence levels 6-8
+
+    /// `&` - bitwise AND operator.
+    BitAnd,
+
+    /// `^` - bitwise XOR operator.
+    BitXor,
+
+    /// `|` - bitwise OR operator.
+    BitOr,
+
+// Comparison, precedence level 5
+
+    /// `==` - equality operator.
+    Eq,
+
+    /// `!=` - inequality operator.
+    NotEq,
+
+    /// `<` - less-than operator.
+    Less,
+
+    /// `>` - greater-than operator.
+    More,
+
+    /// `<=` - less-than-or-equal-to operator.
+    LessEq,
+
+    /// `>=` - greater-than-or-equal-to operator.
+    MoreEq,
+
+// Logical AND/XOR/OR, precedence level 2-4
+
+    /// `&&` - logical AND operator.
+    LogAnd,
+
+    /// `^^` - logical XOR operator.
+    LogXor,
+
+    /// `||` - logical OR operator.
+    LogOr,
+
+// Assignment, precedence level 1
+
+    /// `=` - assignment operator.
+    Assign,
+
+    /// `*=` - compound multiplication-assignment operator.
+    MulAssign,
+
+    /// `/=` - compound division-assignment operator.
+    DivAssign,
+
+    /// `&=` - compound modulo-assignment operator.
+    ModAssign,
+
+    /// `+=` - compound addition-assignment operator.
+    AddAssign,
+
+    /// `-=` - compound subtraction-assignment operator.
+    SubAssign,
+
+    /// `<<=` - compound left-shift-assignment operator.
+    ShlAssign,
+
+    /// `>>=` - compound right-shift-assignment operator.
+    ShrAssign,
+
+    /// `&=` - compound bitwise-AND-assignment operator.
+    BitAndAssign,
+
+    /// `^=` - compound bitwise-XOR-assignment operator.
+    BitXorAssign,
+
+    /// `|=` - compound bitwise-OR-assignment operator.
+    BitOrAssign,
+
+    /// `&&=` - compound logical-AND-assignment operator.
+    LogAndAssign,
+
+    /// `^^=` - compound logical-XOR-assignment operator.
+    LogXorAssign,
+
+    /// `||=` - compound logical-OR-assignment operator.
+    LogOrAssign,
+}
+
 // ----------------------------------------------------------------------------
 
 /// Node wrapper to facilitate [`Display`] implementation.
 #[derive(Clone, Copy, Debug)]
 struct ForDisplay<'a, T> {
-    node:  &'a T,
-    names: &'a NameTable,
+    node:    &'a T,
+    names:   &'a NameTable,
+    nesting: Nesting<'a>,
 }
+
+#[derive(Clone, Copy, Debug)]
+enum Nesting<'a> {
+    Root,
+    Child { more: bool, parent: &'a Self }
+}
+
+ // TODO: Figure out a better way or name
+#[derive(Clone, Copy, Debug)]
+struct Nesting2<'a> (Nesting<'a>);
 
 impl Module {
     /// Returns a wrapper over the node that implements [`Display`].
     pub fn for_display<'a>(&'a self, names: &'a NameTable) -> impl Display + 'a {
-        ForDisplay { node: self, names }
+        ForDisplay { node: self, names, nesting: Nesting::Root }
     }
 }
 
 impl<T> ForDisplay<'_, T> {
-    fn drill<'a, U>(&'a self, other: &'a U) -> ForDisplay<'a, U> {
-        ForDisplay { node: other, names: self.names }
+    fn drill<'a, U>(&'a self, node: &'a U) -> ForDisplay<'a, U> {
+        ForDisplay { node, names: self.names, nesting: self.nesting }
+    }
+
+    fn child<'a, U>(&'a self, node: &'a U, more: bool) -> ForDisplay<'a, U> {
+        let nesting = Nesting::Child { more, parent: &self.nesting };
+        ForDisplay { node, names: self.names, nesting }
+    }
+}
+
+impl Display for Nesting2<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use Nesting::*;
+        match self.0 {
+            Root                          => Ok(()),
+            Child { more: false, parent } => write!(f, "{}╰─", parent),
+            Child { more: true,  parent } => write!(f, "{}├─", parent),
+        }
+    }
+}
+
+impl Display for Nesting<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use Nesting::*;
+        match *self {
+            Root                          => Ok(()),
+            Child { more: false, parent } => write!(f, "{}  ", parent),
+            Child { more: true,  parent } => write!(f, "{}│ ", parent),
+        }
     }
 }
 
 impl<T> Display for ForDisplay<'_, Module<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        self.node.stmts.iter().try_for_each(|stmt| self.drill(&**stmt).fmt(f))
+        writeln!(f, "{}[module]", Nesting2(self.nesting))?;
+        if let Some((x, xs)) = self.node.stmts.split_last() {
+            xs.iter().try_for_each(|stmt| self.child(&**stmt, true).fmt(f))?;
+            self.child(&**x, false).fmt(f)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -155,12 +409,51 @@ impl<T> Display for ForDisplay<'_, Stmt<T>> {
 
 impl<T> Display for ForDisplay<'_, Label<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        writeln!(f, "Label {} {:?}", self.names.get(self.node.name), self.node.scope)
+        writeln!(f,
+            "{}[label] {} ({:?})",
+            Nesting2(self.nesting),
+            self.names.get(self.node.name),
+            self.node.scope
+        )
     }
 }
 
 impl<T> Display for ForDisplay<'_, Directive<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        writeln!(f, "Op {}", self.names.get(self.node.name))
+        writeln!(f,
+            "{}[op] {}",
+            Nesting2(self.nesting),
+            self.names.get(self.node.name)
+        )
+    }
+}
+
+impl<T> Display for ForDisplay<'_, Expr<T>> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        use Expr::*;
+        match *self.node {
+            Ident(_, name) => {
+                writeln!(f, "{}[ident] {}", Nesting2(self.nesting), self.names.get(name))
+            },
+
+            Int  (_, _)    => todo!(),
+            Float(_, _)    => todo!(),
+            Str  (_, _)    => todo!(),
+            Char (_, _)    => todo!(),
+            Block(_, _)    => todo!(),
+            Deref(_, _, _) => todo!(),
+            Join (_, _, _) => todo!(),
+            Alias(_, _, _) => todo!(),
+
+            Unary(_, op, ref expr) => {
+                writeln!(f, "{}[unary] {:?}", Nesting2(self.nesting), op)?;
+                self.child(&**expr, false).fmt(f)
+            },
+            Binary(_, op, ref lhs, ref rhs) => {
+                writeln!(f, "{}[binary] {:?}", Nesting2(self.nesting), op)?;
+                self.child(&**lhs, true ).fmt(f)?;
+                self.child(&**rhs, false).fmt(f)
+            },
+        }
     }
 }

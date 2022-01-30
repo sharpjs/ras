@@ -21,14 +21,14 @@
 use std::fmt::{self, Display, Formatter};
 use crate::name::{Name, NameTable};
 
-/// Module.
+/// Block of statements.
 ///
 /// ```text
-/// module = EOS* stmt*
+/// block = EOS* stmt*
 /// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Module<T = ()> {
-    /// Statements in the module.
+pub struct Block<T = ()> {
+    /// Statements in the block.
     pub stmts: Vec<Box<Stmt<T>>>,
 
     /// Additional data.
@@ -38,15 +38,15 @@ pub struct Module<T = ()> {
 /// Statement.
 ///
 /// ```text
-/// stmt = label | directive
+/// stmt = label | op
 /// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Stmt<T = ()> {
-    /// Label statement.
+    /// Label.
     Label(Label<T>),
 
-    /// Directive statement.
-    Directive(Directive<T>),
+    /// Operation directive.
+    Op(Op<T>),
 }
 
 /// Label.
@@ -100,16 +100,19 @@ pub enum Scope {
     Public,
 }
 
-/// Directive.
+/// Operation directive.
 ///
 /// ```text
-/// directive = IDENT arguments?
-/// arguments = term ( "," term )*
+/// op   = IDENT args?
+/// args = term ( "," term )*
 /// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Directive<T = ()> {
+pub struct Op<T = ()> {
     /// Name.
     pub name: Name,
+
+    /// Arguments.
+    pub args: Vec<Box<Expr<T>>>,
 
     /// Additional data.
     pub data: T,
@@ -120,7 +123,7 @@ pub struct Directive<T = ()> {
 /// ```text
 /// TODO: pseudo-BNF
 /// ```
-#[derive(Clone, PartialEq, /*Eq,*/ Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Expr<T = ()> {
     // Atoms
 
@@ -131,7 +134,7 @@ pub enum Expr<T = ()> {
     Int(T, u64),
 
     /// Floating-point literal.
-    Float(T, f64),
+    Float(T, ()),
 
     /// String literal.
     Str(T, String),
@@ -143,7 +146,7 @@ pub enum Expr<T = ()> {
     // one variant per tuple type
 
     // Statement block.
-    Block(T, Vec<Box<Stmt<T>>>),
+    Block(Block),
 
     /// Dereference expression: `[expr]` `[expr]!`
     Deref(T, Box<Expr<T>>, bool),
@@ -345,7 +348,7 @@ enum Nesting<'a> {
 #[derive(Clone, Copy, Debug)]
 struct Nesting2<'a> (Nesting<'a>);
 
-impl Module {
+impl Block {
     /// Returns a wrapper over the node that implements [`Display`].
     pub fn for_display<'a>(&'a self, names: &'a NameTable) -> impl Display + 'a {
         ForDisplay { node: self, names, nesting: Nesting::Root }
@@ -385,7 +388,7 @@ impl Display for Nesting<'_> {
     }
 }
 
-impl<T> Display for ForDisplay<'_, Module<T>> {
+impl<T> Display for ForDisplay<'_, Block<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         writeln!(f, "{}[module]", Nesting2(self.nesting))?;
         if let Some((x, xs)) = self.node.stmts.split_last() {
@@ -402,7 +405,7 @@ impl<T> Display for ForDisplay<'_, Stmt<T>> {
         use Stmt::*;
         match *self.node {
             Label     (ref l) => self.drill(l).fmt(f),
-            Directive (ref d) => self.drill(d).fmt(f),
+            Op (ref d) => self.drill(d).fmt(f),
         }
     }
 }
@@ -418,13 +421,19 @@ impl<T> Display for ForDisplay<'_, Label<T>> {
     }
 }
 
-impl<T> Display for ForDisplay<'_, Directive<T>> {
+impl<T> Display for ForDisplay<'_, Op<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         writeln!(f,
             "{}[op] {}",
             Nesting2(self.nesting),
             self.names.get(self.node.name)
-        )
+        )?;
+        if let Some((x, xs)) = self.node.args.split_last() {
+            xs.iter().try_for_each(|expr| self.child(&**expr, true).fmt(f))?;
+            self.child(&**x, false).fmt(f)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -436,11 +445,11 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
                 writeln!(f, "{}[ident] {}", Nesting2(self.nesting), self.names.get(name))
             },
 
-            Int  (_, _)    => todo!(),
-            Float(_, _)    => todo!(),
-            Str  (_, _)    => todo!(),
-            Char (_, _)    => todo!(),
-            Block(_, _)    => todo!(),
+            Int  (_,     v) => writeln!(f, "{}[] {}", Nesting2(self.nesting),    v ),
+            Float(_,     _) => writeln!(f, "{}[] ?",  Nesting2(self.nesting)       ),
+            Str  (_, ref v) => writeln!(f, "{}[] {}", Nesting2(self.nesting), &**v ),
+            Char (_,     v) => writeln!(f, "{}[] {}", Nesting2(self.nesting),    v ),
+            Block(_)       => todo!(),
             Deref(_, _, _) => todo!(),
             Join (_, _, _) => todo!(),
             Alias(_, _, _) => todo!(),

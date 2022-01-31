@@ -22,6 +22,17 @@ along with ras.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Lexical Structure
 
+### Number Format
+
+```text
+[base] significand [exponent]
+─┬──── ───┬─────── ──┬───────
+ ├─ b'    ├─ 1       ├─ p1
+ ├─ o'    ├─ 1.      ├─ p+1
+ ├─ d'    ├─ 1.1     └─ p-1
+ └─ x'    └─  .1
+```
+
 ### Escape Sequences
 
 Sequence | UTF-8   | Name  | Description

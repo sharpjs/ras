@@ -79,6 +79,16 @@ Sequence | UTF-8   | Name  | Description
 <sup>1</sup> Compound assignment operator signedness behavior matches that of
 the corresponding non-assignment operator.
 
+### Formal Specification in [ABNF](https://www.rfc-editor.org/rfc/rfc5234.html)
+
+```abnf
+block = *stmt
+
+stmt  = EOS     ; Empty statements are omitted from the AST.
+      / label
+      / dir
+```
+
 ## Directives
 
 ```

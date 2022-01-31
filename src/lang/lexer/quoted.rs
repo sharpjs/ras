@@ -124,10 +124,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     pub(super) fn scan_char(&mut self) -> Option<Token> {
         let token = self.scan_quoted(b'\'', Token::Char)?;
 
-        // SAFETY: UTF-8 already validated
-        let mut chars = unsafe {
-            std::str::from_utf8_unchecked(&self.str_buf[..])
-        }.chars();
+        let mut chars = self.str().chars();
 
         match chars.next() {
             None => {

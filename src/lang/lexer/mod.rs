@@ -315,17 +315,23 @@ pub trait Lex {
     /// return value is unspecified.
     fn str(&self) -> &str;
 
+    /// Returns the value of the current character-like token.
+    ///
+    /// If the current token is not character-like, this method is safe, but
+    /// the return value is unspecified.
+    fn char(&self) -> char;
+
     /// Returns the value of the current integer-like token.
     ///
     /// If the current token is not integer-like, this method is safe, but the
     /// return value is unspecified.
     fn int(&self) -> u64;
 
-    /// Returns the value of the current float-like token.
+    /// Returns the value of the current number-like token.
     ///
-    /// If the current token is not float-like, this method is safe, but the
+    /// If the current token is not number-like, this method is safe, but the
     /// return value is unspecified.
-    fn float(&self) -> &NumData;
+    fn num(&self) -> &NumData;
 }
 
 // ----------------------------------------------------------------------------
@@ -390,12 +396,17 @@ impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
     }
 
     #[inline]
+    fn char(&self) -> char {
+        char::from_u32(self.num.significand as u32).unwrap_or_default()
+    }
+
+    #[inline]
     fn int(&self) -> u64 {
         self.num.significand
     }
 
     #[inline]
-    fn float(&self) -> &NumData {
+    fn num(&self) -> &NumData {
         &self.num
     }
 }
@@ -417,7 +428,7 @@ impl<'a, I: Iterator<Item = u8>> Display for Value<'a, I> {
             Ident => self.lexer.str().fmt(f),
             Param => self.lexer.str().fmt(f),
             Int   => self.lexer.int().fmt(f),
-            Float => format!("{}", self.lexer.float()).fmt(f),
+            Float => format!("{}", self.lexer.num()).fmt(f),
             _     => "".fmt(f),
         }
     }

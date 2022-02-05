@@ -21,6 +21,8 @@
 use std::fmt::{self, Display, Formatter};
 use crate::name::{Name, NameTable};
 
+use colored::*;
+
 /// Block of statements.
 ///
 /// ```text
@@ -371,8 +373,8 @@ impl Display for Nesting2<'_> {
         use Nesting::*;
         match self.0 {
             Root                          => Ok(()),
-            Child { more: false, parent } => write!(f, "{}╰─", parent),
-            Child { more: true,  parent } => write!(f, "{}├─", parent),
+            Child { more: false, parent } => write!(f, "{}{}", parent, "╰─".white().dimmed()),
+            Child { more: true,  parent } => write!(f, "{}{}", parent, "├─".white().dimmed()),
         }
     }
 }
@@ -382,15 +384,15 @@ impl Display for Nesting<'_> {
         use Nesting::*;
         match *self {
             Root                          => Ok(()),
-            Child { more: false, parent } => write!(f, "{}  ", parent),
-            Child { more: true,  parent } => write!(f, "{}│ ", parent),
+            Child { more: false, parent } => write!(f, "{}{}", parent, "  ".white().dimmed()),
+            Child { more: true,  parent } => write!(f, "{}{}", parent, "│ ".white().dimmed()),
         }
     }
 }
 
 impl<T> Display for ForDisplay<'_, Block<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        writeln!(f, "{}[module]", Nesting2(self.nesting))?;
+        writeln!(f, "{}{}", Nesting2(self.nesting), "Block".green())?;
         if let Some((x, xs)) = self.node.stmts.split_last() {
             xs.iter().try_for_each(|stmt| self.child(&**stmt, true).fmt(f))?;
             self.child(&**x, false).fmt(f)
@@ -404,8 +406,8 @@ impl<T> Display for ForDisplay<'_, Stmt<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Stmt::*;
         match *self.node {
-            Label     (ref l) => self.drill(l).fmt(f),
-            Op (ref d) => self.drill(d).fmt(f),
+            Label (ref l) => self.drill(l).fmt(f),
+            Op    (ref d) => self.drill(d).fmt(f),
         }
     }
 }
@@ -413,8 +415,9 @@ impl<T> Display for ForDisplay<'_, Stmt<T>> {
 impl<T> Display for ForDisplay<'_, Label<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         writeln!(f,
-            "{}[label] {} ({:?})",
+            "{}{}({}, {:?})",
             Nesting2(self.nesting),
+            "Label".green(),
             self.names.get(self.node.name),
             self.node.scope
         )
@@ -424,8 +427,9 @@ impl<T> Display for ForDisplay<'_, Label<T>> {
 impl<T> Display for ForDisplay<'_, Op<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         writeln!(f,
-            "{}[op] {}",
+            "{}{}({})",
             Nesting2(self.nesting),
+            "Dir".green(),
             self.names.get(self.node.name)
         )?;
         if let Some((x, xs)) = self.node.args.split_last() {
@@ -441,28 +445,25 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Expr::*;
         match *self.node {
-            Ident(_, name) => {
-                writeln!(f, "{}[ident] {}", Nesting2(self.nesting), self.names.get(name))
-            },
-
-            Int  (_,     v) => writeln!(f, "{}[int] {}",   Nesting2(self.nesting),    v ),
-            Float(_,     _) => writeln!(f, "{}[float] ?",  Nesting2(self.nesting)       ),
-            Str  (_, ref v) => writeln!(f, "{}[str] {}",   Nesting2(self.nesting), &**v ),
-            Char (_,     v) => writeln!(f, "{}[char] {}",  Nesting2(self.nesting),    v ),
+            Ident(_,  name) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Ident".green(), self.names.get(name)),
+            Int  (_,     v) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Int"  .green(),    v ),
+            Float(_,     _) => writeln!(f, "{}{}(?)",  Nesting2(self.nesting), "Float".green(),      ),
+            Str  (_, ref v) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Str"  .green(), &**v ),
+            Char (_,     v) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Char" .green(),    v ),
             Block(   ref b)    => self.drill(b).fmt(f),
 
             Deref(_, ref e, a) => {
-                writeln!(f, "{}[deref] {}",  Nesting2(self.nesting), if a {"!"} else {""} )?;
+                writeln!(f, "{}{}{}",  Nesting2(self.nesting), "Deref".green(), if a {"!"} else {""} )?;
                 self.child(&**e, false).fmt(f)
             },
             Join (_, _, _)  => todo!(),
             Alias(_, _, _)  => todo!(),
             Unary(_, op, ref expr) => {
-                writeln!(f, "{}[unary] {:?}", Nesting2(self.nesting), op)?;
+                writeln!(f, "{}{}({:?})", Nesting2(self.nesting), "Unary".green(), op)?;
                 self.child(&**expr, false).fmt(f)
             },
             Binary(_, op, ref lhs, ref rhs) => {
-                writeln!(f, "{}[binary] {:?}", Nesting2(self.nesting), op)?;
+                writeln!(f, "{}{}({:?})", Nesting2(self.nesting), "Binary".green(), op)?;
                 self.child(&**lhs, true ).fmt(f)?;
                 self.child(&**rhs, false).fmt(f)
             },

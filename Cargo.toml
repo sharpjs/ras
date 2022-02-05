@@ -28,3 +28,4 @@ edition = "2021"
 #rust = "1.53"
 
 [dependencies]
+colored = "2"

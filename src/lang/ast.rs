@@ -445,15 +445,18 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
                 writeln!(f, "{}[ident] {}", Nesting2(self.nesting), self.names.get(name))
             },
 
-            Int  (_,     v) => writeln!(f, "{}[] {}", Nesting2(self.nesting),    v ),
-            Float(_,     _) => writeln!(f, "{}[] ?",  Nesting2(self.nesting)       ),
-            Str  (_, ref v) => writeln!(f, "{}[] {}", Nesting2(self.nesting), &**v ),
-            Char (_,     v) => writeln!(f, "{}[] {}", Nesting2(self.nesting),    v ),
-            Block(_)       => todo!(),
-            Deref(_, _, _) => todo!(),
-            Join (_, _, _) => todo!(),
-            Alias(_, _, _) => todo!(),
+            Int  (_,     v) => writeln!(f, "{}[int] {}",   Nesting2(self.nesting),    v ),
+            Float(_,     _) => writeln!(f, "{}[float] ?",  Nesting2(self.nesting)       ),
+            Str  (_, ref v) => writeln!(f, "{}[str] {}",   Nesting2(self.nesting), &**v ),
+            Char (_,     v) => writeln!(f, "{}[char] {}",  Nesting2(self.nesting),    v ),
+            Block(   ref b)    => self.drill(b).fmt(f),
 
+            Deref(_, ref e, a) => {
+                writeln!(f, "{}[deref] {}",  Nesting2(self.nesting), if a {"!"} else {""} )?;
+                self.child(&**e, false).fmt(f)
+            },
+            Join (_, _, _)  => todo!(),
+            Alias(_, _, _)  => todo!(),
             Unary(_, op, ref expr) => {
                 writeln!(f, "{}[unary] {:?}", Nesting2(self.nesting), op)?;
                 self.child(&**expr, false).fmt(f)

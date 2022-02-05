@@ -38,60 +38,110 @@ impl<'a, L: Lex> Parser<'a, L> {
 
     /// Parses input completely, returning an abstract syntax tree.
     pub fn parse(&mut self) -> Block {
-        self.parse_block()
+        self.parse_block(Eof).unwrap()
     }
 
-    /// Parses a block of statements.
+    // Rules:
+    //
+    // If code receives a token, either as a method parameter, as returned from
+    // a call, or via a &mut token parameter in a call, the lexer is positioned
+    // at that token.  Otherwise, the lexer is positioned before the next token
+    // and the method should get the next one as needed.  Document exceptions.
+    //
+    // BOF is the lexer state before its first `next` call.
+    //
+    // EOS is the `Eos` token for directives.
+    // EOS is a label declarator token for labels.
+    //
+    // EOF is the `Eof` token.
+
+    /// Attempts to parse a block with the given `end` token.
+    /// Fails on unexpected EOF.
     ///
-    /// Assumes the lexer is at BOF or [`Eos`].
-    fn parse_block(&mut self) -> Block {
+    /// Lexer positions:
+    /// - On entry: at BOF or on block opening delimiter.
+    /// - On exit:  at EOF or on block closing delimiter.
+    fn parse_block(&mut self, end: Token) -> Result<Block, ()> {
         let mut stmts = vec![];
 
-        while let Some(stmt) = self.parse_stmt() {
-            stmts.push(stmt);
+        'block: loop {
+            match self.parse_stmt() {
+                Ok(stmt) => {
+                    // Accumulate statement
+                    stmts.push(stmt);
+                },
+                Err(token) if token == end => {
+                    // Complete block
+                    break;
+                },
+                Err(RCurly) => {
+                    // } not in {} block
+                    eprintln!("error: unexpected '}}'");
+                },
+                Err(Eof) => {
+                    // EOF not in top-level block
+                    eprintln!("error: unexpected end of file");
+                    return Err(());
+                }
+                Err(_) => {
+                    // Other weirdness
+                    eprintln!("error: expected statement");
+
+                    // Recover
+                    'recov: loop {
+                        match self.lexer.next() {
+                            t if t == end => break 'block,
+                            Eos | Eof     => break 'recov,
+                            _             => (),
+                        }
+                    }
+                }
+            }
         }
 
-        Block { stmts, data: () }
+        Ok(Block { stmts, data: () })
     }
 
-    /// Attempts to parse a statement.  Returns [`None`] at EOF.
+    /// Attempts to parse a statement.
     ///
-    /// Assumes the lexer is at BOF or [`Eos`].
-    fn parse_stmt(&mut self) -> Option<Box<Stmt>> {
+    /// Lexer positions:
+    /// - On entry:   before statement token.
+    /// - On success: after statement, on EOS or EOF.
+    /// - On failure: on unexpected token (returned).
+    fn parse_stmt(&mut self) -> Result<Box<Stmt>, Token> {
         loop {
             match self.lexer.next() {
                 Eos => {
                     // Ignore empty statement
                 },
-                Eof => {
-                    // Signal end-of-file
-                    return None;
-                },
                 Ident => {
                     // Parse as a label or directive
-                    if let stmt@Some(_) = self.parse_label_or_dir() {
-                        return stmt
+                    if let Ok(stmt) = self.parse_label_or_dir() {
+                        return Ok(stmt)
                     }
+                    // Assume `parse_label_or_dir` added errors and recovered
+                    // to EOS; look again for a statement
                 },
-                _ => {
-                    // TODO: Add syntax error.
-                    eprintln!("error: expected: label or directive");
+                token => {
+                    // Report non-statement token
+                    return Err(token);
                 },
             }
         }
     }
 
-    /// Attempts to parse a label or a directive.  Returns [`None`] if input is
-    /// unparseable.
+    /// Attempts to parse a label or a directive.
     ///
-    /// Assumes the lexer is at [`Ident`].
-    fn parse_label_or_dir(&mut self) -> Option<Box<Stmt>> {
+    /// Lexer positions:
+    /// - On entry: on [`Ident`].
+    /// - On exit:  on EOS or EOF.
+    fn parse_label_or_dir(&mut self) -> Result<Box<Stmt>, ()> {
         // Get label or directive name
         let name   = self.lexer.str();
         let pseudo = name.starts_with('.');
         let name   = self.session.names_mut().add(name);
 
-        // Expect label suffix; otherwise parse as directive
+        // Expect label declarator as EOS; otherwise parse as directive
         let scope = match self.lexer.next() {
             Colon  if pseudo => Scope::Local,
             Colon            => Scope::Private,
@@ -101,156 +151,187 @@ impl<'a, L: Lex> Parser<'a, L> {
             token            => return self.parse_dir(name, token),
         };
 
-        Some(Box::new(Stmt::Label(Label { name, scope, data: () })))
+        Ok(Box::new(Stmt::Label(Label { name, scope, data: () })))
     }
 
-    /// Attempts to parse a directive with the given `name`.  Returns [`None`]
-    /// if input is unparsable.
+    /// Attempts to parse a directive with the given `name`.
     ///
-    /// Assumes the lexer is at the given `token`.
-    fn parse_dir(&mut self, name: Name, mut token: Token) -> Option<Box<Stmt>> {
+    /// Lexer positions:
+    /// - On entry: after `name`, on given `token`.
+    /// - On exit:  on EOS or EOF.
+    fn parse_dir(&mut self, name: Name, mut token: Token) -> Result<Box<Stmt>, ()> {
         let mut args = vec![];
 
-        if !matches!(token, Eos | Eof) {
+        // Parse arguments if present
+        if !token.is_eos() {
             loop {
                 // Parse argument
-                match self.parse_expr(&mut token) {
-                    Some(arg) => {
+                match self.parse_expr(token) {
+                    Ok((arg, t)) => {
                         args.push(arg);
+                        token = t;
                     },
-                    _ => {
-                        // TODO: Syntax error
+                    Err(t) => {
                         eprintln!("expected: argument");
-                        return None;
+                        return self.parse_dir_fail(t);
                     },
                 }
 
                 // Parse argument separator or end of statement
                 match token {
-                    Comma => {
-                        token = self.lexer.next();
-                    },
-                    Eos | Eof => {
-                        break;
-                    },
+                    Comma     => token = self.lexer.next(),
+                    Eos | Eof => break,
                     _ => {
-                        // TODO: Syntax error
                         eprintln!("expected: comma, end of statement, or end of file");
-                        return None;
+                        return self.parse_dir_fail(token);
                     },
                 }
             }
         }
 
-        Some(Box::new(Stmt::Op(Op { name, args, data: () })))
+        Ok(Box::new(Stmt::Op(Op { name, args, data: () })))
     }
 
-    fn parse_expr(&mut self, token: &mut Token) -> Option<Box<Expr>> {
+    fn parse_dir_fail(&mut self, mut token: Token) -> Result<Box<Stmt>, ()> {
+        // Recover
+        while !token.is_eos() {
+            token = self.lexer.next();
+        }
+
+        Err(())
+    }
+
+    /// Attempts to parse an expression.
+    ///
+    /// Lexer positions:
+    /// - On entry:   at `token`, the first token of the expression.
+    /// - On success: at the returned token, the first token after the expression.
+    /// - On failure: at the returned token, the token that was unexpected.
+    #[inline]
+    fn parse_expr(&mut self, token: Token) -> Result<(Box<Expr>, Token), Token> {
         self.parse_expr_prec(token, 0)
     }
 
-    fn parse_expr_prec(&mut self, token: &mut Token, min_prec: u8) -> Option<Box<Expr>> {
+    /// Attempts to parse an expression with the given minimum precedence.
+    ///
+    /// This method is the postfix half of the precedence-climbing expression
+    /// parser.
+    ///
+    /// Lexer positions:
+    /// - On entry:   at `token`, the first token of the expression.
+    /// - On success: at the returned token, the first token after the expression.
+    /// - On failure: at the returned token, the token that was unexpected.
+    fn parse_expr_prec(&mut self, token: Token, min_prec: u8)
+        -> Result<(Box<Expr>, Token), Token>
+    {
         use PostfixParse as P;
 
-        let mut lhs = self.parse_primary(token)?;
-        *token = self.lexer.next();
+        let (mut expr, mut token) = self.parse_expr_prefix(token)?;
 
         loop {
-            match postfix_parse_kind(*token) {
+            match postfix_parse_kind(token) {
                 P::None => {
                     break;
                 },
                 P::Unary(op) => {
-                    // Unary postfix operation on expression
                     let (prec, _assoc) = unary_prec(op);
                     if prec < min_prec { break; }
 
-                    *token = self.lexer.next();
-
-                    lhs = Box::new(Expr::Unary((), op, lhs));
+                    token = self.lexer.next();
+                    expr  = Box::new(Expr::Unary((), op, expr));
                 },
                 P::Binary(op) => {
-                    // Binary operation on expressions
                     let (prec, assoc) = binary_prec(op);
                     if prec < min_prec { break; }
 
-                    *token = self.lexer.next();
+                    token = self.lexer.next();
+                    let (rhs, t) = self.parse_expr_prec(token, prec + assoc as u8)?;
 
-                    let rhs = self.parse_expr_prec(token, prec + assoc as u8)?;
-                    lhs = Box::new(Expr::Binary((), op, lhs, rhs))
+                    token = t;
+                    expr  = Box::new(Expr::Binary((), op, expr, rhs))
                 },
             }
         }
 
-        Some(lhs)
+        Ok((expr, token))
     }
 
-    fn parse_primary(&mut self, token: &mut Token) -> Option<Box<Expr>> {
+    /// Attempts to parse an atomic, prefix, or circumfix expression.
+    ///
+    /// This method is the prefix half of the precedence-climbing expression
+    /// parser.
+    ///
+    /// Lexer positions:
+    /// - On entry:   at `token`, the first token of the expression.
+    /// - On success: at the returned token, the first token after the expression.
+    /// - On failure: at the returned token, the token that was unexpected.
+    fn parse_expr_prefix(&mut self, token: Token)
+        -> Result<(Box<Expr>, Token), Token>
+    {
         use PrefixParse as P;
 
-        match prefix_parse_kind(*token) {
-            P::Ident => {
-                Some(Box::new(Expr::Ident((), self.name())))
-            },
-            P::Int => {
-                Some(Box::new(Expr::Int((), self.lexer.int())))
-            },
-            P::Float => {
-                Some(Box::new(Expr::Float((), ())))
-            },
-            P::Str => {
-                Some(Box::new(Expr::Str((), self.lexer.str().to_string())))
-            },
-            P::Char => {
-                Some(Box::new(Expr::Char((), 'x')))
+        match prefix_parse_kind(token) {
+            P::Ident => Ok((
+                Box::new(Expr::Ident((), self.name())),
+                self.lexer.next()
+            )),
+            P::Param => todo!(),
+            P::Int => Ok((
+                Box::new(Expr::Int((), self.lexer.int())),
+                self.lexer.next()
+            )),
+            P::Float => Ok((
+                Box::new(Expr::Float((), ())),
+                self.lexer.next()
+            )),
+            P::Str => Ok((
+                Box::new(Expr::Str((), self.lexer.str().to_string())),
+                self.lexer.next()
+            )),
+            P::Char => Ok((
+                Box::new(Expr::Char((), self.lexer.char())),
+                self.lexer.next()
+            )),
+            P::Unary(op) => {
+                let (prec, assoc) = unary_prec(op);
+                let        token  = self.lexer.next();
+                let (expr, token) = self.parse_expr_prec(token, prec + assoc as u8)?;
+                Ok(( Box::new(Expr::Unary((), op, expr)), token ))
             },
             P::Group => {
-                let lhs = self.parse_expr_prec(token, 0)?;
-                match *token {
-                    RParen => {
-                        *token = self.lexer.next();
-                        Some(lhs)
-                    },
-                    _ => {
-                        eprintln!("expected: ')'");
-                        None
-                    }
+                let       token  = self.lexer.next();
+                let (lhs, token) = self.parse_expr(token)?;
+                match token {
+                    RParen => Ok((lhs, self.lexer.next())),
+                    _      => Err({ eprintln!("expected: ')'"); token }),
                 }
             },
             P::Deref => {
-                let lhs = self.parse_expr_prec(token, 0)?;
-                match *token {
+                let       token  = self.lexer.next();
+                let (lhs, token) = self.parse_expr(token)?;
+                match token {
                     RSquare => {
-                        *token = self.lexer.next();
-                        let effect = *token == LogNot;
-                        if effect { *token = self.lexer.next(); }
-                        Some(Box::new(Expr::Deref((), lhs, effect)))
+                        let (effect, token) = match self.lexer.next() {
+                            LogNot => (true, self.lexer.next()),
+                            token  => (false, token),
+                        };
+                        Ok(( Box::new(Expr::Deref((), lhs, effect)), token ))
                     },
-                    _ => {
-                        eprintln!("expected: ']'");
-                        None
-                    }
+                    _ => Err({ eprintln!("expected: ']'"); token }),
                 }
             },
             P::Block => {
-                todo!()
-                //let block = self.parse_block(); // TODO: what about token here?
-                //match *token {
-                //    RCurly => {
-                //        *token = self.lexer.next();
-                //        Some(Box::new(Expr::Block(block)))
-                //    },
-                //    _ => {
-                //        eprintln!("expected: '}}'");
-                //        None
-                //    }
-                //}
+                let block = self.parse_block(RCurly);
+                let token = self.lexer.next();
+                match block {
+                    Ok(block) => Ok((Box::new(Expr::Block(block)), token)),
+                    _         => Err(token),
+                }
             },
-            _ => {
-                // TODO: Add syntax error.
+            P::None => Err({
                 eprintln!("expected: expression");
-                None
-            },
+                token
+            }),
         }
     }
 
@@ -259,53 +340,91 @@ impl<'a, L: Lex> Parser<'a, L> {
     }
 }
 
+// ----------------------------------------------------------------------------
+
+/// Expression parsing strategies selected by leading token.
+///
+/// These cases include atomic, prefix, and circumfix expressions.
 #[derive(Clone, Copy, Debug)]
 enum PrefixParse {
+    /// Do not parse.
     None,
+
+    /// Parse as an identifier atom.
     Ident,
+
+    /// Parse as a macro parameter atom.
     Param,
+
+    /// Parse as an integer literal atom.
     Int,
+
+    /// Parse as a floating-point number literal atom.
     Float,
+
+    /// Parse as a string literal atom.
     Str,
+
+    /// Parse as a character literal atom.
     Char,
+
+    /// Parse as a unary operator expression.
     Unary(UnOp),
-    Deref,
+
+    /// Parse as a grouping expression.
     Group,
+
+    /// Parse as a dereference expression.
+    Deref,
+
+    /// Parse as a statement block expression.
     Block,
 }
 
+/// Returns the expression parsing strategy for the given leading `token`.
 fn prefix_parse_kind(token: Token) -> PrefixParse {
     use PrefixParse as P;
     match token {
-        Ident   => P::Ident,
-        Param   => todo!(),
-        Int     => todo!(),
-        Float   => todo!(),
-        Str     => todo!(),
-        Char    => todo!(),
-        BitNot  => todo!(),
-        LogNot  => todo!(),
-        Inc     => todo!(),
-        Dec     => todo!(),
-        Mod     => todo!(),
-        Add     => todo!(),
-        Sub     => todo!(),
-        LCurly  => todo!(),
-        LParen  => todo!(),
-        LSquare => todo!(),
-        Eos     => todo!(),
-        Eof     => todo!(),
-        _       => P::None,
+        Ident    => P::Ident,
+        Param    => P::Param,
+        Int      => P::Int,
+        Float    => P::Float,
+        Str      => P::Str,
+        Char     => P::Char,
+        BitNot   => P::Unary(UnOp::BitNot),
+        LogNot   => P::Unary(UnOp::LogNot),
+        Inc      => P::Unary(UnOp::PreInc),
+        Dec      => P::Unary(UnOp::PreDec),
+        Mod      => P::Unary(UnOp::UnsignedH),
+        Add      => P::Unary(UnOp::SignedH),
+        Sub      => P::Unary(UnOp::Neg),
+        LParen   => P::Group,
+        LSquare  => P::Deref,
+        LCurly   => P::Block,
+        Unsigned => P::Unary(UnOp::UnsignedL),
+        Signed   => P::Unary(UnOp::SignedL),
+        _        => P::None,
     }
 }
 
+// ----------------------------------------------------------------------------
+
+/// Expression parsing strategies determined by trailing token.
+///
+/// These cases include postfix and infix exprssions.
 #[derive(Clone, Copy, Debug)]
 enum PostfixParse {
+    /// Do not parse.
     None,
+
+    /// Parse as a unary operator expression.
     Unary(UnOp),
+
+    /// Parse as a binary operator expression.
     Binary(BinOp),
 }
 
+/// Returns the expression parsing strategy for the given trailing `token`.
 fn postfix_parse_kind(token: Token) -> PostfixParse {
     use PostfixParse::*;
     match token {
@@ -367,6 +486,8 @@ fn postfix_parse_kind(token: Token) -> PostfixParse {
     }
 }
 
+// ----------------------------------------------------------------------------
+
 /// Operator associativity kinds.
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]
@@ -378,20 +499,22 @@ enum Assoc {
     Right
 }
 
+/// Returns the precedence and associativity of the given unary operator.
 fn unary_prec(op: UnOp) -> (u8, Assoc) {
     use UnOp::*;
     use Assoc::*;
-    match op {                  // prec assoc
-        PostInc | PostDec       => (13, Left ),
+    match op {                                      // prec assoc
+        PostInc | PostDec                           => (13, Left ),
 
-        PreInc  | PreDec        |
-        BitNot  | LogNot | Neg  |
-        SignedH | UnsignedH     => (12, Right),
+        PreInc  | PreDec                            |
+        BitNot  | LogNot | Neg                      |
+        SignedH | UnsignedH                         => (12, Right),
 
-        SignedL | UnsignedL     => ( 0, Right),
+        SignedL | UnsignedL                         => ( 0, Right),
     }
 }
 
+/// Returns the precedence and associativity of the given binary operator.
 fn binary_prec(op: BinOp) -> (u8, Assoc) {
     use BinOp::*;
     use Assoc::*;
@@ -407,10 +530,10 @@ fn binary_prec(op: BinOp) -> (u8, Assoc) {
         LogXor                                      => ( 3, Left ),
         LogOr                                       => ( 2, Left ),
 
-              Assign                                |
-           MulAssign |    DivAssign |   ModAssign   |
-           AddAssign |    SubAssign                 |
-           ShlAssign |    ShrAssign                 |
+        Assign                                      |
+        MulAssign    | DivAssign    | ModAssign     |
+        AddAssign    | SubAssign                    |
+        ShlAssign    | ShrAssign                    |
         BitAndAssign | BitXorAssign | BitOrAssign   |
         LogAndAssign | LogXorAssign | LogOrAssign   => ( 1, Right),
     }

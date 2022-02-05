@@ -223,6 +223,13 @@ pub enum Token {
     Eof
 }
 
+impl Token {
+    /// Returns whether the token is an end-of-statement token.
+    pub fn is_eos(self) -> bool {
+        matches!(self, Self::Eos | Self::Eof)
+    }
+}
+
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Token::*;

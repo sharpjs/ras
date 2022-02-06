@@ -146,23 +146,20 @@ pub enum Expr<T = ()> {
     // Operators
     // one variant per tuple type
 
-    // Statement block.
-    Block(Block),
+    /// Alias expression: `name@expr`.
+    Alias(T, Name, Box<Expr<T>>),
 
     /// Dereference expression: `[expr]` `[expr]!`
     Deref(T, Box<Expr<T>>, bool),
-
-    /// Compound name expression: `name:name`.
-    Join(T, Name, Name),
-
-    /// Alias expression: `name@expr`.
-    Alias(T, Name, Box<Expr<T>>),
 
     /// Unary operation on a subexpression.
     Unary(T, UnOp, Box<Expr<T>>),
 
     /// Binary operation on subexpressions.
     Binary(T, BinOp, Box<Expr<T>>, Box<Expr<T>>),
+
+    // Statement block.
+    Block(Block),
 }
 
 // ----------------------------------------------------------------------------
@@ -170,7 +167,7 @@ pub enum Expr<T = ()> {
 /// Unary operators on expressions.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum UnOp {
-// Suffix unary, precedence level 13
+// Suffix unary, precedence level 15
 
     /// `x++` - post-increment operator.
     PostInc,
@@ -178,7 +175,7 @@ pub enum UnOp {
     /// `x--` - post-increment operator.
     PostDec,
 
-// Prefix unary, precedence level 12
+// Prefix unary, precedence level 14
 
     /// `~x` - bitwise NOT operator.
     BitNot,
@@ -201,7 +198,7 @@ pub enum UnOp {
     /// `--x` - pre-decrement operator.
     PreDec,
 
-// Prefix unary, precedence level 0
+// Signedness, precedence level 0
 
     /// `+:` - implicit-signed operator.
     SignedL,
@@ -215,7 +212,7 @@ pub enum UnOp {
 /// Binary operators on expressions.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BinOp {
-// Multiplicative, precedence level 11
+// Multiplicative, precedence level 13
 
     /// `*` - multiplication operator.
     Mul,
@@ -226,7 +223,7 @@ pub enum BinOp {
     /// `%` - modulo operator.
     Mod,
 
-// Additive, precedence level 10
+// Additive, precedence level 12
 
     /// `+` - addition operator.
     Add,
@@ -234,7 +231,7 @@ pub enum BinOp {
     /// `-` - subtraction operator.
     Sub,
 
-// Shift, precedence level 9
+// Shift, precedence level 11
 
     /// `<<` - left shift operator.
     Shl,
@@ -242,7 +239,7 @@ pub enum BinOp {
     /// `>>` - right shift operator.
     Shr,
 
-// Bitwise AND/XOR/OR, precedence levels 6-8
+// Bitwise AND/XOR/OR, precedence levels 8/9/10
 
     /// `&` - bitwise AND operator.
     BitAnd,
@@ -253,7 +250,7 @@ pub enum BinOp {
     /// `|` - bitwise OR operator.
     BitOr,
 
-// Comparison, precedence level 5
+// Comparison, precedence level 7
 
     /// `==` - equality operator.
     Eq,
@@ -273,7 +270,7 @@ pub enum BinOp {
     /// `>=` - greater-than-or-equal-to operator.
     MoreEq,
 
-// Logical AND/XOR/OR, precedence level 2-4
+// Logical AND/XOR/OR, precedence levels 4/5/6
 
     /// `&&` - logical AND operator.
     LogAnd,
@@ -284,7 +281,7 @@ pub enum BinOp {
     /// `||` - logical OR operator.
     LogOr,
 
-// Assignment, precedence level 1
+// Assignment, precedence level 3
 
     /// `=` - assignment operator.
     Assign,
@@ -327,6 +324,16 @@ pub enum BinOp {
 
     /// `||=` - compound logical-OR-assignment operator.
     LogOrAssign,
+
+// Range, precedence level 2
+
+    /// `~` - range operator.
+    Range,
+
+// Composition, precedence level 1
+
+    /// `:` - composition operator.
+    Join,
 }
 
 // ----------------------------------------------------------------------------
@@ -500,21 +507,19 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Expr::*;
         match *self.node {
-            Ident(_,     name ) => self.node1("Ident", self.names.get(name)).fmt(f),
-            Int  (_,     val  ) => self.node1("Int",   val).fmt(f),
-            Float(_,     _    ) => self.node1("Float", "?").fmt(f),
-            Str  (_, ref val  ) => self.node1("Str",   val).fmt(f),
-            Char (_,     val  ) => self.node1("Char",  val).fmt(f),
-            Block(   ref block) => self.drill(block).fmt(f),
-
-            Deref(_, ref expr, store) => {
-                self.node1("Deref", if store {"!"} else {"_"}).fmt(f)?;
+            Ident(_,     name) => self.node1("Ident", self.names.get(name)).fmt(f),
+            Int  (_,     val ) => self.node1("Int",   val).fmt(f),
+            Float(_,     _   ) => self.node1("Float", "?").fmt(f),
+            Str  (_, ref val ) => self.node1("Str",   val).fmt(f),
+            Char (_,     val ) => self.node1("Char",  val).fmt(f),
+            Alias(_, name, ref expr) => {
+                self.node1("Alias", self.names.get(name)).fmt(f)?;
                 self.child(&**expr, false).fmt(f)
             },
-
-            Join (_, _, _)  => todo!(),
-            Alias(_, _, _)  => todo!(),
-
+            Deref(_, ref expr, hot) => {
+                self.node1("Deref", if hot {"!"} else {"_"}).fmt(f)?;
+                self.child(&**expr, false).fmt(f)
+            },
             Unary(_, op, ref expr) => {
                 self.node1("Unary", format!("{:?}", op)).fmt(f)?;
                 self.child(&**expr, false).fmt(f)
@@ -524,6 +529,7 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
                 self.child(&**lhs, true ).fmt(f)?;
                 self.child(&**rhs, false).fmt(f)
             },
+            Block(ref block) => self.drill(block).fmt(f),
         }
     }
 }

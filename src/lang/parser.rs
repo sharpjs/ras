@@ -271,11 +271,19 @@ impl<'a, L: Lex> Parser<'a, L> {
         use PrefixParse as P;
 
         match prefix_parse_kind(token) {
-            P::Ident => Ok((
-                Box::new(Expr::Ident((), self.name())),
-                self.lexer.next()
-            )),
-            P::Param => todo!(),
+            P::Ident => Ok({
+                let name = self.name();
+                match self.lexer.next() {
+                    Alias => {
+                        let (prec, assoc) = ALIAS_PREC;
+                        let        token  = self.lexer.next();
+                        let (expr, token) = self.parse_expr_prec(token, prec + assoc as u8)?;
+                        (Box::new(Expr::Alias((), name, expr)), token)
+                    },
+                    token => (Box::new(Expr::Ident((), name)), token)
+                }
+            }),
+            P::Param => todo!(), // TODO: Process macro right here?
             P::Int => Ok((
                 Box::new(Expr::Int((), self.lexer.int())),
                 self.lexer.next()
@@ -382,7 +390,7 @@ enum PrefixParse {
 }
 
 /// Returns the expression parsing strategy for the given leading `token`.
-fn prefix_parse_kind(token: Token) -> PrefixParse {
+const fn prefix_parse_kind(token: Token) -> PrefixParse {
     use PrefixParse as P;
     match token {
         Ident    => P::Ident,
@@ -391,6 +399,7 @@ fn prefix_parse_kind(token: Token) -> PrefixParse {
         Float    => P::Float,
         Str      => P::Str,
         Char     => P::Char,
+
         BitNot   => P::Unary(UnOp::BitNot),
         LogNot   => P::Unary(UnOp::LogNot),
         Inc      => P::Unary(UnOp::PreInc),
@@ -398,11 +407,14 @@ fn prefix_parse_kind(token: Token) -> PrefixParse {
         Mod      => P::Unary(UnOp::UnsignedH),
         Add      => P::Unary(UnOp::SignedH),
         Sub      => P::Unary(UnOp::Neg),
+
         LParen   => P::Group,
         LSquare  => P::Deref,
         LCurly   => P::Block,
+
         Unsigned => P::Unary(UnOp::UnsignedL),
         Signed   => P::Unary(UnOp::SignedL),
+
         _        => P::None,
     }
 }
@@ -425,46 +437,41 @@ enum PostfixParse {
 }
 
 /// Returns the expression parsing strategy for the given trailing `token`.
-fn postfix_parse_kind(token: Token) -> PostfixParse {
+const fn postfix_parse_kind(token: Token) -> PostfixParse {
     use PostfixParse::*;
     match token {
-        // Unary
+        //Alias       => handled as special case in PrefixParse::Ident
 
-        Inc => Unary(UnOp::PostInc),
-        Dec => Unary(UnOp::PostDec),
+        Inc           => Unary(UnOp::PostInc),
+        Dec           => Unary(UnOp::PostDec),
 
-        // Binary
+        //LParen      => Call,
+        //LSquare     => Index,
 
-    //  Alias   => AliasDef,
-    //  Colon   => NameTuple,
+        Mul           => Binary(BinOp::Mul),
+        Div           => Binary(BinOp::Div),
+        Mod           => Binary(BinOp::Mod),
 
-    //  LParen  => Call,
-    //  LSquare => Index,
+        Add           => Binary(BinOp::Add),
+        Sub           => Binary(BinOp::Sub),
 
-        Mul     => Binary(BinOp::Mul),
-        Div     => Binary(BinOp::Div),
-        Mod     => Binary(BinOp::Mod),
+        Shl           => Binary(BinOp::Shl),
+        Shr           => Binary(BinOp::Shr),
 
-        Add     => Binary(BinOp::Add),
-        Sub     => Binary(BinOp::Sub),
+        BitAnd        => Binary(BinOp::BitAnd),
+        BitXor        => Binary(BinOp::BitXor),
+        BitOr         => Binary(BinOp::BitOr),
 
-        Shl     => Binary(BinOp::Shl),
-        Shr     => Binary(BinOp::Shr),
+        Eq            => Binary(BinOp::Eq),
+        NotEq         => Binary(BinOp::NotEq),
+        Less          => Binary(BinOp::Less),
+        More          => Binary(BinOp::More),
+        LessEq        => Binary(BinOp::LessEq),
+        MoreEq        => Binary(BinOp::MoreEq),
 
-        BitAnd  => Binary(BinOp::BitAnd),
-        BitXor  => Binary(BinOp::BitXor),
-        BitOr   => Binary(BinOp::BitOr),
-
-        Eq      => Binary(BinOp::Eq),
-        NotEq   => Binary(BinOp::NotEq),
-        Less    => Binary(BinOp::Less),
-        More    => Binary(BinOp::More),
-        LessEq  => Binary(BinOp::LessEq),
-        MoreEq  => Binary(BinOp::MoreEq),
-
-        LogAnd  => Binary(BinOp::LogAnd),
-        LogXor  => Binary(BinOp::LogXor),
-        LogOr   => Binary(BinOp::LogOr),
+        LogAnd        => Binary(BinOp::LogAnd),
+        LogXor        => Binary(BinOp::LogXor),
+        LogOr         => Binary(BinOp::LogOr),
 
         Assign        => Binary(BinOp::Assign),
         MulAssign     => Binary(BinOp::MulAssign),
@@ -481,8 +488,10 @@ fn postfix_parse_kind(token: Token) -> PostfixParse {
         LogXorAssign  => Binary(BinOp::LogXorAssign),
         LogOrAssign   => Binary(BinOp::LogOrAssign),
 
-        // Other
-        _ => None,
+        BitNot        => Binary(BinOp::Range),
+        Colon         => Binary(BinOp::Join),
+
+        _             => None,
     }
 }
 
@@ -499,42 +508,48 @@ enum Assoc {
     Right
 }
 
+/// Precedence and associativity of alias operator.
+const ALIAS_PREC: (u8, Assoc) = (16, Assoc::Right);
+
 /// Returns the precedence and associativity of the given unary operator.
-fn unary_prec(op: UnOp) -> (u8, Assoc) {
+const fn unary_prec(op: UnOp) -> (u8, Assoc) {
     use UnOp::*;
     use Assoc::*;
     match op {                                      // prec assoc
-        PostInc | PostDec                           => (13, Left ),
+        PostInc | PostDec                           => (15, Left ),
 
         PreInc  | PreDec                            |
         BitNot  | LogNot | Neg                      |
-        SignedH | UnsignedH                         => (12, Right),
+        SignedH | UnsignedH                         => (14, Right),
 
         SignedL | UnsignedL                         => ( 0, Right),
     }
 }
 
 /// Returns the precedence and associativity of the given binary operator.
-fn binary_prec(op: BinOp) -> (u8, Assoc) {
+const fn binary_prec(op: BinOp) -> (u8, Assoc) {
     use BinOp::*;
     use Assoc::*;
     match op {                                      // prec assoc
-        Mul | Div | Mod                             => (11, Left ),
-        Add | Sub                                   => (10, Left ),
-        Shl | Shr                                   => ( 9, Left ),
-        BitAnd                                      => ( 8, Left ),
-        BitXor                                      => ( 7, Left ),
-        BitOr                                       => ( 6, Left ),
-        Eq | NotEq | Less | More | LessEq | MoreEq  => ( 5, Left ),
-        LogAnd                                      => ( 4, Left ),
-        LogXor                                      => ( 3, Left ),
-        LogOr                                       => ( 2, Left ),
+        Mul | Div | Mod                             => (13, Left ),
+        Add | Sub                                   => (12, Left ),
+        Shl | Shr                                   => (11, Left ),
+        BitAnd                                      => (10, Left ),
+        BitXor                                      => ( 9, Left ),
+        BitOr                                       => ( 8, Left ),
+        Eq | NotEq | Less | More | LessEq | MoreEq  => ( 7, Left ),
+        LogAnd                                      => ( 6, Left ),
+        LogXor                                      => ( 5, Left ),
+        LogOr                                       => ( 4, Left ),
 
         Assign                                      |
         MulAssign    | DivAssign    | ModAssign     |
         AddAssign    | SubAssign                    |
         ShlAssign    | ShrAssign                    |
         BitAndAssign | BitXorAssign | BitOrAssign   |
-        LogAndAssign | LogXorAssign | LogOrAssign   => ( 1, Right),
+        LogAndAssign | LogXorAssign | LogOrAssign   => ( 3, Right),
+
+        Range                                       => ( 2, Right),
+        Join                                        => ( 1, Right),
     }
 }

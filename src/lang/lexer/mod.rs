@@ -62,7 +62,7 @@ pub enum Token {
     /// `@` - alias operator.
     Alias,
 
-    /// `~` - bitwise NOT operator.
+    /// `~` - bitwise NOT operator, range operator.
     BitNot,
 
     /// `!` - logical NOT operator, side-effect operator.
@@ -196,7 +196,7 @@ pub enum Token {
     /// `]` - right square bracket.
     RSquare,
 
-    /// `:` - private label declarator, identifier composition operator.
+    /// `:` - private label declarator, join operator.
     Colon,
 
     /// `+:` - implicit-signed operator.

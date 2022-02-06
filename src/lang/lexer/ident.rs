@@ -27,8 +27,9 @@ use super::*;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Char {
-    Ident,
-    Other
+    Ident,  // A-Z a-z 0-9 . and all code points above U+007F
+    Lit,    // '
+    Other,  // everything else
 }
 
 impl LogicalChar for Char {
@@ -47,7 +48,7 @@ static CHARS: [Char; 128] = {
     __,     __,     __,     __,     __,     __,     __,     __,     // 0x │·tnvfr··│
     __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
     __,     __,     __,     __,     __,     __,     __,     __,     // 1x │········│
-    __,     __,     __,     __,     __,     __,     __,     __,     // 2x │ !"#$%&'│
+    __,     __,     __,     __,     __,     __,     __,     Lit,    // 2x │ !"#$%&'│
     __,     __,     __,     __,     __,     __,     Ident,  __,     // 2x │()*+,-./│
     Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  Ident,  // 3x │01234567│
     Ident,  Ident,  __,     __,     __,     __,     __,     __,     // 3x │89:;<=>?│
@@ -78,6 +79,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
             match kind {
                 Ident => { buf.push(byte); input.advance(); },
+                Lit   => todo!(), // TODO: named literal b' o' d' x'
                 Other => break,
             }
         }

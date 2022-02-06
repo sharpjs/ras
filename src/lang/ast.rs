@@ -528,12 +528,12 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
     }
 }
 
-impl<'a, T> ForDisplay<'a, Vec<Box<T>>> {
+impl<T> ForDisplay<'_, Vec<Box<T>>> {
     // NOTE: This is a pseudo-Display implementation, written to mesh well with
     // the code above but permitting a constraint on the `fmt` method.
-    fn fmt<'b>(&'b self, f: &mut Formatter) -> fmt::Result
+    fn fmt<'a>(&'a self, f: &mut Formatter) -> fmt::Result
     where
-        ForDisplay<'b, T>: Display
+        ForDisplay<'a, T>: Display
     {
         if let [nodes@.., last] = &self.node[..] {
             for node in nodes {

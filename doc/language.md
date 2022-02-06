@@ -59,7 +59,7 @@ Sequence | UTF-8   | Name  | Description
 | Operators                          |Prec|Assoc| Arity | Signedness        | Description
 |:-----------------------------------|---:|:---:|------:|:-----------------:|:-----------
 | `( )` `[ ]` `{ }`                  | 17 |  —  |     1 |                   | group
-| `@`                                | 17 |  R⯈ |     2 |                   | alias
+| `@`                                | 16 |  R⯈ |     2 |                   | alias
 | `x++` `x--` `f()` `x[]`            | 15 | ⯇L  |     1 |                   | unary postfix
 | `~` `!` `+x` `-x` `%x` `++x` `--x` | 14 |  R⯈ |     1 |                   | unary prefix
 | `*` `/` `%`                        | 13 | ⯇L  |     2 | `*` `/` `%`       | multiplicative

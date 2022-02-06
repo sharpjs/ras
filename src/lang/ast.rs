@@ -341,14 +341,33 @@ struct ForDisplay<'a, T> {
 }
 
 #[derive(Clone, Copy, Debug)]
+struct DisplayNode0<'a> {
+    kind:    &'a str,
+    nesting: Nesting<'a>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct DisplayNode1<'a, T0: Display> {
+    kind:    &'a str,
+    nesting: Nesting<'a>,
+    data:    T0,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct DisplayNode2<'a, T0: Display, T1: Display> {
+    kind:    &'a str,
+    nesting: Nesting<'a>,
+    data:    (T0, T1),
+}
+
+#[derive(Clone, Copy, Debug)]
 enum Nesting<'a> {
     Root,
     Child { more: bool, parent: &'a Self }
 }
 
- // TODO: Figure out a better way or name
 #[derive(Clone, Copy, Debug)]
-struct Nesting2<'a> (Nesting<'a>);
+struct Indent<'a> (Nesting<'a>);
 
 impl Block {
     /// Returns a wrapper over the node that implements [`Display`].
@@ -366,16 +385,52 @@ impl<T> ForDisplay<'_, T> {
         let nesting = Nesting::Child { more, parent: &self.nesting };
         ForDisplay { node, names: self.names, nesting }
     }
+
+    fn node0<'a>(&'a self, kind: &'a str) -> DisplayNode0 {
+        DisplayNode0 { kind, nesting: self.nesting }
+    }
+
+    fn node1<'a, T0: Display>( &'a self, kind:  &'a str, data0: T0) -> DisplayNode1<T0> {
+        DisplayNode1 { kind, nesting: self.nesting, data: data0 }
+    }
+
+    fn node2<'a, T0: Display, T1: Display>(&'a self, kind: &'a str, data0: T0, data1: T1)
+        -> DisplayNode2<T0, T1>
+    {
+        DisplayNode2 { kind, nesting: self.nesting, data: (data0, data1) }
+    }
 }
 
-impl Display for Nesting2<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        use Nesting::*;
-        match self.0 {
-            Root                          => Ok(()),
-            Child { more: false, parent } => write!(f, "{}{}", parent, "╰─".white().dimmed()),
-            Child { more: true,  parent } => write!(f, "{}{}", parent, "├─".white().dimmed()),
-        }
+impl Display for DisplayNode0<'_> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        writeln!(f,
+            "{}{}",
+            Indent(self.nesting),
+            self.kind.green()
+        )
+    }
+}
+
+impl<T0: Display> Display for DisplayNode1<'_, T0> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        writeln!(f,
+            "{}{}({})",
+            Indent(self.nesting),
+            self.kind.green(),
+            self.data
+        )
+    }
+}
+
+impl<T0: Display, T1: Display> Display for DisplayNode2<'_, T0, T1> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        writeln!(f,
+            "{}{}({}, {})",
+            Indent(self.nesting),
+            self.kind.green(),
+            self.data.0,
+            self.data.1
+        )
     }
 }
 
@@ -383,19 +438,35 @@ impl Display for Nesting<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Nesting::*;
         match *self {
-            Root                          => Ok(()),
-            Child { more: false, parent } => write!(f, "{}{}", parent, "  ".white().dimmed()),
-            Child { more: true,  parent } => write!(f, "{}{}", parent, "│ ".white().dimmed()),
+            Root => Ok(()),
+            Child { more, parent } => {
+                let text = if more { "│ " } else { "  " };
+                write!(f, "{}{}", parent, text.white().dimmed())
+            },
+        }
+    }
+}
+
+impl Display for Indent<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use Nesting::*;
+        match self.0 {
+            Root => Ok(()),
+            Child { more, parent } => {
+                let text = if more { "├─" } else { "╰─" };
+                write!(f, "{}{}", parent, text.white().dimmed())
+            },
         }
     }
 }
 
 impl<T> Display for ForDisplay<'_, Block<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        writeln!(f, "{}{}", Nesting2(self.nesting), "Block".green())?;
-        if let Some((x, xs)) = self.node.stmts.split_last() {
-            xs.iter().try_for_each(|stmt| self.child(&**stmt, true).fmt(f))?;
-            self.child(&**x, false).fmt(f)
+        self.node0("Block").fmt(f)?;
+
+        if let Some((last, stmts)) = self.node.stmts.split_last() {
+            stmts.iter().try_for_each(|stmt| self.child(&**stmt, true).fmt(f))?;
+            self.child(&**last, false).fmt(f)
         } else {
             Ok(())
         }
@@ -414,27 +485,20 @@ impl<T> Display for ForDisplay<'_, Stmt<T>> {
 
 impl<T> Display for ForDisplay<'_, Label<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        writeln!(f,
-            "{}{}({}, {:?})",
-            Nesting2(self.nesting),
-            "Label".green(),
+        self.node2("Label",
             self.names.get(self.node.name),
-            self.node.scope
-        )
+            format!("{:?}", self.node.scope)
+        ).fmt(f)
     }
 }
 
 impl<T> Display for ForDisplay<'_, Op<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        writeln!(f,
-            "{}{}({})",
-            Nesting2(self.nesting),
-            "Dir".green(),
-            self.names.get(self.node.name)
-        )?;
-        if let Some((x, xs)) = self.node.args.split_last() {
-            xs.iter().try_for_each(|expr| self.child(&**expr, true).fmt(f))?;
-            self.child(&**x, false).fmt(f)
+        self.node1("Dir", self.names.get(self.node.name)).fmt(f)?;
+
+        if let Some((last, args)) = self.node.args.split_last() {
+            args.iter().try_for_each(|arg| self.child(&**arg, true).fmt(f))?;
+            self.child(&**last, false).fmt(f)
         } else {
             Ok(())
         }
@@ -445,25 +509,27 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Expr::*;
         match *self.node {
-            Ident(_,  name) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Ident".green(), self.names.get(name)),
-            Int  (_,     v) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Int"  .green(),    v ),
-            Float(_,     _) => writeln!(f, "{}{}(?)",  Nesting2(self.nesting), "Float".green(),      ),
-            Str  (_, ref v) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Str"  .green(), &**v ),
-            Char (_,     v) => writeln!(f, "{}{}({})", Nesting2(self.nesting), "Char" .green(),    v ),
-            Block(   ref b)    => self.drill(b).fmt(f),
+            Ident(_,    name) => self.node1("Ident", self.names.get(name)).fmt(f),
+            Int  (_,     val) => self.node1("Int",   val  ).fmt(f),
+            Float(_,       _) => self.node1("Float", "?").fmt(f),
+            Str  (_, ref val) => self.node1("Str",   val  ).fmt(f),
+            Char (_,     val) => self.node1("Char",  val  ).fmt(f),
+            Block(   ref blk) => self.drill(blk).fmt(f),
 
-            Deref(_, ref e, a) => {
-                writeln!(f, "{}{}{}",  Nesting2(self.nesting), "Deref".green(), if a {"!"} else {""} )?;
-                self.child(&**e, false).fmt(f)
+            Deref(_, ref expr, store) => {
+                self.node1("Deref", if store {"!"} else {"_"}).fmt(f)?;
+                self.child(&**expr, false).fmt(f)
             },
+
             Join (_, _, _)  => todo!(),
             Alias(_, _, _)  => todo!(),
+
             Unary(_, op, ref expr) => {
-                writeln!(f, "{}{}({:?})", Nesting2(self.nesting), "Unary".green(), op)?;
+                self.node1("Unary", format!("{:?}", op)).fmt(f)?;
                 self.child(&**expr, false).fmt(f)
             },
             Binary(_, op, ref lhs, ref rhs) => {
-                writeln!(f, "{}{}({:?})", Nesting2(self.nesting), "Binary".green(), op)?;
+                self.node1("Binary", format!("{:?}", op)).fmt(f)?;
                 self.child(&**lhs, true ).fmt(f)?;
                 self.child(&**rhs, false).fmt(f)
             },

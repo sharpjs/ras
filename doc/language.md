@@ -83,11 +83,49 @@ the corresponding non-assignment operator.
 ### Formal Specification in [ABNF](https://www.rfc-editor.org/rfc/rfc5234.html)
 
 ```abnf
-block = *stmt
+block       = *stmt
 
-stmt  = EOS     ; Empty statements are omitted from the AST.
-      / label
-      / dir
+stmt        = EOS ; omitted from AST
+            / label
+            / directive
+
+label       = IDENT label-kind
+
+label-kind  = ':'  ; local or private
+            / '::' ; public
+            / ':?' ; weak
+
+directive   = IDENT [args] EOS
+
+args        = expr *(',' expr)
+
+expr        = atom
+            / '(' expr ')'
+            / '[' expr ']' ['!']
+            / '{' block '}'
+            / prefix-op expr      ; subject to precedence
+            / expr postfix-op     ; subject to precedence
+            / expr infix-op expr  ; subject to precedence
+
+prefix-op   = '++' / '--' / '~' / '!' / '%' / '+' / '-' / '%:' / '+:'
+
+postfix-op  = '++' / '--'
+
+infix-op    = '@'
+            / '*'  / '/'   / '%'
+            / '+'  / '-'
+            / '<<' / '>>'
+            / '&'  / '^'   / '|'
+            / '==' / '!='  / '<'   / '>'  / '<=' / '>='
+            / '&&' / '^^'  / '||'
+            / '='  / '*='  / '/='  / '%='
+                   / '+='  / '-='
+                   / '<<=' / '>>='
+                   / '&='  / '^='  / '|='
+                   / '&&=' / '^^=' / '||='
+            / '~'
+            / ':'
+
 ```
 
 ## Directives

@@ -19,9 +19,8 @@
 //! Abstract syntax trees.
 
 use std::fmt::{self, Display, Formatter};
-use crate::name::{Name, NameTable};
-
 use colored::*;
+use crate::name::{Name, NameTable};
 
 /// Block of statements.
 ///
@@ -334,7 +333,7 @@ pub enum BinOp {
 
 /// Node wrapper to facilitate [`Display`] implementation.
 #[derive(Clone, Copy, Debug)]
-struct ForDisplay<'a, T> {
+struct ForDisplay<'a, T: ?Sized> {
     node:    &'a T,
     names:   &'a NameTable,
     nesting: Nesting<'a>,
@@ -376,27 +375,31 @@ impl Block {
     }
 }
 
-impl<T> ForDisplay<'_, T> {
-    fn drill<'a, U>(&'a self, node: &'a U) -> ForDisplay<'a, U> {
+impl<T: ?Sized> ForDisplay<'_, T> {
+    fn drill<'a, U: ?Sized>(&'a self, node: &'a U) -> ForDisplay<'a, U> {
         ForDisplay { node, names: self.names, nesting: self.nesting }
     }
 
-    fn child<'a, U>(&'a self, node: &'a U, more: bool) -> ForDisplay<'a, U> {
+    fn child<'a, U: ?Sized>(&'a self, node: &'a U, more: bool) -> ForDisplay<'a, U> {
         let nesting = Nesting::Child { more, parent: &self.nesting };
         ForDisplay { node, names: self.names, nesting }
     }
 
-    fn node0<'a>(&'a self, kind: &'a str) -> DisplayNode0 {
+    fn node0<'a>(
+        &'a self, kind: &'a str
+    ) -> DisplayNode0 {
         DisplayNode0 { kind, nesting: self.nesting }
     }
 
-    fn node1<'a, T0: Display>( &'a self, kind:  &'a str, data0: T0) -> DisplayNode1<T0> {
-        DisplayNode1 { kind, nesting: self.nesting, data: data0 }
+    fn node1<'a, T0: Display>(
+        &'a self, kind: &'a str, data: T0
+    ) -> DisplayNode1<T0> {
+        DisplayNode1 { kind, nesting: self.nesting, data }
     }
 
-    fn node2<'a, T0: Display, T1: Display>(&'a self, kind: &'a str, data0: T0, data1: T1)
-        -> DisplayNode2<T0, T1>
-    {
+    fn node2<'a, T0: Display, T1: Display>(
+        &'a self, kind: &'a str, data0: T0, data1: T1
+    ) -> DisplayNode2<T0, T1> {
         DisplayNode2 { kind, nesting: self.nesting, data: (data0, data1) }
     }
 }
@@ -463,13 +466,7 @@ impl Display for Indent<'_> {
 impl<T> Display for ForDisplay<'_, Block<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.node0("Block").fmt(f)?;
-
-        if let Some((last, stmts)) = self.node.stmts.split_last() {
-            stmts.iter().try_for_each(|stmt| self.child(&**stmt, true).fmt(f))?;
-            self.child(&**last, false).fmt(f)
-        } else {
-            Ok(())
-        }
+        self.drill(&self.node.stmts).fmt(f)
     }
 }
 
@@ -495,13 +492,7 @@ impl<T> Display for ForDisplay<'_, Label<T>> {
 impl<T> Display for ForDisplay<'_, Op<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.node1("Dir", self.names.get(self.node.name)).fmt(f)?;
-
-        if let Some((last, args)) = self.node.args.split_last() {
-            args.iter().try_for_each(|arg| self.child(&**arg, true).fmt(f))?;
-            self.child(&**last, false).fmt(f)
-        } else {
-            Ok(())
-        }
+        self.drill(&self.node.args).fmt(f)
     }
 }
 
@@ -509,12 +500,12 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         use Expr::*;
         match *self.node {
-            Ident(_,    name) => self.node1("Ident", self.names.get(name)).fmt(f),
-            Int  (_,     val) => self.node1("Int",   val  ).fmt(f),
-            Float(_,       _) => self.node1("Float", "?").fmt(f),
-            Str  (_, ref val) => self.node1("Str",   val  ).fmt(f),
-            Char (_,     val) => self.node1("Char",  val  ).fmt(f),
-            Block(   ref blk) => self.drill(blk).fmt(f),
+            Ident(_,     name ) => self.node1("Ident", self.names.get(name)).fmt(f),
+            Int  (_,     val  ) => self.node1("Int",   val).fmt(f),
+            Float(_,     _    ) => self.node1("Float", "?").fmt(f),
+            Str  (_, ref val  ) => self.node1("Str",   val).fmt(f),
+            Char (_,     val  ) => self.node1("Char",  val).fmt(f),
+            Block(   ref block) => self.drill(block).fmt(f),
 
             Deref(_, ref expr, store) => {
                 self.node1("Deref", if store {"!"} else {"_"}).fmt(f)?;
@@ -533,6 +524,24 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
                 self.child(&**lhs, true ).fmt(f)?;
                 self.child(&**rhs, false).fmt(f)
             },
+        }
+    }
+}
+
+impl<'a, T> ForDisplay<'a, Vec<Box<T>>> {
+    // NOTE: This is a pseudo-Display implementation, written to mesh well with
+    // the code above but permitting a constraint on the `fmt` method.
+    fn fmt<'b>(&'b self, f: &mut Formatter) -> fmt::Result
+    where
+        ForDisplay<'b, T>: Display
+    {
+        if let [nodes@.., last] = &self.node[..] {
+            for node in nodes {
+                self.child(&**node, true).fmt(f)?;
+            }
+            self.child(&**last, false).fmt(f)
+        } else {
+            Ok(())
         }
     }
 }

@@ -189,7 +189,7 @@ impl<'a, L: Lex> Parser<'a, L> {
             }
         }
 
-        Ok(Box::new(Stmt::Op(Op { name, args, data: () })))
+        Ok(Box::new(Stmt::Dir(Dir { name, args, data: () })))
     }
 
     fn parse_dir_fail(&mut self, mut token: Token) -> Result<Box<Stmt>, ()> {

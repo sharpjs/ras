@@ -38,8 +38,8 @@ pub enum Stmt<T = ()> {
     /// Label.
     Label(Label<T>),
 
-    /// Operation directive.
-    Op(Op<T>),
+    /// Directive.
+    Dir(Dir<T>),
 }
 
 /// Label.
@@ -91,7 +91,7 @@ pub enum Scope {
 
 /// Directive.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Op<T = ()> {
+pub struct Dir<T = ()> {
     /// Name.
     pub name: Name,
 
@@ -461,7 +461,7 @@ impl<T> Display for ForDisplay<'_, Stmt<T>> {
         use Stmt::*;
         match *self.node {
             Label (ref l) => self.drill(l).fmt(f),
-            Op    (ref d) => self.drill(d).fmt(f),
+            Dir   (ref d) => self.drill(d).fmt(f),
         }
     }
 }
@@ -475,7 +475,7 @@ impl<T> Display for ForDisplay<'_, Label<T>> {
     }
 }
 
-impl<T> Display for ForDisplay<'_, Op<T>> {
+impl<T> Display for ForDisplay<'_, Dir<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.node1("Dir", self.names.get(self.node.name)).fmt(f)?;
         self.drill(&self.node.args).fmt(f)

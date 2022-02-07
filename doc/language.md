@@ -91,40 +91,40 @@ stmt        = EOS ; omitted from AST
 
 label       = IDENT label-kind
 
-label-kind  = ':'  ; local or private
-            / '::' ; public
-            / ':?' ; weak
+label-kind  = ":"  ; local or private
+            / "::" ; public
+            / ":?" ; weak
 
 directive   = IDENT [args] EOS
 
-args        = expr *(',' expr)
+args        = expr *("," expr)
 
 expr        = atom
-            / '(' expr ')'
-            / '[' expr ']' ['!']
-            / '{' block '}'
+            / "(" expr ")"
+            / "[" expr "]" ["!"]
+            / "{" block "}"
             / prefix-op expr      ; subject to precedence
             / expr postfix-op     ; subject to precedence
             / expr infix-op expr  ; subject to precedence
 
-prefix-op   = '++' / '--' / '~' / '!' / '%' / '+' / '-' / '%:' / '+:'
+prefix-op   = "++" / "--" / "~" / "!" / "%" / "+" / "-" / "%:" / "+:"
 
-postfix-op  = '++' / '--'
+postfix-op  = "++" / "--"
 
-infix-op    = '@'
-            / '*'  / '/'   / '%'
-            / '+'  / '-'
-            / '<<' / '>>'
-            / '&'  / '^'   / '|'
-            / '==' / '!='  / '<'   / '>'  / '<=' / '>='
-            / '&&' / '^^'  / '||'
-            / '='  / '*='  / '/='  / '%='
-                   / '+='  / '-='
-                   / '<<=' / '>>='
-                   / '&='  / '^='  / '|='
-                   / '&&=' / '^^=' / '||='
-            / '~'
-            / ':'
+infix-op    = "@"
+            / "*"  / "/"   / "%"
+            / "+"  / "-"
+            / "<<" / ">>"
+            / "&"  / "^"   / "|"
+            / "==" / "!="  / "<"   / ">"  / "<=" / ">="
+            / "&&" / "^^"  / "||"
+            / "="  / "*="  / "/="  / "%="
+                   / "+="  / "-="
+                   / "<<=" / ">>="
+                   / "&="  / "^="  / "|="
+                   / "&&=" / "^^=" / "||="
+            / "~"
+            / ":"
 
 ```
 

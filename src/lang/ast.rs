@@ -23,10 +23,6 @@ use colored::*;
 use crate::name::{Name, NameTable};
 
 /// Block of statements.
-///
-/// ```text
-/// block = EOS* stmt*
-/// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Block<T = ()> {
     /// Statements in the block.
@@ -37,10 +33,6 @@ pub struct Block<T = ()> {
 }
 
 /// Statement.
-///
-/// ```text
-/// stmt = label | op
-/// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Stmt<T = ()> {
     /// Label.
@@ -51,10 +43,6 @@ pub enum Stmt<T = ()> {
 }
 
 /// Label.
-///
-/// ```text
-/// label = IDENT (":" | ":?" | "::") EOS*
-/// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Label<T = ()> {
     /// Name.
@@ -78,7 +66,7 @@ pub enum Scope {
 
     /// Valid within the entire source file.  Not present in the object file.
     ///
-    /// Lexical form: `.foo::`
+    /// Lexical form: `.foo::` TODO: Find a different syntax for this or eliminate.
     Hidden,
 
     /// Valid within the entire source file.  Present in the object file but
@@ -101,12 +89,7 @@ pub enum Scope {
     Public,
 }
 
-/// Operation directive.
-///
-/// ```text
-/// op   = IDENT args?
-/// args = term ( "," term )*
-/// ```
+/// Directive.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Op<T = ()> {
     /// Name.
@@ -120,10 +103,6 @@ pub struct Op<T = ()> {
 }
 
 /// Expression.
-///
-/// ```text
-/// TODO: pseudo-BNF
-/// ```
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Expr<T = ()> {
     // Atoms

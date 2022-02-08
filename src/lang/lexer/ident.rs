@@ -27,7 +27,7 @@ use super::*;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Char {
-    Ident,  // A-Z a-z 0-9 . and all code points above U+007F
+    Ident,  // A-Z a-z 0-9 . {U+0080..}
     Lit,    // '
     Other,  // everything else
 }
@@ -65,8 +65,9 @@ static CHARS: [Char; 128] = {
 // ----------------------------------------------------------------------------
 
 impl<I: Iterator<Item = u8>> Lexer<I> {
-    /// Scans an identifier or macro parameter.
-    pub(super) fn scan_ident(&mut self, variant: u8) -> Token {
+    /// Scans an identifier or a named literal.
+    pub(super) fn scan_ident_or_lit(&mut self) -> Option<Token> {
+        use crate::num::Base::*;
         use Char::*;
 
         let input = &mut self.input;
@@ -79,12 +80,22 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
             match kind {
                 Ident => { buf.push(byte); input.advance(); },
-                Lit   => todo!(), // TODO: named literal b' o' d' x'
-                Other => break,
+                Lit   => break,
+                Other => return Some(Token::Ident),
             }
         }
 
-        // TODO: Change variant to somethign else
-        if variant == 0 { Token::Ident } else { Token::Param }
+        self.input.advance();
+
+        match self.str() {
+            "b" | "B" => self.scan_num(Bin),
+            "o" | "O" => self.scan_num(Oct),
+            "d" | "D" => self.scan_num(Dec),
+            "x" | "X" => self.scan_num(Hex),
+            s => {
+                eprintln!("invalid literal specifier '{}'", s);
+                None
+            },
+        }
     }
 }

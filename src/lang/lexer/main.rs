@@ -754,13 +754,12 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         // Every call begins in `Normal` state with no token found
         let mut state   = State::Normal;
         let mut start   = 0;
-        let mut variant = 0;
 
         // Scan until a token is found
         let token = loop {
             // Translate input into action
             // // flag = 0 or 1
-            let (action, start_flag, variant_flag) = {
+            let (action, start_flag, _variant_flag) = {
                 let input      = self.input.classify(&CHARS).0;
                 let transition = TRANSITION_MAP[state as usize + input as usize];
                 transition.decode()
@@ -768,7 +767,6 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
             // Record token start position
             start   |= (start_flag as usize).wrapping_neg() & self.input.position();
-            variant |= variant_flag;
 
             // Perform action
             match action {
@@ -780,13 +778,13 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                 ScanCrLf     =>       self.scan_crlf(),
                 ScanLfEos    => break self.scan_lf_eos(),
                 ScanLf       =>       self.scan_lf(),
-                ScanBin      => if let Some(t) = self.scan_num(Bin) { break t },
-                ScanOct      => if let Some(t) = self.scan_num(Oct) { break t },
-                ScanDec      => if let Some(t) = self.scan_num(Dec) { break t },
-                ScanHex      => if let Some(t) = self.scan_num(Hex) { break t },
-                ScanStr      => if let Some(t) = self.scan_str()    { break t },
-                ScanChar     => if let Some(t) = self.scan_char()   { break t },
-                ScanIdent    => break self.scan_ident(variant),
+                ScanBin      => if let Some(t) = self.scan_num(Bin)       { break t; },
+                ScanOct      => if let Some(t) = self.scan_num(Oct)       { break t; },
+                ScanDec      => if let Some(t) = self.scan_num(Dec)       { break t; },
+                ScanHex      => if let Some(t) = self.scan_num(Hex)       { break t; },
+                ScanStr      => if let Some(t) = self.scan_str()          { break t; },
+                ScanChar     => if let Some(t) = self.scan_char()         { break t; },
+                ScanIdent    => if let Some(t) = self.scan_ident_or_lit() { break t; },
                 ScanParam    => break self.scan_param(),
             }
         };
@@ -836,7 +834,8 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     #[inline]
     fn scan_param(&mut self) -> Token {
         self.input.advance();
-        self.scan_ident(1)
+        self.scan_ident_or_lit();
+        Token::Param
     }
 
     fn add_error(&mut self) -> State {

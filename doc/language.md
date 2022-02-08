@@ -46,7 +46,7 @@ Sequence | UTF-8   | Name  | Description
 `\f`     | `0C`    | `FF`  | form feed
 `\r`     | `0D`    | `CR`  | carriage return
 `\e`     | `1B`    | `ESC` | escape
-`\s`     | `20`    | ` `   | space
+`\s`     | `20`    | ` `   | space
 `\"`     | `22`    | `"`   | double quote
 `\'`     | `27`    | `'`   | single quote
 `\\`     | `5C`    | `\`   | backslash

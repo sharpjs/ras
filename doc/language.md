@@ -136,8 +136,71 @@ infix-op    = "@"
 
 ## Directives
 
-```
-.nop        Do nothing.
-.signed     Set default signedness to signed.
-.unsigned   Set default signedness to unsigned.
-```
+Name        | Description
+:---------- | :----------
+`.end`      | Ends the current scope.
+`.define`   | Defines a function-like macro.
+`.macro`    | Defines a statement-like macro.
+`.nop`      | Does nothing.
+`.block`    | Renders a block.
+`.signed`   | Sets default signedness to signed.
+`.unsigned` | Sets default signedness to unsigned.
+
+### General
+
+#### .end
+
+> ```
+> .end [ <name> ]
+> ```
+>
+> Ends the current scope.  If an identifier is provided, the assembler
+> verifies that it matches the name of the ending scope.
+
+### Signedness
+
+The operators `*` `/` `%` `>>` `<` `>` `<=` `>=` behave differently depending
+on the signedness of operands.  The operators `%` `+` `-` `%:` `+:` override
+the default signedness.
+
+#### .signed
+
+> ```
+> .signed
+> ```
+>
+> Sets the default signedness to **signed** for subsequent statements.
+
+#### .unsigned
+
+> ```
+> .unsigned
+> ```
+>
+> Sets the default signedness to **unsigned** for subsequent statements.
+
+### Macros
+
+#### .define
+
+> ```
+> .define <name> = <value>
+> ```
+>
+> Defines a function-like macro without parameters.
+>
+> ```
+> .define <name> ( <params> ) = <value>
+> ```
+>
+> Defines a function-like macro with parameters.
+
+#### .macro
+
+> ```
+> .macro <name> <args>
+>     ...
+> .end
+> ```
+>
+> Defines a statement-like macro.

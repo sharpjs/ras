@@ -61,7 +61,7 @@ Sequence | UTF-8   | Name  | Description
 | `( )` `[ ]` `{ }`                  | 17 |  —  |     1 |                   | group
 | `@`                                | 16 |  R⯈ |     2 |                   | alias
 | `x++` `x--` `f()` `x[]`            | 15 | ⯇L  |     1 |                   | unary postfix
-| `~` `!` `+x` `-x` `%x` `++x` `--x` | 14 |  R⯈ |     1 |                   | unary prefix
+| `~` `!` `%x` `+x` `-x` `++x` `--x` | 14 |  R⯈ |     1 |                   | unary prefix
 | `*` `/` `%`                        | 13 | ⯇L  |     2 | `*` `/` `%`       | multiplicative
 | `+` `-`                            | 12 | ⯇L  |     2 |                   | additive
 | `<<` `>>`                          | 11 | ⯇L  |     2 | `>>`              | shift
@@ -130,6 +130,7 @@ infix-op    = "@"
                    / "&&=" / "^^=" / "||="
             / "~"
             / ":"
+            / "%:" / "+:"
 
 ```
 

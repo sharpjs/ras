@@ -76,6 +76,9 @@ Sequence | UTF-8   | Name  | Description
 | `~`                                |  2 |  —  |     2 |                   | range
 | `:`                                |  1 |  R⯈ |     2 |                   | composition
 | `%:` `+:`                          |  0 |  R⯈ |     1 |                   | signedness
+|                                    |    |     |       |                   |
+| `..`                               | -1 |  —  |     2 |                   | duplication
+| `,`                                | -2 |  R⯈ |     2 |                   | sequencing
 
 <sup>1</sup> Compound assignment operator signedness behavior matches that of
 the corresponding non-assignment operator.
@@ -97,7 +100,9 @@ label-kind  = ":"  ; local or private
 
 directive   = IDENT [args] EOS
 
-args        = expr *("," expr)
+args        = arg *("," arg)
+
+arg         = expr [".." expr]
 
 expr        = atom
             / "(" expr ")"

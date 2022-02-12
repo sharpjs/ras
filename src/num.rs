@@ -152,8 +152,8 @@ pub struct Num {
 
 impl Display for Num {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}×{}^{}",
-            self.base.apply(&self.significand),
+        write!(f, "{} * p{}({})",
+            self.base.display(&self.significand),
             self.base.exp_lhs(),
             self.exponent,
         )

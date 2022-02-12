@@ -21,7 +21,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::ops::Range;
 
-use self::num::NumData;
+use crate::num::Num;
 
 use super::input::Cursor;
 
@@ -338,7 +338,7 @@ pub trait Lex {
     ///
     /// If the current token is not number-like, this method is safe, but the
     /// return value is unspecified.
-    fn num(&self) -> &NumData;
+    fn num(&self) -> &Num;
 }
 
 // ----------------------------------------------------------------------------
@@ -352,7 +352,7 @@ pub struct Lexer<I: Iterator<Item = u8>> {
     line_next: usize,
     range:     Range<usize>,
     str_buf:   Vec<u8>,
-    num:       NumData,
+    num:       Num,
 }
 
 impl<I: Iterator<Item = u8>> Lexer<I> {
@@ -361,9 +361,13 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         let mut input = Cursor::new(iter);
         input.advance();
         Self {
-            input, token: Token::Eof, line: 0, line_next: 1, range: 0..0,
-            str_buf: vec![],
-            num:  NumData::default(),
+            input,
+            token:     Token::Eof,
+            line:      0,
+            line_next: 1,
+            range:     0..0,
+            str_buf:   vec![],
+            num:       Num::default(),
         }
     }
 
@@ -409,11 +413,11 @@ impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
 
     #[inline]
     fn int(&self) -> u64 {
-        self.num.significand
+        self.num.significand as u64
     }
 
     #[inline]
-    fn num(&self) -> &NumData {
+    fn num(&self) -> &Num {
         &self.num
     }
 }

@@ -29,8 +29,6 @@
 //!  └─ x'    └─  .1
 //! ```
 
-use std::fmt::{self, Display, Formatter};
-
 use crate::lang::input::LogicalChar;
 use crate::num::Base;
 use super::*;
@@ -322,38 +320,18 @@ static TRANSITION_MAP: [Transition; Row::COUNT * State::COUNT] = {
 
 // ----------------------------------------------------------------------------
 
-/// Value for numeric literal tokens.
-#[derive(Clone, Copy, Default, Debug)]
-pub struct NumData {
-    pub significand: u64,
-    pub exponent:    i64,
-    pub radix:       u8,
-}
-
-impl Display for NumData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}×{}^{}",
-            self.significand,
-            self.radix,
-            self.exponent,
-        )
-    }
-}
-
-// ----------------------------------------------------------------------------
-
 impl<I: Iterator<Item = u8>> Lexer<I> {
     /// Attempts to scan a numeric literal.
     pub(super) fn scan_num(&mut self, base: Base) -> Option<Token> {
         use Action::*;
 
         // Get radix
-        let radix = base.radix();
-        self.num.radix = radix;
+        let mut radix = base.sig_radix();
+        self.num.base = base;
 
         // Initialize state
         let mut state = State::Int0;    // Sublexer state
-        let mut acc   = 0u64;           // Digit accumulator
+        let mut acc   = 0u128;          // Digit accumulator
         let mut prec  = 0u8;            // Fractional precision
         let mut inv   = false;          // Inversion (negative exponent) flag
         let mut over  = false;          // Overflow flag
@@ -377,21 +355,23 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
             // Perform action specified by transition
             match action {
-                Continue            =>        (),
-                SetSignificand      =>        self.set_significand(&mut acc),
+                Continue => (),
+                SetSignificand => {
+                    self.set_significand(acc);
+                    radix = base.exp_radix();
+                    acc   = 0;
+                },
                 YieldInt   if !over => return self.yield_int(acc),
                 YieldFloat if !over => return self.yield_float_sig(acc,      prec),
                 YieldSci   if !over => return self.yield_float_exp(acc, inv, prec),
-                YieldInt            => return self.fail_overflow(),
-                YieldFloat          => return self.fail_overflow(),
-                YieldSci            => return self.fail_overflow(),
                 Error               => return self.fail_invalid_number(),
+                _                   => return self.fail_overflow(),
             }
 
             // Accumulate digit
             let scale  = (radix ^ 1) & mask ^ 1; // radix if digit, 1 if non-digit
-            let (v, o) = acc.overflowing_mul(scale as u64); acc = v; over |= o;
-            let (v, o) = acc.overflowing_add(digit as u64); acc = v; over |= o;
+            let (v, o) = acc.overflowing_mul(scale as u128); acc = v; over |= o;
+            let (v, o) = acc.overflowing_add(digit as u128); acc = v; over |= o;
 
             // Accumulate fractional precision
             prec += state.precision_inc() & mask;
@@ -406,26 +386,25 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     }
 
     #[inline]
-    fn set_significand(&mut self, sig: &mut u64) {
-        self.num.significand = *sig;
-        *sig = 0;
+    fn set_significand(&mut self, sig: u128) {
+        self.num.significand = sig;
     }
 
     #[inline]
-    fn yield_int(&mut self, sig: u64) -> Option<Token> {
+    fn yield_int(&mut self, sig: u128) -> Option<Token> {
         self.num.significand = sig;
         self.num.exponent    = 0;
         Some(Token::Int)
     }
 
     #[inline]
-    fn yield_float_sig(&mut self, sig: u64, prec: u8) -> Option<Token> {
+    fn yield_float_sig(&mut self, sig: u128, prec: u8) -> Option<Token> {
         self.num.significand = sig;
-        self.num.exponent    = -(prec as i64);
+        self.num.exponent    = -(prec as i32);
         Some(Token::Float)
     }
 
-    fn yield_float_exp(&mut self, exp: u64, inv: bool, prec: u8) -> Option<Token> {
+    fn yield_float_exp(&mut self, exp: u128, inv: bool, prec: u8) -> Option<Token> {
         if let Some(exp) = convert_exp(exp, inv, prec) {
             self.num.exponent = exp;
             Some(Token::Float)
@@ -437,28 +416,28 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     fn fail_overflow(&mut self) -> Option<Token> {
         // TODO: add error
         eprintln!("ERROR: Overflow.");
-        self.num = NumData::default();
+        self.num = Num::default();
         None
     }
 
     fn fail_invalid_number(&mut self) -> Option<Token> {
         // TODO: add error
         eprintln!("ERROR: Invalid numeric literal.");
-        self.num = NumData::default();
+        self.num = Num::default();
         None
     }
 }
 
 #[inline]
-fn convert_exp(exp: u64, inv: bool, prec: u8) -> Option<i64> {
-    let mut exp = i64::try_from(exp).ok()?;
+fn convert_exp(exp: u128, inv: bool, prec: u8) -> Option<i32> {
+    let mut exp = i32::try_from(exp).ok()?;
 
     // Conditional negation
     // https://graphics.stanford.edu/~seander/bithacks.html#ConditionalNegate
-    let inv = inv as i64; // 0 or 1
+    let inv = inv as i32; // 0 or 1
     exp = (exp ^ -inv).checked_add(inv)?;
 
-    exp.checked_sub(prec as i64)
+    exp.checked_sub(prec as i32)
 }
 
 #[cfg(test)]
@@ -500,7 +479,7 @@ mod tests {
         assert_eq!(lexer.input.position(), 1);
         assert_eq!(lexer.num.significand,  0);
         assert_eq!(lexer.num.exponent,     0);
-        assert_eq!(lexer.num.radix,        base.radix());
+        assert_eq!(lexer.num.base,         base);
     }
 
     /*

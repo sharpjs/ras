@@ -18,28 +18,46 @@
 
 //! Number support.
 
+use std::fmt::{self, Binary, Display, Formatter, Octal, UpperHex};
+
+// ----------------------------------------------------------------------------
+
 /// Numeric bases.
+///
+/// Terminology:
+///
+/// ```text
+/// ╭──────────────Base::Hex─────────────╮
+/// │                                    │
+/// significand₁₆ * power(2₁₀, exponent₁₀)
+///            ╰┤         │╰┤          ├╯
+///    sig_radix╯  exp_lhs╯ ╰base_radix╯
+///  ∈{2,8,10,16}  ∈{2,10}      =10
+/// ```
+///
+/// The appropriate term for `exp_lhs` is *base*, but this code avoids it to
+/// prevent confusion with [`Base`].
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Base {
-    /// Binary.
+    /// Binary: *significand*₂ \[ *power*(2₁₀, *exponent*₁₀) \]
     Bin,
 
-    /// Octal.
+    /// Octal: *significand*₈ \[ *power*(2₁₀, *exponent*₁₀) \]
     Oct,
 
-    /// Decimal.
+    /// Decimal: *significand*₁₀ \[ *power*(10₁₀, *exponent*₁₀) \]
     Dec,
 
-    /// Hexadecimal.
+    /// Hexadecimal: *significand*₁₆ \[ *power*(2₁₀, *exponent*₁₀) \]
     Hex,
 }
 
 impl Base {
-    /// Returns the count of digits used to represent numbers in the base.
+    /// Returns the count of digits used to represent an integer or the
+    /// significand in of scientific notation.
     #[inline]
-    pub const fn radix(self) -> u8 {
+    pub const fn sig_radix(self) -> u8 {
         use Base::*;
-
         match self {
             Bin =>  2,
             Oct =>  8,
@@ -47,11 +65,94 @@ impl Base {
             Hex => 16,
         }
     }
+
+    /// Returns the left-hand side of the exponent in scientific notation.
+    ///
+    /// The appropriate term is *base*, but this code avoids it to prevent
+    /// confusion with [`Base`].
+    #[inline]
+    pub const fn exp_lhs(self) -> u8 {
+        use Base::*;
+        match self {
+            Bin =>  2,
+            Oct =>  2,
+            Dec => 10,
+            Hex =>  2,
+        }
+    }
+
+    /// Returns the count of digits used to represent the exponent in
+    /// scientific notation.
+    #[inline]
+    pub const fn exp_radix(self) -> u8 {
+        10
+    }
+}
+
+impl Base {
+    #[inline]
+    pub fn apply<'a, T>(self, val: &'a T) -> InBase<'a, T>
+    where
+        T: Display + Binary + Octal + UpperHex
+    {
+        InBase { base: self, val }
+    }
 }
 
 impl Default for Base {
     #[inline]
     fn default() -> Self {
         Base::Dec
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+#[derive(Clone, Copy, Debug)]
+pub struct InBase<'a, T>
+where
+    T: Display + Binary + Octal + UpperHex
+{
+    base: Base,
+    val:  &'a T,
+}
+
+impl<T> Display for InBase<'_, T>
+where
+    T: Display + Binary + Octal + UpperHex
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use Base::*;
+        match self.base {
+            Bin => write!(f, "b'{:b}", self.val),
+            Oct => write!(f, "o'{:o}", self.val),
+            Dec => write!(f,     "{}", self.val),
+            Hex => write!(f, "x'{:X}", self.val),
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+/// Internal number representation.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+pub struct Num {
+    /// Significand.
+    pub significand: u128,
+
+    /// Exponent.
+    pub exponent: i32,
+
+    /// Significand base.
+    pub base: Base,
+}
+
+impl Display for Num {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}×{}^{}",
+            self.base.apply(&self.significand),
+            self.base.exp_lhs(),
+            self.exponent,
+        )
     }
 }

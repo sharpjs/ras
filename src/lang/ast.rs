@@ -20,7 +20,9 @@
 
 use std::fmt::{self, Display, Formatter};
 use colored::*;
+
 use crate::name::{Name, NameTable};
+use crate::num::Num;
 
 /// Block of statements.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -114,7 +116,7 @@ pub enum Expr<T = ()> {
     Int(T, u64),
 
     /// Floating-point literal.
-    Float(T, ()),
+    Float(T, Box<Num>),
 
     /// String literal.
     Str(T, String),
@@ -487,10 +489,10 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
         use Expr::*;
         match *self.node {
             Ident(_,     name) => self.node1("Ident", self.names.get(name)).fmt(f),
-            Int  (_,     val ) => self.node1("Int",   val).fmt(f),
-            Float(_,     _   ) => self.node1("Float", "?").fmt(f),
-            Str  (_, ref val ) => self.node1("Str",   val).fmt(f),
-            Char (_,     val ) => self.node1("Char",  val).fmt(f),
+            Int  (_,     val ) => self.node1("Int",      val).fmt(f),
+            Float(_, ref val ) => self.node1("Float", &**val).fmt(f),
+            Str  (_, ref val ) => self.node1("Str",      val).fmt(f),
+            Char (_,     val ) => self.node1("Char",     val).fmt(f),
             Alias(_, name, ref expr) => {
                 self.node1("Alias", self.names.get(name)).fmt(f)?;
                 self.child(&**expr, false).fmt(f)

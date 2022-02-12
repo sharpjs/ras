@@ -289,7 +289,7 @@ impl<'a, L: Lex> Parser<'a, L> {
                 self.lexer.next()
             )),
             P::Float => Ok((
-                Box::new(Expr::Float((), ())),
+                Box::new(Expr::Float((), Box::new(*self.lexer.num()))),
                 self.lexer.next()
             )),
             P::Str => Ok((

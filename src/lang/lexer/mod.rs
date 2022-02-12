@@ -352,6 +352,7 @@ pub struct Lexer<I: Iterator<Item = u8>> {
     line_next: usize,
     range:     Range<usize>,
     str_buf:   Vec<u8>,
+    char:      char,
     num:       Num,
 }
 
@@ -367,7 +368,8 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
             line_next: 1,
             range:     0..0,
             str_buf:   vec![],
-            num:       Num::default(),
+            char:      char ::default(),
+            num:       Num  ::default(),
         }
     }
 
@@ -408,7 +410,7 @@ impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
 
     #[inline]
     fn char(&self) -> char {
-        char::from_u32(self.num.significand as u32).unwrap_or_default()
+        self.char
     }
 
     #[inline]

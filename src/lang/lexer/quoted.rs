@@ -132,7 +132,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                 None
             },
             Some(c) if chars.next().is_none() => {
-                self.num = Num { significand: c as u128, exponent: 0, base: crate::num::Base::Hex };
+                self.char = c;
                 Some(token)
             },
             _ => {

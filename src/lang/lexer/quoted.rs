@@ -150,7 +150,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         self.input.advance();
 
         // Prepare the content buffer
-        self.str_buf.clear();
+        self.text.clear();
 
         // Initialize loop state
         let mut line     = self.line;
@@ -170,7 +170,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                     self.input.advance();
 
                     // Append the byte verbatim
-                    self.str_buf.push(byte);
+                    self.text.push(byte);
 
                     // Accumulate line number
                     line     += kind.is_lf() as usize | after_cr;

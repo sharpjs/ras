@@ -351,7 +351,7 @@ pub struct Lexer<I: Iterator<Item = u8>> {
     line:      usize,
     line_next: usize,
     range:     Range<usize>,
-    str_buf:   Vec<u8>,
+    text:      Vec<u8>,
     char:      char,
     num:       Num,
 }
@@ -366,8 +366,8 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
             token:     Token::Eof,
             line:      0,
             line_next: 1,
-            range:     0..0,
-            str_buf:   vec![],
+            range:     Range::default(),
+            text:      Vec  ::default(),
             char:      char ::default(),
             num:       Num  ::default(),
         }
@@ -405,7 +405,7 @@ impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
     #[inline]
     fn str(&self) -> &str {
         // SAFETY: UTF-8 validation performed in an earlier phase.
-        unsafe { std::str::from_utf8_unchecked(&self.str_buf[..]) }
+        unsafe { std::str::from_utf8_unchecked(&self.text[..]) }
     }
 
     #[inline]

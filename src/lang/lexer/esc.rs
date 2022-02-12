@@ -369,7 +369,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
     fn append_esc_verbatim(&mut self, byte: u8) -> Result {
         self.input.advance();
-        self.str_buf.push(byte);
+        self.text.push(byte);
         Ok(())
     }
 
@@ -386,7 +386,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
             self.err_esc_invalid()
         } else if let Ok(c) = char::try_from(value) {
             let mut bytes = [0; 4];
-            self.str_buf.extend(c.encode_utf8(&mut bytes).bytes());
+            self.text.extend(c.encode_utf8(&mut bytes).bytes());
             Ok(())
         } else {
             self.err_esc_invalid()

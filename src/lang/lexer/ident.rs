@@ -71,7 +71,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         use Char::*;
 
         let input = &mut self.input;
-        let buf   = &mut self.str_buf;
+        let buf   = &mut self.text;
 
         buf.clear();
 

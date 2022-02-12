@@ -98,10 +98,20 @@ pub struct Dir<T = ()> {
     pub name: Name,
 
     /// Arguments.
-    pub args: Vec<Expr<T>>,
+    pub args: Vec<Arg<T>>,
 
     /// Additional data.
     pub data: T,
+}
+
+/// Directive argument.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Arg<T = ()> {
+    /// Unknown argument.
+    Unknown(T),
+
+    /// Expression argument.
+    Expr(Expr<T>),
 }
 
 /// Expression.
@@ -481,6 +491,16 @@ impl<T> Display for ForDisplay<'_, Dir<T>> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.node1("Dir", self.names.get(self.node.name)).fmt(f)?;
         self.drill(&self.node.args).fmt(f)
+    }
+}
+
+impl<T> Display for ForDisplay<'_, Arg<T>> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        use Arg::*;
+        match *self.node {
+            Unknown (_)     => self.node0("Unknown").fmt(f),
+            Expr    (ref e) => self.drill(e).fmt(f),
+        }
     }
 }
 

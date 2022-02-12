@@ -166,14 +166,20 @@ impl<'a, L: Lex> Parser<'a, L> {
         if !token.is_eos() {
             loop {
                 // Parse argument
-                match self.parse_expr(token) {
-                    Ok((arg, t)) => {
-                        args.push(arg);
-                        token = t;
+                match token {
+                    Unknown => {
+                        args.push(Arg::Unknown(()));
+                        token = self.lexer.next();
                     },
-                    Err(t) => {
-                        eprintln!("expected: argument");
-                        return self.parse_dir_fail(t);
+                    _ => match self.parse_expr(token) {
+                        Ok((expr, t)) => {
+                            args.push(Arg::Expr(expr));
+                            token = t;
+                        },
+                        Err(t) => {
+                            eprintln!("expected: argument");
+                            return self.parse_dir_fail(t);
+                        },
                     },
                 }
 

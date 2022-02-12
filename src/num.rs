@@ -90,8 +90,10 @@ impl Base {
 }
 
 impl Base {
+    /// Returns a wrapper that implements [`Display`] by formatting the given
+    /// value in the base.
     #[inline]
-    pub fn apply<'a, T>(self, val: &'a T) -> InBase<'a, T>
+    pub fn display<'a, T>(self, val: &'a T) -> impl Display + 'a
     where
         T: Display + Binary + Octal + UpperHex
     {
@@ -108,8 +110,9 @@ impl Default for Base {
 
 // ----------------------------------------------------------------------------
 
+/// Wrapper that implements [`Display`] for a value in a specific numeric base.
 #[derive(Clone, Copy, Debug)]
-pub struct InBase<'a, T>
+struct InBase<'a, T>
 where
     T: Display + Binary + Octal + UpperHex
 {

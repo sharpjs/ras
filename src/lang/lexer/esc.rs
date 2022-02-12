@@ -395,17 +395,17 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 
     fn err_esc_unknown(&mut self) -> Result {
         self.input.advance();
-        eprintln!("error: unknown escape sequence (TODO)");
+        eprintln!("error: unknown escape sequence");
         Err(())
     }
 
     fn err_esc_invalid(&mut self) -> Result {
-        eprintln!("error: invalid escape sequence (TODO)");
+        eprintln!("error: invalid escape sequence");
         Err(())
     }
 
     fn err_esc_incomplete(&mut self) -> Result {
-        eprintln!("error: incomplete escape sequence (TODO)");
+        eprintln!("error: incomplete escape sequence");
         Err(())
     }
 }

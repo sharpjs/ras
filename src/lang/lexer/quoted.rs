@@ -191,8 +191,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
                     let _ = self.scan_esc();
                 },
                 Unterm => {
-                    // TODO: Add unterminated string error
-                    eprintln!("error: unterminated string or character literal (TODO)");
+                    eprintln!("error: unterminated string or character literal");
 
                     // Fail
                     break None

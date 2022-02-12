@@ -414,14 +414,12 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
     }
 
     fn fail_overflow(&mut self) -> Option<Token> {
-        // TODO: add error
         eprintln!("ERROR: Overflow.");
         self.num = Num::default();
         None
     }
 
     fn fail_invalid_number(&mut self) -> Option<Token> {
-        // TODO: add error
         eprintln!("ERROR: Invalid numeric literal.");
         self.num = Num::default();
         None

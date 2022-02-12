@@ -108,7 +108,7 @@ impl<'a, L: Lex> Parser<'a, L> {
     /// - On entry:   before statement token.
     /// - On success: after statement, on EOS or EOF.
     /// - On failure: on unexpected token (returned).
-    fn parse_stmt(&mut self) -> Result<Box<Stmt>, Token> {
+    fn parse_stmt(&mut self) -> Result<Stmt, Token> {
         loop {
             match self.lexer.next() {
                 Eos => {
@@ -135,7 +135,7 @@ impl<'a, L: Lex> Parser<'a, L> {
     /// Lexer positions:
     /// - On entry: on [`Ident`].
     /// - On exit:  on EOS or EOF.
-    fn parse_label_or_dir(&mut self) -> Result<Box<Stmt>, ()> {
+    fn parse_label_or_dir(&mut self) -> Result<Stmt, ()> {
         // Get label or directive name
         let name   = self.lexer.str();
         let pseudo = name.starts_with('.');
@@ -151,7 +151,7 @@ impl<'a, L: Lex> Parser<'a, L> {
             token            => return self.parse_dir(name, token),
         };
 
-        Ok(Box::new(Stmt::Label(Label { name, scope, data: () })))
+        Ok(Stmt::Label(Label { name, scope, data: () }))
     }
 
     /// Attempts to parse a directive with the given `name`.
@@ -159,7 +159,7 @@ impl<'a, L: Lex> Parser<'a, L> {
     /// Lexer positions:
     /// - On entry: after `name`, on given `token`.
     /// - On exit:  on EOS or EOF.
-    fn parse_dir(&mut self, name: Name, mut token: Token) -> Result<Box<Stmt>, ()> {
+    fn parse_dir(&mut self, name: Name, mut token: Token) -> Result<Stmt, ()> {
         let mut args = vec![];
 
         // Parse arguments if present
@@ -189,10 +189,10 @@ impl<'a, L: Lex> Parser<'a, L> {
             }
         }
 
-        Ok(Box::new(Stmt::Dir(Dir { name, args, data: () })))
+        Ok(Stmt::Dir(Dir { name, args, data: () }))
     }
 
-    fn parse_dir_fail(&mut self, mut token: Token) -> Result<Box<Stmt>, ()> {
+    fn parse_dir_fail(&mut self, mut token: Token) -> Result<Stmt, ()> {
         // Recover
         while !token.is_eos() {
             token = self.lexer.next();
@@ -208,7 +208,7 @@ impl<'a, L: Lex> Parser<'a, L> {
     /// - On success: at the returned token, the first token after the expression.
     /// - On failure: at the returned token, the token that was unexpected.
     #[inline]
-    fn parse_expr(&mut self, token: Token) -> Result<(Box<Expr>, Token), Token> {
+    fn parse_expr(&mut self, token: Token) -> Result<(Expr, Token), Token> {
         self.parse_expr_prec(token, 0)
     }
 
@@ -221,9 +221,7 @@ impl<'a, L: Lex> Parser<'a, L> {
     /// - On entry:   at `token`, the first token of the expression.
     /// - On success: at the returned token, the first token after the expression.
     /// - On failure: at the returned token, the token that was unexpected.
-    fn parse_expr_prec(&mut self, token: Token, min_prec: u8)
-        -> Result<(Box<Expr>, Token), Token>
-    {
+    fn parse_expr_prec(&mut self, token: Token, min_prec: u8) -> Result<(Expr, Token), Token> {
         use PostfixParse as P;
 
         let (mut expr, mut token) = self.parse_expr_prefix(token)?;
@@ -238,7 +236,7 @@ impl<'a, L: Lex> Parser<'a, L> {
                     if prec < min_prec { break; }
 
                     token = self.lexer.next();
-                    expr  = Box::new(Expr::Unary((), op, expr));
+                    expr  = Expr::Unary((), op, Box::new(expr));
                 },
                 P::Binary(op) => {
                     let (prec, assoc) = binary_prec(op);
@@ -248,7 +246,7 @@ impl<'a, L: Lex> Parser<'a, L> {
                     let (rhs, t) = self.parse_expr_prec(token, prec + assoc as u8)?;
 
                     token = t;
-                    expr  = Box::new(Expr::Binary((), op, expr, rhs))
+                    expr  = Expr::Binary((), op, Box::new(expr), Box::new(rhs))
                 },
             }
         }
@@ -265,9 +263,7 @@ impl<'a, L: Lex> Parser<'a, L> {
     /// - On entry:   at `token`, the first token of the expression.
     /// - On success: at the returned token, the first token after the expression.
     /// - On failure: at the returned token, the token that was unexpected.
-    fn parse_expr_prefix(&mut self, token: Token)
-        -> Result<(Box<Expr>, Token), Token>
-    {
+    fn parse_expr_prefix(&mut self, token: Token) -> Result<(Expr, Token), Token> {
         use PrefixParse as P;
 
         match prefix_parse_kind(token) {
@@ -278,33 +274,33 @@ impl<'a, L: Lex> Parser<'a, L> {
                         let (prec, assoc) = ALIAS_PREC;
                         let        token  = self.lexer.next();
                         let (expr, token) = self.parse_expr_prec(token, prec + assoc as u8)?;
-                        (Box::new(Expr::Alias((), name, expr)), token)
+                        (Expr::Alias((), name, Box::new(expr)), token)
                     },
-                    token => (Box::new(Expr::Ident((), name)), token)
+                    token => (Expr::Ident((), name), token)
                 }
             }),
             P::Param => todo!(), // TODO: Process macro right here?
             P::Int => Ok((
-                Box::new(Expr::Int((), self.lexer.int())),
+                Expr::Int((), self.lexer.int()),
                 self.lexer.next()
             )),
             P::Float => Ok((
-                Box::new(Expr::Float((), Box::new(*self.lexer.num()))),
+                Expr::Float((), Box::new(*self.lexer.num())),
                 self.lexer.next()
             )),
             P::Str => Ok((
-                Box::new(Expr::Str((), self.lexer.str().to_string())),
+                Expr::Str((), self.lexer.str().to_string()),
                 self.lexer.next()
             )),
             P::Char => Ok((
-                Box::new(Expr::Char((), self.lexer.char())),
+                Expr::Char((), self.lexer.char()),
                 self.lexer.next()
             )),
             P::Unary(op) => {
                 let (prec, assoc) = unary_prec(op);
                 let        token  = self.lexer.next();
                 let (expr, token) = self.parse_expr_prec(token, prec + assoc as u8)?;
-                Ok(( Box::new(Expr::Unary((), op, expr)), token ))
+                Ok(( Expr::Unary((), op, Box::new(expr)), token ))
             },
             P::Group => {
                 let       token  = self.lexer.next();
@@ -323,7 +319,7 @@ impl<'a, L: Lex> Parser<'a, L> {
                             LogNot => (true, self.lexer.next()),
                             token  => (false, token),
                         };
-                        Ok(( Box::new(Expr::Deref((), lhs, effect)), token ))
+                        Ok(( Expr::Deref((), Box::new(lhs), effect), token ))
                     },
                     _ => Err({ eprintln!("expected: ']'"); token }),
                 }
@@ -332,7 +328,7 @@ impl<'a, L: Lex> Parser<'a, L> {
                 let block = self.parse_block(RCurly);
                 let token = self.lexer.next();
                 match block {
-                    Ok(block) => Ok((Box::new(Expr::Block(block)), token)),
+                    Ok(block) => Ok(( Expr::Block(block), token )),
                     _         => Err(token),
                 }
             },

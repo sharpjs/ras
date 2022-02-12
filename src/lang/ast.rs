@@ -28,7 +28,7 @@ use crate::num::Num;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Block<T = ()> {
     /// Statements in the block.
-    pub stmts: Vec<Box<Stmt<T>>>,
+    pub stmts: Vec<Stmt<T>>,
 
     /// Additional data.
     pub data: T,
@@ -98,7 +98,7 @@ pub struct Dir<T = ()> {
     pub name: Name,
 
     /// Arguments.
-    pub args: Vec<Box<Expr<T>>>,
+    pub args: Vec<Expr<T>>,
 
     /// Additional data.
     pub data: T,
@@ -515,7 +515,7 @@ impl<T> Display for ForDisplay<'_, Expr<T>> {
     }
 }
 
-impl<T> ForDisplay<'_, Vec<Box<T>>> {
+impl<T> ForDisplay<'_, Vec<T>> {
     // NOTE: This is a pseudo-Display implementation, written to mesh well with
     // the code above but permitting a constraint on the `fmt` method.
     fn fmt<'a>(&'a self, f: &mut Formatter) -> fmt::Result
@@ -524,9 +524,9 @@ impl<T> ForDisplay<'_, Vec<Box<T>>> {
     {
         if let [nodes@.., last] = &self.node[..] {
             for node in nodes {
-                self.child(&**node, true).fmt(f)?;
+                self.child(node, true).fmt(f)?;
             }
-            self.child(&**last, false).fmt(f)
+            self.child(last, false).fmt(f)
         } else {
             Ok(())
         }

@@ -146,7 +146,6 @@ impl<'a, L: Lex> Parser<'a, L> {
             Colon  if pseudo => Scope::Local,
             Colon            => Scope::Private,
             Weak             => Scope::Weak,
-            Public if pseudo => Scope::Hidden,
             Public           => Scope::Public,
             token            => return self.parse_dir(name, token),
         };

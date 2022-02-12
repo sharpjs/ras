@@ -66,11 +66,6 @@ pub enum Scope {
     /// Lexical form: `.foo:`
     Local,
 
-    /// Valid within the entire source file.  Not present in the object file.
-    ///
-    /// Lexical form: `.foo::` TODO: Find a different syntax for this or eliminate.
-    Hidden,
-
     /// Valid within the entire source file.  Present in the object file but
     /// not exported to other objects.
     ///

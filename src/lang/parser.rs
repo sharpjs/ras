@@ -166,30 +166,28 @@ impl<'a, L: Lex> Parser<'a, L> {
         if !token.is_eos() {
             loop {
                 // Parse argument
-                match token {
-                    Unknown => {
-                        args.push(Arg::Unknown(()));
-                        token = self.lexer.next();
+                match self.parse_arg(token) {
+                    Ok((arg, t)) => {
+                        args.push(arg);
+                        token = t;
                     },
-                    _ => match self.parse_expr(token) {
-                        Ok((expr, t)) => {
-                            args.push(Arg::Expr(expr));
-                            token = t;
-                        },
-                        Err(t) => {
-                            eprintln!("expected: argument");
-                            return self.parse_dir_fail(t);
-                        },
+                    Err(t) => {
+                        eprintln!("expected: argument");
+                        return self.parse_dir_fail(t);
                     },
                 }
 
                 // Parse argument separator or end of statement
                 match token {
-                    Comma     => token = self.lexer.next(),
-                    Eos | Eof => break,
-                    _ => {
+                    Comma => {
+                        token = self.lexer.next();
+                    },
+                    Eos | Eof => {
+                        break;
+                    },
+                    t => {
                         eprintln!("expected: comma, end of statement, or end of file");
-                        return self.parse_dir_fail(token);
+                        return self.parse_dir_fail(t);
                     },
                 }
             }
@@ -205,6 +203,24 @@ impl<'a, L: Lex> Parser<'a, L> {
         }
 
         Err(())
+    }
+
+    /// Attempts to parse an argument.
+    ///
+    /// Lexer positions:
+    /// - On entry:   at `token`, the first token of the expression.
+    /// - On success: at the returned token, the first token after the expression.
+    /// - On failure: at the returned token, the token that was unexpected.
+    fn parse_arg(&mut self, token: Token) -> Result<(Arg, Token), Token> {
+        match token {
+            Unknown => Ok((
+                Arg::Unknown(()),
+                self.lexer.next()
+            )),
+            token => self
+                .parse_expr(token)
+                .map(|(e, t)| (Arg::Expr(e), t)),
+        }
     }
 
     /// Attempts to parse an expression.

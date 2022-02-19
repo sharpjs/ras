@@ -77,7 +77,7 @@ Sequence | UTF-8   | Name  | Description
 | `:`                                |  1 |  R⯈ |     2 |                   | composition
 | `%:` `+:`                          |  0 |  R⯈ |     1 |                   | signedness
 |                                    |    |     |       |                   |
-| `..`                               | -1 |  —  |     2 |                   | duplication
+| `$`                                | -1 |  —  |     2 |                   | duplication
 | `,`                                | -2 |  R⯈ |     2 |                   | sequencing
 
 <sup>1</sup> Compound assignment operator signedness behavior matches that of
@@ -85,59 +85,91 @@ the corresponding non-assignment operator.
 
 ### Formal Specification in [ABNF](https://www.rfc-editor.org/rfc/rfc5234.html)
 
+```asm
+  .macro a=1, b=2, !c=3
+```
+
 ```abnf
-block       = *stmt
+block           = *stmt
 
-stmt        = EOS ; omitted from AST
-            / label
-            / directive
+stmt            = EOS ; omitted from AST
+                / label
+                / define-stmt
+                / macro-stmt
+                / directive
 
-label       = IDENT label-kind
+label           = IDENT label-kind
 
-label-kind  = ":"  ; local or private
-            / "::" ; public
-            / ":?" ; weak
+label-kind      = ":"  ; local or private
+                / "::" ; public
+                / ":?" ; weak
 
-directive   = IDENT [args] EOS
+directive       = IDENT [args] EOS
+                ; except ".define" / ".macro"
 
-args        = arg *("," arg)
+args            = arg *( "," arg )
 
-arg         = expr [".." expr]
+arg             = "?"
+                / expr
+                / arg [ "$" expr ]
 
-expr        = atom
-            / "(" expr ")"
-            / "[" expr "]" ["!"]
-            / "{" block "}"
-            / prefix-op expr      ; subject to precedence
-            / expr postfix-op     ; subject to precedence
-            / expr infix-op expr  ; subject to precedence
+expr            = atom
+                / "(" expr ")"
+                / "[" expr "]" ["!"]
+                / "{" block "}"
+                / prefix-op expr      ; subject to precedence
+                / expr postfix-op     ; subject to precedence
+                / expr infix-op expr  ; subject to precedence
 
-prefix-op   = "++" / "--" / "~" / "!" / "%" / "+" / "-" / "%:" / "+:"
+atom            = IDENT / INT / FLOAT / STR / CHAR
 
-postfix-op  = "++" / "--"
+prefix-op       = "++" / "--" / "~" / "!" / "%" / "+" / "-" / "%:" / "+:"
 
-infix-op    = "@"
-            / "*"  / "/"   / "%"
-            / "+"  / "-"
-            / "<<" / ">>"
-            / "&"  / "^"   / "|"
-            / "==" / "!="  / "<"   / ">"  / "<=" / ">="
-            / "&&" / "^^"  / "||"
-            / "="  / "*="  / "/="  / "%="
-                   / "+="  / "-="
-                   / "<<=" / ">>="
-                   / "&="  / "^="  / "|="
-                   / "&&=" / "^^=" / "||="
-            / "~"
-            / ":"
-            / "%:" / "+:"
+postfix-op      = "++" / "--"
 
+infix-op        = "@"
+                / "*"  / "/"   / "%"
+                / "+"  / "-"
+                / "<<" / ">>"
+                / "&"  / "^"   / "|"
+                / "==" / "!="  / "<"   / ">"  / "<=" / ">="
+                / "&&" / "^^"  / "||"
+                / "="  / "*="  / "/="  / "%="
+                       / "+="  / "-="
+                       / "<<=" / ">>="
+                       / "&="  / "^="  / "|="
+                       / "&&=" / "^^=" / "||="
+                / "~"
+                / ":"
+
+define-stmt     = ".define" IDENT [ "(" [macro-args] ")" ] "=" *token-tree EOS
+
+macro-stmt      = ".macro" IDENT [macro-args] EOS
+
+macro-args      = macro-arg *( "," macro-arg )
+
+macro-arg       = *macro-arg-flag IDENT [ "=" *token-tree-nc ]
+
+macro-arg-flag  = "!" ; eager evaluation
+                / "+" ; remaining arguments
+
+token-tree      = token-tree-nc / ","
+
+token-tree-nc   = atom
+                / prefix-op
+                / postfix-op
+                / infix-op
+                / label-kind
+                / "?" / "$"
+                / "(" *token-tree ")"
+                / "[" *token-tree "]"
+                / "{" *token-tree "}"
 ```
 
 ## Directives
 
 Name        | Description
-:---------- | :----------
+:-----------|:-----------------------------------------------------------------
 `.end`      | Ends the current scope.
 `.define`   | Defines a function-like macro.
 `.macro`    | Defines a statement-like macro.
@@ -165,42 +197,68 @@ the default signedness.
 
 #### .signed
 
-> ```
-> .signed
-> ```
->
-> Sets the default signedness to **signed** for subsequent statements.
+```
+.signed
+```
+
+Sets the default signedness to **signed** for subsequent statements.
 
 #### .unsigned
 
-> ```
-> .unsigned
-> ```
->
-> Sets the default signedness to **unsigned** for subsequent statements.
+```
+.unsigned
+```
+
+Sets the default signedness to **unsigned** for subsequent statements.
 
 ### Macros
 
 #### .define
 
-> ```
-> .define <name> = <value>
-> ```
->
-> Defines a function-like macro without parameters.
->
-> ```
-> .define <name> ( <params> ) = <value>
-> ```
->
-> Defines a function-like macro with parameters.
+```
+.define <name> = <value>
+```
+
+Defines an inline macro without parameters which expands to the specified
+value.
+
+```
+.define <name> ( <params> ) = <value>
+```
+
+Defines an inline macro with parameters which expands to the specified value.
+
+`<name>` is the macro name and must be an identifier.
+
+`<params>` is a comma-separated list of zero or more parameters.
+
+`<value>` is any set of token trees and may be empty.
 
 #### .macro
 
-> ```
-> .macro <name> <args>
->     ...
-> .end
-> ```
->
-> Defines a statement-like macro.
+```
+.macro <name> <params>
+    ...
+.end
+```
+
+Defines a directive-like macro.
+
+#### Macro Parameters
+
+Each macro parameter has the form
+
+```
+[ ! | + ] <name> [ = <value> ]
+```
+
+where `name` is the parameter name, and `value` is an optional default value.
+
+Optional prefixes, which may appear in any order, alter the behavior of the
+parameter:
+- `!` causes the parameter to use eager evaluation rather than lazy.
+- `+` causes the parameter to capture all remaining arguments and the commas
+      separating them.  This prefix may appear only on the last argument.
+
+If a parameter has a default value, the parameter is optional.  Otherwise, the
+parameter is required.  The default value may be empty.

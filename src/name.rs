@@ -167,6 +167,7 @@ impl StringArena {
 macro_rules! prepopulate {
     ($($(#[$attr:meta])* $ident:ident => $value:literal,)*) => {
         #[repr(u32)]
+        #[allow(non_camel_case_types)]
         enum _Names { $($ident),* }
 
         impl Name { $(
@@ -187,8 +188,72 @@ macro_rules! prepopulate {
 
 prepopulate! {
     /// `Name` representing the empty string.
-    EMPTY   => "",
-    SECTION => ".section",
+    EMPTY       => "",
+
+    // Literals
+    B           => "b",
+    B_UC        => "B",
+    O           => "o",
+    O_UC        => "O",
+    D           => "d",
+    D_UC        => "D",
+    X           => "x",
+    X_UC        => "X",
+
+    // Misc
+    DOT         => ".",
+    DOT_NOP     => ".nop",
+
+    // Messages
+    DOT_PRINT   => ".print",
+    DOT_WARNING => ".warning",
+    DOT_ERROR   => ".error",
+
+    // Inclusion
+    DOT_INCLUDE => ".include",
+    DOT_INCBIN  => ".incbin",
+
+    // Macros
+    DOT_DEFINE  => ".define",
+    DOT_MACRO   => ".macro",
+    DOT_UNDEF   => ".undef",
+    DOT_UNMAC   => ".unmac",
+
+    // Control flow
+    DOT_IF      => ".if",
+    DOT_ELSEIF  => ".elif",
+    DOT_ELSE    => ".else",
+    DOT_END     => ".end",
+    DOT_FOR     => ".for",
+
+    // Section
+    DOT_SECTION => ".section",
+    DOT_CODE    => ".code",
+    DOT_DATA    => ".data",
+    DOT_BSS     => ".bss",
+    DOT_STRUCT  => ".struct",
+
+    // Address
+    DOT_ORG     => ".org",
+    DOT_SKIP    => ".skip",
+    DOT_ALIGN   => ".align",
+
+    // Data
+    DOT_INT8    => ".int8",
+    DOT_INT16   => ".int16",
+    DOT_INT32   => ".int32",
+    DOT_INT64   => ".int64",
+    DOT_FLOAT16 => ".float16",
+    DOT_FLOAT32 => ".float32",
+    DOT_FLOAT64 => ".float64",
+    DOT_FLOAT96 => ".float96",
+    DOT_ASCII   => ".ascii",
+    DOT_ASCIIZ  => ".asciiz",
+    DOT_UTF8    => ".utf8",
+    DOT_UTF8Z   => ".utf8z",
+    DOT_UTF16   => ".utf8",
+    DOT_UTF16Z  => ".utf8z",
+    DOT_NEW     => ".object",
 }
 
 // ----------------------------------------------------------------------------
@@ -197,24 +262,24 @@ prepopulate! {
 mod tests {
     use super::{Name, NameTable};
 
-    const INITIAL_LEN: usize = 2;
+    const INITIAL_LEN: usize = 46; // Increment for each prepopulated name
 
     #[test]
     fn empty() {
         let t = NameTable::empty();
 
-        assert_eq!(t.len(),              0);
-        assert_eq!(t.get(Name::EMPTY),   "");
-        assert_eq!(t.get(Name::SECTION), "");
+        assert_eq!(t.len(),                  0);
+        assert_eq!(t.get(Name::EMPTY),       "");
+        assert_eq!(t.get(Name::DOT_SECTION), "");
     }
 
     #[test]
     fn new() {
         let t = NameTable::new();
 
-        assert_eq!(t.len(),              INITIAL_LEN);
-        assert_eq!(t.get(Name::EMPTY),   "");
-        assert_eq!(t.get(Name::SECTION), ".section");
+        assert_eq!(t.len(),                  INITIAL_LEN);
+        assert_eq!(t.get(Name::EMPTY),       "");
+        assert_eq!(t.get(Name::DOT_SECTION), ".section");
     }
 
     #[test]
@@ -225,7 +290,7 @@ mod tests {
 
         assert_eq!(t.len(),              INITIAL_LEN + 1);
         assert_eq!(t.get(Name::EMPTY),   "");
-        assert_eq!(t.get(Name::SECTION), ".section");
+        assert_eq!(t.get(Name::DOT_SECTION), ".section");
         assert_eq!(t.get(name),          "foo");
     }
 
@@ -236,10 +301,10 @@ mod tests {
         let name0 = t.add("foo");
         let name1 = t.add("foo");
 
-        assert_eq!(t.len(),              INITIAL_LEN + 1);
-        assert_eq!(t.get(Name::EMPTY),   "");
-        assert_eq!(t.get(Name::SECTION), ".section");
-        assert_eq!(t.get(name1),         "foo");
+        assert_eq!(t.len(),                  INITIAL_LEN + 1);
+        assert_eq!(t.get(Name::EMPTY),       "");
+        assert_eq!(t.get(Name::DOT_SECTION), ".section");
+        assert_eq!(t.get(name1),             "foo");
 
         assert_eq!(name0, name1);
         assert_eq!(

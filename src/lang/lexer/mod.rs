@@ -28,6 +28,7 @@ use super::input::Cursor;
 mod esc;
 mod ident;
 mod main;
+mod memo;
 mod num;
 mod quoted;
 

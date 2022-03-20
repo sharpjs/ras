@@ -21,6 +21,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::ops::Range;
 
+use crate::name::{Name, NameTable};
 use crate::num::Num;
 
 use super::input::Cursor;
@@ -48,6 +49,15 @@ pub trait Lex {
     /// Returns the byte position range of the current token within the input
     /// stream.
     fn range(&self) -> &Range<usize>;
+
+    /// Returns the [`Name`] that identifies the value of current string-like
+    /// token in the given `names` table.
+    ///
+    /// If the current token is not string-like, this method is safe, but the
+    /// return value is unspecified.
+    fn name(&self, names: &mut NameTable) -> Name {
+        names.add(self.str())
+    }
 
     /// Returns the value of the current string-like token.
     ///
@@ -124,6 +134,11 @@ impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
     #[inline]
     fn range(&self) -> &Range<usize> {
         &self.range
+    }
+
+    #[inline]
+    fn name(&self, names: &mut NameTable) -> Name {
+        names.add(self.str())
     }
 
     #[inline]

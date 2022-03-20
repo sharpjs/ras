@@ -18,7 +18,6 @@
 
 //! Interned names.
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::mem;
 use std::ops::Index;
@@ -52,11 +51,6 @@ pub struct Name(u32);
 /// Table of interned names.
 #[derive(Debug)]
 pub struct NameTable {
-    inner: RefCell<Inner>,
-}
-
-#[derive(Debug)]
-struct Inner {
     vec: Vec     <&'static str>,
     map: HashMap <&'static str, Name>,
     mem: StringArena,
@@ -66,19 +60,16 @@ impl NameTable {
     /// Creates an new, empty [`NameTable`].
     pub fn empty() -> NameTable {
         Self {
-            inner: RefCell::new(Inner {
-                vec: Vec        ::with_capacity(INITIAL_NAME_CAPACITY),
-                map: HashMap    ::with_capacity(INITIAL_NAME_CAPACITY),
-                mem: StringArena::new(),
-            })
+            vec: Vec        ::with_capacity(INITIAL_NAME_CAPACITY),
+            map: HashMap    ::with_capacity(INITIAL_NAME_CAPACITY),
+            mem: StringArena::new(),
         }
     }
 
     /// Returns the number of names in the table.
     #[inline]
     pub fn len(&self) -> usize {
-        self.inner.borrow()
-            .vec.len()
+        self.vec.len()
     }
 
     /// Returns a reference to the string value of the given `name`.
@@ -87,30 +78,26 @@ impl NameTable {
     /// but the returned reference is unspecified.
     #[inline]
     pub fn get(&self, name: Name) -> &str {
-        self.inner.borrow()
-            .vec.get(name.0 as usize).copied().unwrap_or_default()
+        self.vec.get(name.0 as usize).copied().unwrap_or_default()
     }
 
     /// Copies the given string into the table if not already present, and
     /// returns the [`Name`] representing the string.
     pub fn add(&mut self, str: &str) -> Name {
-        let mut inner = self.inner.borrow_mut();
-
-        if let Some(&name) = inner.map.get(str) {
+        if let Some(&name) = self.map.get(str) {
             name
         } else {
             // Store the string
-            let str = inner.mem.add(str);
+            let str = self.mem.add(str);
 
             // Promote lifetime to 'static
-            // SAFETY: String is alive and immobile for the remainder of 'self,
-            // and get() returns references constrained to a shorter lifetime.
+            // SAFETY: Value is alive and immobile for the lifetime of `self.mem`.
             let str: &'static str = unsafe { mem::transmute(str) };
 
             // Convert to Name and store
-            let name = Name(inner.vec.len() as u32);
-            inner.vec.push(str);
-            inner.map.insert(str, name);
+            let name = Name(self.vec.len() as u32);
+            self.vec.push(str);
+            self.map.insert(str, name);
             name
         }
     }

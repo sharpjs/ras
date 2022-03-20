@@ -91,7 +91,8 @@ impl NameTable {
             let str = self.mem.add(str);
 
             // Promote lifetime to 'static
-            // SAFETY: Value is alive and immobile for the lifetime of `self.mem`.
+            // SAFETY: String is alive and immobile for the remainder of 'self,
+            // and get() returns references constrained to a shorter lifetime.
             let str: &'static str = unsafe { mem::transmute(str) };
 
             // Convert to Name and store

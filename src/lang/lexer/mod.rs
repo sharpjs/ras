@@ -42,9 +42,6 @@ pub trait Lex {
     /// Advances to the next token and returns its type.
     fn next(&mut self) -> Token;
 
-    /// Returns the type of the current token.
-    fn token(&self) -> Token;
-
     /// Returns the line number at which the current token begins.
     fn line(&self) -> usize;
 
@@ -83,7 +80,6 @@ pub trait Lex {
 #[derive(Clone, Debug)]
 pub struct Lexer<I: Iterator<Item = u8>> {
     input:     Cursor<I>,
-    token:     Token,
     line:      usize,
     line_next: usize,
     range:     Range<usize>,
@@ -99,7 +95,6 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
         input.advance();
         Self {
             input,
-            token:     Token::Eof,
             line:      0,
             line_next: 1,
             range:     Range::default(),
@@ -118,14 +113,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
 impl<I: Iterator<Item = u8>> Lex for Lexer<I> {
     #[inline]
     fn next(&mut self) -> Token {
-        let token = self.scan_main();
-        self.token = token;
-        token
-    }
-
-    #[inline]
-    fn token(&self) -> Token {
-        self.token
+        self.scan_main()
     }
 
     #[inline]

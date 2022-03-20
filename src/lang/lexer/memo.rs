@@ -229,10 +229,6 @@ impl Lex for Tokens<'_> {
         token
     }
 
-    fn token(&self) -> Token {
-        unimplemented!()
-    }
-
     fn line(&self) -> usize {
         self.line
     }
@@ -267,7 +263,6 @@ mod test {
 
     impl Lex for FakeLex {
         fn next (&mut self) -> Token         {  self.0 }
-        fn token(&self)     -> Token         {  self.0 }
         fn line (&self)     -> usize         {  self.1 }
         fn range(&self)     -> &Range<usize> { &self.2 }
         fn str  (&self)     -> &str          { todo!() }

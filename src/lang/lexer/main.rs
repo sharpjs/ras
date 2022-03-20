@@ -766,7 +766,7 @@ impl<I: Iterator<Item = u8>> Lexer<I> {
             };
 
             // Record token start position
-            start   |= (start_flag as usize).wrapping_neg() & self.input.position();
+            start |= (start_flag as usize).wrapping_neg() & self.input.position();
 
             // Perform action
             match action {
